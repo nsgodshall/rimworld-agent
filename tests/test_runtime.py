@@ -167,3 +167,8 @@ def test_loader_hot_reloads_changed_managers(tmp_path, monkeypatch):
     assert [type(m).every_hours for m in second] == [5]
     assert second[0].last_tick == 777  # the schedule survives the reload
     sys.modules.pop("hotmgrs.m", None)
+
+
+def test_loader_orders_managers_by_priority():
+    names = [m.name for m in ManagerLoader().load()]
+    assert names.index("defense") < names.index("food") < names.index("beds")

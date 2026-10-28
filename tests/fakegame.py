@@ -34,7 +34,9 @@ class FakeRim(RimClient):
         self.blueprints: list[dict[str, Any]] = []  # placements not built yet
         self.threats: list[dict[str, Any]] = []     # as list_threats shows them
         self.weapons: list[dict[str, Any]] = []     # as find_things shows them
+        self.medicine: list[dict[str, Any]] = []    # as find_things shows them
         self.resources: list[dict[str, Any]] = []   # as list_resources shows them
+        self.medical: dict[str, Any] = {"downed": 0, "bleeding": 0, "examples": []}
         self.calls: list[tuple[str, dict[str, Any]]] = []
 
     def _record(self, tool: str, /, **args: Any) -> None:
@@ -67,6 +69,7 @@ class FakeRim(RimClient):
             "map": {"size": {"x": self.map_size[0], "z": self.map_size[1]}},
             "time": {"ticksGame": self.tick},
             "food": self.food,
+            "medical": self.medical,
             "threats": {"hostiles": sum(t.get("threatKind") != "animal" for t in self.threats),
                         "total": len(self.threats)},
         }})
@@ -95,7 +98,7 @@ class FakeRim(RimClient):
         rows = ["".join(self.cells.get((cx, cz), "?") for cx in range(x, x + width)) for cz in range(z + height - 1, z - 1, -1)]
         return Result({"data": {"origin": {"x": x, "z": z}, "width": width, "height": height, "rows": rows,
                                 "legend": {".": "soil", ":": "rich soil", "_": "ground too poor to farm, or floor",
-                                           "x": "blueprint or unfinished building", "b": "other building"}}})
+                                           "x": "blueprint or unfinished building", "b": "other building", "t": "tree"}}})
 
     def get_game_context(self, **_: Any) -> Result:
         return Result({"data": {"programState": "Playing"}})
@@ -128,6 +131,8 @@ class FakeRim(RimClient):
         things = [{"id": i} for i in self.forbidden_food] if category == "Foods" and forbidden else []
         if category == "Weapons":
             things = [w for w in self.weapons if forbidden is None or w["forbidden"] == forbidden]
+        if category == "Medicine":
+            things = [m for m in self.medicine if forbidden is None or m["forbidden"] == forbidden]
         return Result({"data": {"things": things}})
 
     # --- changes -----------------------------------------------------------------------------

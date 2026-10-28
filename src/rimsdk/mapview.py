@@ -82,7 +82,13 @@ class MapView:
         return MapView({**self.cells, **other.cells}, {**self.legend, **other.legend})
 
     def count(self, rect: Rect, chars: str) -> int:
-        return sum(1 for xz in rect.cells() if (self.cells.get(xz) or "") in chars)
+        """Cells of `rect` showing one of `chars`; cells off the view never match."""
+        return sum(1 for xz in rect.cells() if self.is_(xz, chars))
+
+    def is_(self, xz: tuple[int, int], chars: str) -> bool:
+        """Whether the cell shows one of `chars` (not `"" in chars`, which is always true)."""
+        ch = self.cells.get(xz)
+        return ch is not None and ch in chars
 
     def find(self, chars: str) -> list[tuple[int, int]]:
         return [xz for xz, ch in self.cells.items() if ch in chars]

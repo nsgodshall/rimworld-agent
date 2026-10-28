@@ -32,8 +32,8 @@ def test_near_raid_drafts_everyone_gathers_them_and_shortens_time(tmp_path):
     DefenseManager().update(ctx)
     assert {c["pawn_id"] for c in rim.called("set_pawn_drafted")} == {"HumanA", "HumanB", "HumanC"}
     assert all(p["drafted"] for p in rim.colonists)
-    # Only the colonist out of place (A, 20 cells off) is moved; the others are already at the rally point.
-    assert [c["pawn_id"] for c in rim.called("order_pawn") if c["order"] == "move"] == ["HumanA"]
+    # No cover on this bare map: a tight group at the base. B already stands on its spot, so isn't moved.
+    assert [c["pawn_id"] for c in rim.called("order_pawn") if c["order"] == "move"] == ["HumanA", "HumanC"]
     assert ctx.chunk_hours == COMBAT_CHUNK_HOURS
 
 
@@ -108,3 +108,40 @@ def test_raid_in_the_runtime_needs_no_escalation_and_runs_short_chunks(tmp_path)
     assert not (tmp_path / "run" / "incidents").exists()
     hours = [c["hours"] for c in rim.called("advance")]
     assert hours[0] == COMBAT_CHUNK_HOURS or hours[1] == COMBAT_CHUNK_HOURS
+
+
+def test_rescuers_are_chosen_after_undrafting(tmp_path):
+    """The live raid: one colonist still drafted, two downed. Undrafting must free them to carry."""
+    rim = colony()
+    rim.colonists[0]["drafted"] = True
+    rim.colonists[1]["downed"] = rim.colonists[2]["downed"] = True
+    manager = DefenseManager()
+    manager.combat_since = 0
+    ctx = ctx_for(rim, tmp_path)
+    manager.update(ctx)
+    rescues = [(c["pawn_id"], c["target_id"]) for c in rim.called("order_pawn") if c["order"] == "rescue"]
+    assert rescues == [("HumanA", "HumanB")]
+    assert ctx.incidents == []  # one helper for two downed: the second waits for the next cycle
+
+
+def test_nobody_to_carry_the_downed_is_an_incident(tmp_path):
+    rim = colony()
+    for p in rim.colonists:
+        p["downed"] = True
+    ctx = ctx_for(rim, tmp_path)
+    DefenseManager().update(ctx)
+    assert [i.kind for i in ctx.incidents] == ["noRescuer"]
+
+
+def test_shooters_take_cover_facing_the_raiders_and_melee_waits_behind(tmp_path):
+    rim = colony()
+    rim.colonists[2]["gear"]["equipment"] = [{"def": {"defName": "MeleeWeapon_Knife"}}]
+    for z in range(45, 56):
+        rim.cells[(53, z)] = "t"  # a line of trees east of the base
+    rim.threats = [raider("R1", 80, 50)]  # raiders to the east
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    moves = {c["pawn_id"]: (c["x"], c["z"]) for c in rim.called("order_pawn") if c["order"] == "move"}
+    for shooter in ("HumanA", "HumanB"):
+        x, z = moves.get(shooter, (50, 50))
+        assert rim.cells[(x + 1, z)] == "t", f"{shooter} at {(x, z)} has no tree between it and the raiders"
+    assert moves["HumanC"][0] < 50  # the knife waits west of the base, away from the shooting

@@ -29,3 +29,9 @@ def test_rect_geometry():
     assert Rect(-5, 95, 20, 20).clamp(100, 100) == Rect(0, 95, 15, 5)
     assert Rect(0, 0, 4, 4).overlaps(Rect(3, 3, 2, 2)) and not Rect(0, 0, 4, 4).overlaps(Rect(4, 0, 2, 2))
     assert Rect(1, 2, 3, 4).to_api() == {"x": 1, "z": 2, "width": 3, "height": 4}
+
+
+def test_cells_off_the_view_never_match():
+    view = MapView({(0, 0): "."}, {})
+    assert view.count(Rect(0, 0, 2, 2), ".") == 1
+    assert not view.is_((5, 5), ".t") and view.is_((0, 0), ".t")

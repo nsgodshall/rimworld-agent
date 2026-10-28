@@ -1,8 +1,9 @@
 """Defense: keep colonists armed, gather and fight when hostiles come near, rescue the downed after.
 
-The tactic is deliberately plain: draft everyone who can fight, stand them together at the base
-(the stockpile) so they shoot together, and undraft once no live hostile is near. Better tactics,
-such as cover, chokepoints or retreats, are for later managers to add.
+The tactic: draft everyone who can fight and hold near the base (the stockpile), each shooter on a
+cell with cover (a tree, rock, wall or building) between them and the raiders, melee fighters a few
+cells behind; undraft once no live hostile is near. In the first raid test, three colonists standing
+together in the open went down in seconds. Chokepoints and retreats are for later.
 """
 
 from __future__ import annotations
@@ -14,16 +15,25 @@ from rimsdk import errors
 
 from ..events import Event
 from ..manager import Context, Manager
+from rimsdk.mapview import MapView, Rect
+
 from .beds import base_anchor
 
 ENGAGE_RADIUS = 45        # cells from the base within which hostiles are fought
 COMBAT_CHUNK_HOURS = 0.1  # time runs while fighting: 250 ticks, about 4 seconds at Normal speed
 MAX_COMBAT_HOURS = 8      # drafted this long means the fight isn't going the way this code expects
+COVER_SEARCH = 10         # cells around the base searched for covered positions
+TEND_JOBS = {"TendPatient"}
+BUSY_HELPING = {"Rescue", *TEND_JOBS, "TakeToBedToOperate"}
 SPREAD = [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)]
+# Map-view meanings (legend text prefixes) that stop bullets, and that a pawn can stand on.
+COVER = ("tree", "natural rock", "wall", "other building", "blueprint or unfinished building")
+STANDABLE = ("soil", "rich soil", "ground too poor", "stockpile zone", "growing zone")
 
 
 class DefenseManager(Manager):
     name = "defense"
+    priority = 0  # a fight comes first
     every_hours = 0  # every cycle: it must notice a fight, and its end, at once
     handles = ("hostiles", "threatLetter", "downed")
 
@@ -38,6 +48,10 @@ class DefenseManager(Manager):
             self.fight(ctx, threats)
         else:
             self.stand_down(ctx)
+            # Carry the downed to bed once nobody bleeds: tending (managers/medical.py) comes first.
+            bleeding = (ctx.snapshot.colony.get("medical") or {}).get("bleeding")
+            if not bleeding and any(p.get("downed") for p in ctx.snapshot.colonists):
+                self.rescue(ctx)
             if self.armed_at is None or ctx.tick - self.armed_at >= 12 * 2500:
                 self.arm(ctx)
                 self.armed_at = ctx.tick
@@ -72,8 +86,12 @@ class DefenseManager(Manager):
                                threats=[describe(t) for t in threats][:10])
         ctx.request_chunk(COMBAT_CHUNK_HOURS)
 
-        fighters = [p for p in ctx.snapshot.colonists if not p.get("downed")]
-        for i, pawn in enumerate(fighters):
+        pawns = ctx.rim.list_pawns(filter="colonists", include=["gear"]).data.get("pawns") or []
+        fighters = [p for p in pawns if not p.get("downed") and not p.get("dead")]
+        shooters = [p for p in fighters if has_gun(p)]
+        spots = positions(ctx.snapshot.view(Rect.around(*anchor, 2 * COVER_SEARCH + 1, 2 * COVER_SEARCH + 1)),
+                          anchor, centroid(threats), len(shooters), len(fighters) - len(shooters))
+        for pawn, spot in zip(shooters + [p for p in fighters if not has_gun(p)], spots):
             pid = pawn_id(pawn)
             if not pawn.get("drafted"):
                 try:
@@ -81,15 +99,15 @@ class DefenseManager(Manager):
                 except errors.RimError as exc:  # e.g. incapable of violence
                     ctx.log(self.name, f"Couldn't draft {pawn['name']}: {exc.message}")
                     continue
-            dx, dz = SPREAD[i % len(SPREAD)]
-            spot = (anchor[0] + dx, anchor[1] + dz)
             pos = pawn.get("position") or {}
             # Only move pawns that are out of place: a move order interrupts their shooting.
-            if abs(pos.get("x", spot[0]) - spot[0]) > 2 or abs(pos.get("z", spot[1]) - spot[1]) > 2:
+            if abs(pos.get("x", spot[0]) - spot[0]) > 1 or abs(pos.get("z", spot[1]) - spot[1]) > 1:
                 ctx.rim.order_pawn(pid, order="move", x=spot[0], z=spot[1])
 
     def stand_down(self, ctx: Context) -> None:
-        drafted = [p for p in ctx.snapshot.colonists if p.get("drafted")]
+        # Colonists drafted to tend (managers/medical.py) stay drafted until they're done.
+        drafted = [p for p in ctx.snapshot.colonists if p.get("drafted")
+                   and (p.get("currentJob") or {}).get("defName") not in TEND_JOBS]
         if self.combat_since is None and not drafted:
             return
         for pawn in drafted:
@@ -97,17 +115,24 @@ class DefenseManager(Manager):
         if self.combat_since is not None:
             ctx.log(self.name, f"No hostiles near after {(ctx.tick - self.combat_since) / 2500:.1f}h: undrafted {len(drafted)}.")
         self.combat_since = None
-        self.rescue(ctx)
 
     def rescue(self, ctx: Context) -> None:
-        colonists = ctx.snapshot.colonists
-        downed = [p for p in colonists if p.get("downed")]
-        helpers = [p for p in colonists if not p.get("downed") and not p.get("drafted")]
-        for patient, helper in zip(downed, helpers):
+        # Read afresh: the snapshot predates this cycle's undrafting, and a fight can add colonists
+        # (RimWorld's "man in black" joins when everyone is down).
+        colonists = [p for p in ctx.rim.list_pawns(filter="colonists").data.get("pawns") or [] if not p.get("dead")]
+        # In bed (LayDown) already: the doctors take it from there.
+        downed = [p for p in colonists if p.get("downed") and (p.get("currentJob") or {}).get("defName") != "LayDown"]
+        if not downed:
+            return
+        able = [p for p in colonists if not p.get("downed") and not p.get("drafted")]
+        if not able:
+            ctx.raise_incident("noRescuer", f"{len(downed)} colonists downed and nobody can carry them.")
+            return
+        # Leave anyone already carrying or tending to it; the rest wait for the next cycle.
+        free = [p for p in able if (p.get("currentJob") or {}).get("defName") not in BUSY_HELPING]
+        for patient, helper in zip(downed, free):
             result = ctx.rim.order_pawn(pawn_id(helper), order="rescue", target_id=pawn_id(patient), request_id=uuid.uuid4().hex)
             ctx.log(self.name, f"{helper['name']} rescues {patient['name']}.", result=(result.data or {}).get("outcome"))
-        if len(downed) > len(helpers):
-            ctx.raise_incident("noRescuer", f"{len(downed)} colonists downed and only {len(helpers)} can carry them.")
 
     # --- arming ------------------------------------------------------------------------------
 
@@ -146,6 +171,37 @@ def engaging_threats(ctx: Context, radius: int | None = ENGAGE_RADIUS) -> list[d
         if radius is None or ("x" in pos and max(abs(pos["x"] - anchor[0]), abs(pos["z"] - anchor[1])) <= radius):
             near.append(t)
     return near
+
+
+def positions(view: MapView, anchor: tuple[int, int], enemy: tuple[float, float], shooters: int, melee: int) -> list[tuple[int, int]]:
+    """Cells for the shooters, nearest the base first, each with cover on its side facing the enemy,
+    then cells for melee fighters three cells behind the base. Falls back to a tight group."""
+    cover = "".join(s for s, text in view.legend.items() if text.startswith(COVER))
+    ground = "".join(s for s, text in view.legend.items() if text.startswith(STANDABLE))
+    dx, dz = _sign(enemy[0] - anchor[0]), _sign(enemy[1] - anchor[1])
+    covered = sorted(
+        (xz for xz, ch in view.cells.items()
+         if ch in ground and view.is_((xz[0] + dx, xz[1] + dz), cover) and (dx or dz)),
+        key=lambda xz: (abs(xz[0] - anchor[0]) + abs(xz[1] - anchor[1]), xz),
+    )
+    spots = covered[:shooters]
+    spots += [(anchor[0] + sx, anchor[1] + sz) for sx, sz in SPREAD[: shooters - len(spots)]]
+    back = (anchor[0] - 3 * dx, anchor[1] - 3 * dz)
+    spots += [(back[0] + sx, back[1] + sz) for sx, sz in SPREAD[:melee]]
+    return spots
+
+
+def centroid(threats: list[dict[str, Any]]) -> tuple[float, float]:
+    cells = [t["position"] for t in threats if "x" in (t.get("position") or {})]
+    return sum(c["x"] for c in cells) / len(cells), sum(c["z"] for c in cells) / len(cells)
+
+
+def _sign(v: float) -> int:
+    return (v > 0.5) - (v < -0.5)
+
+
+def has_gun(pawn: dict[str, Any]) -> bool:
+    return any(str((e.get("def") or {}).get("defName", "")).startswith("Gun_") for e in (pawn.get("gear") or {}).get("equipment") or [])
 
 
 def pawn_id(pawn: dict[str, Any]) -> str:

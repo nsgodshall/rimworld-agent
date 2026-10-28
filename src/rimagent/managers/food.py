@@ -18,6 +18,7 @@ SEARCH_RADIUS = 30  # cells around the colonists to look for zone sites
 
 class FoodManager(Manager):
     name = "food"
+    priority = 10  # makes the stockpile other managers build around
     every_hours = 6
     handles = ("lowFood",)
 

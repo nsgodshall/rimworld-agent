@@ -16,6 +16,7 @@ WINDOW = 20  # side of the square around the base anchor where beds go (check_pl
 
 class BedsManager(Manager):
     name = "beds"
+    priority = 20  # after food: beds go beside its stockpile
     # A day between passes: a wooden bed is under an hour's work, so blueprints left from the last
     # pass are normally built by then.
     every_hours = 24

@@ -52,6 +52,8 @@ class Manager:
 
     name: ClassVar[str] = "manager"
     every_hours: ClassVar[float] = 6.0
+    # Lower runs first each cycle: e.g. food (which makes the stockpile) before beds (placed beside it).
+    priority: ClassVar[int] = 50
     # Event kinds this manager's on_event() deals with (see rimagent.events.RUN_KINDS).
     handles: ClassVar[tuple[str, ...]] = ()
     # Game alert types (get_events alerts[].type, e.g. "Alert_NeedColonistBeds") this manager owns.

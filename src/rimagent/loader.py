@@ -47,6 +47,7 @@ class ManagerLoader:
                     manager = cls()
                     manager.last_tick = last_ticks.get(manager.name)
                     managers.append(manager)
+        managers.sort(key=lambda m: (m.priority, m.name))
         for gone in set(self._mtimes) - set(files):
             del self._mtimes[gone]
             self._modules.pop(gone, None)

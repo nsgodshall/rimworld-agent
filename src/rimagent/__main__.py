@@ -33,6 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--dry-run", action="store_true", help="one cycle, reads only: print what managers would change")
     run.add_argument("--focus-wait", type=float, default=600.0, help="seconds to wait for an unfocused RimWorld")
     run.add_argument("--escalate", choices=["halt", "claude"], default="halt", help="who handles incidents")
+    run.add_argument("--no-alerts", action="store_true", help="don't halt on unclaimed game alerts (for focused tests)")
     run.add_argument("--max-escalations", type=int, default=5, help="fixing sessions allowed per run")
     run.add_argument("--budget-usd", type=float, default=3.0, help="cap per fixing session, in estimated API dollars (plan usage on a subscription)")
     run.add_argument("--model", help="model for fixing sessions (Claude Code's default if unset)")
@@ -92,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  {name} {json.dumps(call_args)}")
             return 0 if ok else 1
         runtime = Runtime(rim, run_dir, chunk_hours=args.chunk, speed=args.speed, escalator=escalator,
-                          max_escalations=args.max_escalations)
+                          max_escalations=args.max_escalations, watch_alerts=not args.no_alerts)
         reason = runtime.run(args.hours)
         print(f"\nStopped: {reason}. Journal: {runtime.journal.path}")
         return 0 if reason == "done" else 1
