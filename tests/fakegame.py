@@ -35,6 +35,7 @@ class FakeRim(RimClient):
         self.threats: list[dict[str, Any]] = []     # as list_threats shows them
         self.weapons: list[dict[str, Any]] = []     # as find_things shows them
         self.medicine: list[dict[str, Any]] = []    # as find_things shows them
+        self.goods: list[dict[str, Any]] = []       # find_things without a category: items near the base
         self.resources: list[dict[str, Any]] = []   # as list_resources shows them
         self.medical: dict[str, Any] = {"downed": 0, "bleeding": 0, "examples": []}
         self.calls: list[tuple[str, dict[str, Any]]] = []
@@ -133,6 +134,8 @@ class FakeRim(RimClient):
             things = [w for w in self.weapons if forbidden is None or w["forbidden"] == forbidden]
         if category == "Medicine":
             things = [m for m in self.medicine if forbidden is None or m["forbidden"] == forbidden]
+        if category is None:
+            things = [g for g in self.goods if forbidden is None or g["forbidden"] == forbidden]
         return Result({"data": {"things": things}})
 
     # --- changes -----------------------------------------------------------------------------
@@ -141,6 +144,9 @@ class FakeRim(RimClient):
         self._record("designate", kind=kind, thing_ids=thing_ids, rects=rects)
         if kind == "unforbid":
             self.forbidden_food = [t for t in self.forbidden_food if t not in (thing_ids or [])]
+            for g in self.goods:
+                if g["id"] in (thing_ids or []):
+                    g["forbidden"] = False
         return Result({"changed": True, "data": {}})
 
     def set_zone(self, *, kind=None, add=None, request_id=None, **_: Any) -> Result:
