@@ -1,0 +1,41 @@
+{
+ "schemaVersion": "1",
+ "loadId": "ed3f00ba-1",
+ "tick": 1223,
+ "mapId": "0",
+ "truncated": false,
+ "data": {
+  "time": {
+   "tick": 1223,
+   "speed": "Paused",
+   "paused": true,
+   "forcedNormalSpeed": false
+  },
+  "run": {
+   "id": 2,
+   "requestId": "a21791901d6b4359bb7bdc34b34b17b0",
+   "status": "completed",
+   "speed": "Superfast",
+   "hours": 0.1,
+   "hoursElapsed": 0.1,
+   "startTick": 970,
+   "targetTick": 1221,
+   "tick": 1223,
+   "stopOn": [
+    "death",
+    "downed",
+    "injured",
+    "mentalBreak",
+    "hostiles",
+    "lowFood",
+    "threatLetter"
+   ],
+   "endReason": "completed",
+   "events": [],
+   "observerMs": {
+    "average": 0.022,
+    "max": 0.082
+   }
+  }
+ }
+}

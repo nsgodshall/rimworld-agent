@@ -1,0 +1,135 @@
+{
+ "schemaVersion": "1",
+ "loadId": "ed3f00ba-1",
+ "tick": 1223,
+ "mapId": "0",
+ "truncated": false,
+ "data": {
+  "filter": "core",
+  "pawns": [
+   {
+    "ids": {
+     "id": "Human466",
+     "loadId": "Thing_Human466"
+    },
+    "name": "David Bishop",
+    "label": "Bishop",
+    "role": "colonist",
+    "def": {
+     "defName": "Human",
+     "label": "Human"
+    },
+    "kindDef": {
+     "defName": "Colonist",
+     "label": "Colonist"
+    },
+    "faction": {
+     "name": "New Arrivals",
+     "defName": "PlayerColony"
+    },
+    "gender": "Male",
+    "ageBiologicalYears": 38,
+    "downed": false,
+    "dead": false,
+    "drafted": false,
+    "position": {
+     "x": 117,
+     "y": 0,
+     "z": 139
+    },
+    "currentJob": {
+     "defName": "GotoWander",
+     "label": "GotoWander",
+     "report": "wandering."
+    },
+    "ideoligion": {
+     "id": "Ideo_16",
+     "numericId": 16,
+     "name": "Astropolitan"
+    }
+   },
+   {
+    "ids": {
+     "id": "Human433",
+     "loadId": "Thing_Human433"
+    },
+    "name": "Hikari Miyazaki",
+    "label": "Miyazaki",
+    "role": "colonist",
+    "def": {
+     "defName": "Human",
+     "label": "Human"
+    },
+    "kindDef": {
+     "defName": "Colonist",
+     "label": "Colonist"
+    },
+    "faction": {
+     "name": "New Arrivals",
+     "defName": "PlayerColony"
+    },
+    "gender": "Female",
+    "ageBiologicalYears": 40,
+    "downed": false,
+    "dead": false,
+    "drafted": false,
+    "position": {
+     "x": 117,
+     "y": 0,
+     "z": 142
+    },
+    "currentJob": {
+     "defName": "GotoWander",
+     "label": "GotoWander",
+     "report": "wandering."
+    },
+    "ideoligion": {
+     "id": "Ideo_16",
+     "numericId": 16,
+     "name": "Astropolitan"
+    }
+   },
+   {
+    "ids": {
+     "id": "Human436",
+     "loadId": "Thing_Human436"
+    },
+    "name": "Parker 'Sparky' Strobeck",
+    "label": "Sparky",
+    "role": "colonist",
+    "def": {
+     "defName": "Human",
+     "label": "Human"
+    },
+    "kindDef": {
+     "defName": "Colonist",
+     "label": "Colonist"
+    },
+    "faction": {
+     "name": "New Arrivals",
+     "defName": "PlayerColony"
+    },
+    "gender": "Female",
+    "ageBiologicalYears": 39,
+    "downed": false,
+    "dead": false,
+    "drafted": false,
+    "position": {
+     "x": 116,
+     "y": 0,
+     "z": 140
+    },
+    "currentJob": {
+     "defName": "Wait_Wander",
+     "label": "Wait_Wander",
+     "report": "wandering."
+    },
+    "ideoligion": {
+     "id": "Ideo_16",
+     "numericId": 16,
+     "name": "Astropolitan"
+    }
+   }
+  ]
+ }
+}

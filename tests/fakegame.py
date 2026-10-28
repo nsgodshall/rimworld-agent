@@ -1,0 +1,154 @@
+"""A scripted stand-in for the game, implementing the RimClient calls the runtime and managers use."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from rimsdk import Result, RimClient
+
+from .conftest import FakeTransport
+
+
+def grid(width: int, height: int, fill: str = ".") -> dict[tuple[int, int], str]:
+    return {(x, z): fill for x in range(width) for z in range(height)}
+
+
+class FakeRim(RimClient):
+    def __init__(self, *, map_size=(100, 100), cells=None, colonists=None):
+        super().__init__(FakeTransport())
+        self.tick = 0
+        self.paused = True
+        self.map_size = map_size
+        self.cells = cells if cells is not None else grid(*map_size)
+        self.colonists = colonists if colonists is not None else [
+            {"name": n, "position": {"x": 50, "y": 0, "z": 50}} for n in ("A", "B", "C")
+        ]
+        self.zones: list[dict[str, Any]] = []
+        self.forbidden_food: list[str] = []
+        self.food = {"eatenPerDay": 5.6, "daysLeft": 5.0}
+        self.run_script: list[dict[str, Any]] = []  # runs to return, in order; then plain completed runs
+        self.history: list[dict[str, Any]] = []
+        self.alerts: list[dict[str, Any]] = []
+        self.beds: list[dict[str, Any]] = []        # built beds, as list_buildings shows them
+        self.blueprints: list[dict[str, Any]] = []  # placements not built yet
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+
+    def _record(self, name: str, **args: Any) -> None:
+        self.calls.append((name, {k: v for k, v in args.items() if v is not None}))
+
+    def called(self, name: str) -> list[dict[str, Any]]:
+        return [args for n, args in self.calls if n == name]
+
+    # --- time --------------------------------------------------------------------------------
+
+    def get_advance(self, **_: Any) -> Result:
+        return Result({"data": {"time": {"tick": self.tick, "paused": self.paused}, "run": None}})
+
+    def advance(self, hours: float, *, speed=None, stop_on=None, on_poll=None) -> dict[str, Any]:
+        self._record("advance", hours=hours)
+        run = self.run_script.pop(0) if self.run_script else {}
+        start = self.tick
+        self.tick = run.get("tick", start + round(hours * 2500))
+        return {"status": "completed", "endReason": "completed", "tick": self.tick, "events": [], **run}
+
+    def set_game_speed(self, *, speed, **_: Any) -> Result:
+        self._record("set_game_speed", speed=speed)
+        self.paused = speed == "Paused"
+        return Result({"changed": True, "data": {}})
+
+    # --- reads -------------------------------------------------------------------------------
+
+    def get_colony_status(self, **_: Any) -> Result:
+        return Result({"data": {
+            "map": {"size": {"x": self.map_size[0], "z": self.map_size[1]}},
+            "time": {"ticksGame": self.tick},
+            "food": self.food,
+            "threats": {"hostiles": 0},
+        }})
+
+    def list_pawns(self, **_: Any) -> Result:
+        return Result({"data": {"pawns": self.colonists}})
+
+    def list_zones(self, **_: Any) -> Result:
+        return Result({"data": {"zones": self.zones}})
+
+    def get_events(self, *, since=None, **_: Any) -> Result:
+        entries, self.history = (self.history, []) if since else ([], self.history)
+        return Result({"data": {"alerts": self.alerts,
+                                "history": {"entries": entries, "more": False, "cursor": f"c{self.tick}"}}})
+
+    def get_map_view(self, *, x, z, width, height, **_: Any) -> Result:
+        rows = ["".join(self.cells.get((cx, cz), "?") for cx in range(x, x + width)) for cz in range(z + height - 1, z - 1, -1)]
+        return Result({"data": {"origin": {"x": x, "z": z}, "width": width, "height": height, "rows": rows,
+                                "legend": {".": "soil", ":": "rich soil", "_": "ground too poor to farm, or floor",
+                                           "x": "blueprint or unfinished building", "b": "other building"}}})
+
+    def list_buildings(self, *, category=None, **_: Any) -> Result:
+        return Result({"data": {"buildings": self.beds if category == "bed" else []}})
+
+    def check_placement(self, *, def_, x, z, width=1, height=1, **_: Any) -> Result:
+        # As in game: any taken cell is "Space already occupied.", whether a blueprint, a bed or an item.
+        taken = [{"x": cx, "z": cz} for cx in range(x, x + width) for cz in range(z, z + height)
+                 if self.cells.get((cx, cz)) not in (".", ":", "_")]
+        rejected = [{"reason": "Space already occupied.", "count": len(taken)}] if taken else []
+        return Result({"data": {"rejected": rejected}})
+
+    def find_things(self, *, category=None, forbidden=None, **_: Any) -> Result:
+        things = [{"id": i} for i in self.forbidden_food] if category == "Foods" and forbidden else []
+        return Result({"data": {"things": things}})
+
+    # --- changes -----------------------------------------------------------------------------
+
+    def designate(self, *, kind, thing_ids=None, rects=None, **_: Any) -> Result:
+        self._record("designate", kind=kind, thing_ids=thing_ids, rects=rects)
+        if kind == "unforbid":
+            self.forbidden_food = [t for t in self.forbidden_food if t not in (thing_ids or [])]
+        return Result({"changed": True, "data": {}})
+
+    def set_zone(self, *, kind=None, add=None, request_id=None, **_: Any) -> Result:
+        self._record("set_zone", kind=kind, add=add)
+        cells = 0
+        for r in add or []:
+            for cx in range(r["x"], r["x"] + r.get("width", 1)):
+                for cz in range(r["z"], r["z"] + r.get("height", 1)):
+                    if self.cells.get((cx, cz)) in (".", ":", "_"):
+                        self.cells[(cx, cz)] = "s" if kind == "stockpile" else "g"
+                        cells += 1
+        zone = {"id": f"zone:0:{len(self.zones) + 1}", "kind": kind, "cellCount": cells}
+        if add:
+            zone["representativeCell"] = {"x": add[0]["x"], "y": 0, "z": add[0]["z"]}
+        self.zones.append(zone)
+        return Result({"changed": True, "data": {"zone": zone, "created": True}})
+
+    def set_growing_zone(self, *, zone_id, plant=None, allow_sow=None, allow_cut=None, **_: Any) -> Result:
+        self._record("set_growing_zone", zone_id=zone_id, plant=plant)
+        return Result({"changed": True, "data": {}})
+
+    def place_blueprint(self, *, placements, request_id=None, **_: Any) -> Result:
+        """Mirrors RimMCP's reply: per placement an outcome of applied, alreadySatisfied or rejected."""
+        self._record("place_blueprint", placements=placements)
+        results = []
+        for p in placements:
+            footprint = [(p["x"], p["z"]), (p["x"], p["z"] - 1)] if p["def"] == "Bed" else [(p["x"], p["z"])]
+            same = (p["def"], p["x"], p["z"], p.get("rotation"), p.get("stuff"))
+            if any((b["def"], b["x"], b["z"], b.get("rotation"), b.get("stuff")) == same for b in self.blueprints):
+                results.append({**p, "outcome": "alreadySatisfied", "state": "blueprint", "reason": None})
+            elif all(self.cells.get(c) in (".", "_") for c in footprint):
+                for c in footprint:
+                    self.cells[c] = "x"  # a blueprint, on the map view
+                self.blueprints.append(p)
+                results.append({**p, "outcome": "applied", "state": "blueprint", "reason": None})
+            else:
+                results.append({**p, "outcome": "rejected", "reason": "Space already occupied."})
+        count = lambda o: sum(r["outcome"] == o for r in results)
+        return Result({"changed": count("applied") > 0, "data": {
+            "applied": count("applied"), "alreadySatisfied": count("alreadySatisfied"),
+            "rejectedCount": count("rejected"), "results": results, "blockers": []}})
+
+    def build_blueprints(self, n: int | None = None) -> None:
+        """Colonists finish blueprints: they become beds list_buildings shows, drawn as buildings."""
+        for p in self.blueprints[:n]:
+            for c in [(p["x"], p["z"]), (p["x"], p["z"] - 1)]:
+                self.cells[c] = "b"
+            self.beds.append({"id": f"Bed{len(self.beds) + 1}", "position": {"x": p["x"], "y": 0, "z": p["z"]}})
+        self.blueprints = self.blueprints[len(self.blueprints[:n]):]

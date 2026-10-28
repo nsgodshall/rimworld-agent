@@ -1,0 +1,22 @@
+[project]
+name = "rimsdk"
+version = "0.1.0"
+description = "Typed Python SDK for driving RimWorld through the RimMCP mod's local HTTP bridge"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["httpx>=0.27"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rimsdk", "src/rimagent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: needs a running RimWorld with RimMCP enabled (run with -m live)"]
+addopts = "-m 'not live'"

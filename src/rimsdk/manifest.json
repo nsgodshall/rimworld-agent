@@ -1,0 +1,5850 @@
+{
+ "version": "1.1.0",
+ "tools": [
+  {
+   "handlerId": "game-context",
+   "group": "observe",
+   "name": "get_game_context",
+   "description": "Game-wide context: the current map and map ids, time, pause and speed, storyteller and difficulty, and loaded mods.",
+   "method": "GET",
+   "pathTemplate": "/v1/game-context",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "mods",
+   "group": "diagnostics",
+   "name": "list_mods",
+   "description": "Loaded mods in load order (positions from 0), or scope=installed for every installed mod, with the game version, pending changes, and the game's warnings about the mod list.",
+   "method": "GET",
+   "pathTemplate": "/v1/mods",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "scope",
+    "query"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "idsOnly": {
+      "type": "boolean",
+      "description": "Return only ids."
+     },
+     "scope": {
+      "type": "string",
+      "enum": [
+       "loaded",
+       "installed"
+      ],
+      "description": "Mod inventory to inspect. Defaults to loaded."
+     },
+     "query": {
+      "type": "string",
+      "description": "Optional search text for mod name or package id."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "mod",
+   "group": "diagnostics",
+   "name": "get_mod",
+   "description": "One mod's metadata, dependencies, compatibility, assemblies, and settings panel names (not its settings values).",
+   "method": "GET",
+   "pathTemplate": "/v1/mods/{packageId}",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "packageId": {
+      "type": "string",
+      "description": "Exact package id from list_mods, preserving any suffix distinguishing local and Workshop copies."
+     }
+    },
+    "required": [
+     "packageId"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "game-log",
+   "group": "diagnostics",
+   "name": "get_game_log",
+   "description": "Recent in-game log entries, newest first (not the full Player.log). include=[\"stackTrace\"] or detail=full adds stack traces. The cursor is an offset into the current history.",
+   "method": "GET",
+   "pathTemplate": "/v1/debug/log",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "level",
+    "query"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "level": {
+      "type": "string",
+      "enum": [
+       "all",
+       "message",
+       "warning",
+       "error"
+      ],
+      "description": "Severity filter. Defaults to all."
+     },
+     "query": {
+      "type": "string",
+      "description": "Optional case-insensitive search in messages and stack traces."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "game-settings",
+   "group": "diagnostics",
+   "name": "get_game_settings",
+   "description": "Global game options and the colony's storyteller and difficulty, with the choices. Global options work without a colony.",
+   "method": "GET",
+   "pathTemplate": "/v1/settings",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-game-settings",
+   "group": "gameSettings",
+   "name": "set_game_settings",
+   "description": "Change global options or the colony's storyteller or difficulty preset; only the fields given change. Changing only the storyteller keeps a custom difficulty.",
+   "method": "PUT",
+   "pathTemplate": "/v1/settings",
+   "queryKeys": [],
+   "bodyKeys": [
+    "storytellerDefName",
+    "difficultyDefName",
+    "runInBackground",
+    "pauseOnLoad",
+    "automaticPauseMode",
+    "autosaveIntervalDays",
+    "volumeMaster",
+    "volumeMusic",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "storytellerDefName": {
+      "type": "string",
+      "description": "Selectable StorytellerDef defName from get_game_settings. Requires a loaded game."
+     },
+     "difficultyDefName": {
+      "type": "string",
+      "description": "Non-custom DifficultyDef defName from get_game_settings. Replaces the current difficulty with that preset; requires a loaded game."
+     },
+     "runInBackground": {
+      "type": "boolean",
+      "description": "Keep RimWorld running while unfocused."
+     },
+     "pauseOnLoad": {
+      "type": "boolean",
+      "description": "Pause when loading a game."
+     },
+     "automaticPauseMode": {
+      "type": "string",
+      "enum": [
+       "Never",
+       "MajorThreat",
+       "AnyThreat",
+       "AnyLetter"
+      ],
+      "description": "Which events automatically pause the game."
+     },
+     "autosaveIntervalDays": {
+      "type": "number",
+      "enum": [
+       0.5,
+       1,
+       3,
+       7,
+       14
+      ],
+      "description": "Autosave interval in game days, using the normal game options."
+     },
+     "volumeMaster": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Master volume from 0 to 1."
+     },
+     "volumeMusic": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Music volume from 0 to 1."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [],
+    "additionalProperties": false,
+    "minProperties": 1
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "colony-status",
+   "group": "observe",
+   "name": "get_colony_status",
+   "description": "Colony dashboard: top risks with drill-down hints, and food: stored meals and raw nutrition, daily use, days left, and the daily trend over up to three days. Only stored food counts.",
+   "method": "GET",
+   "pathTemplate": "/v1/colony-status",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "pawns",
+   "group": "observe",
+   "name": "list_pawns",
+   "description": "Pawns by filter. include=[\"assignments\"] adds Assign-tab settings, and include=[\"assignmentOptions\"] the valid choices for them.",
+   "method": "GET",
+   "pathTemplate": "/v1/pawns",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "filter"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "idsOnly": {
+      "type": "boolean",
+      "description": "Return only ids."
+     },
+     "filter": {
+      "type": "string",
+      "enum": [
+       "core",
+       "colonist",
+       "colonists",
+       "slave",
+       "slaves",
+       "prisoner",
+       "prisoners",
+       "guest",
+       "guests",
+       "colonyAnimal",
+       "colonyAnimals",
+       "wildAnimal",
+       "wildAnimals",
+       "hostile",
+       "hostiles",
+       "animals",
+       "wildlife",
+       "threats",
+       "other",
+       "others",
+       "all"
+      ],
+      "description": "Pawn filter to list. Defaults to core."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "pawn",
+   "group": "observe",
+   "name": "get_pawn",
+   "description": "Everything about one pawn, by ThingID or load id.",
+   "method": "GET",
+   "pathTemplate": "/v1/pawns/{id}",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "id": {
+      "type": "string",
+      "description": "Pawn ThingID or load id."
+     }
+    },
+    "required": [
+     "id"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "resources",
+   "group": "observe",
+   "name": "list_resources",
+   "description": "Map resources grouped by def, with food, medicine, stack, forbidden, roof, and rot details. Fogged items are hidden.",
+   "method": "GET",
+   "pathTemplate": "/v1/resources",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "idsOnly": {
+      "type": "boolean",
+      "description": "Return only ids."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "things",
+   "group": "observe",
+   "name": "find_things",
+   "description": "Find haulable items (resources, food, medicine, weapons, apparel, chunks, corpses, minified buildings) with id, position, count, forbidden, and storage. Filter by def, category, excludeCategory, label, forbidden, inStorage, or distance from x and z, which sorts by distance. Unexplored areas are not searched.",
+   "method": "GET",
+   "pathTemplate": "/v1/things",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "def",
+    "category",
+    "excludeCategory",
+    "query",
+    "forbidden",
+    "inStorage",
+    "x",
+    "z",
+    "radius"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "idsOnly": {
+      "type": "boolean",
+      "description": "Return only ids."
+     },
+     "def": {
+      "type": "string",
+      "description": "Exact ThingDef defName, such as Steel or MealSimple."
+     },
+     "category": {
+      "type": "string",
+      "description": "ThingCategoryDef defName, such as Foods, Medicine, Weapons, or ResourcesRaw."
+     },
+     "excludeCategory": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "ThingCategoryDef defNames to leave out, subcategories included."
+     },
+     "query": {
+      "type": "string",
+      "description": "Text to find in the item label or defName."
+     },
+     "forbidden": {
+      "type": "boolean",
+      "description": "Only forbidden (true) or only allowed (false) items."
+     },
+     "inStorage": {
+      "type": "boolean",
+      "description": "Only items in storage that accepts them (true), or only items outside it (false)."
+     },
+     "x": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "Search centre x."
+     },
+     "z": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "Search centre z."
+     },
+     "radius": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 500,
+      "description": "Search radius in cells around x and z."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "map-view",
+   "group": "observe",
+   "name": "get_map_view",
+   "description": "A character map of an area, one character per cell: rows[0] is the north edge (z = origin.z + height - 1), each row running west to east from origin.x. Each cell shows its top feature: pawn, building or blueprint, tree, item, zone, water, or fertility. Capital letters are colonists, named in the legend, which lists only symbols shown; unexplored cells are blank. Defaults to 32x32 around the colonists, at most 40x40. layers adds roof or designation grids.",
+   "method": "GET",
+   "pathTemplate": "/v1/map/view",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "x",
+    "z",
+    "width",
+    "height",
+    "layers"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "x": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "West edge of the view."
+     },
+     "z": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "South edge of the view."
+     },
+     "width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 40,
+      "description": "Columns, 1 to 40. Defaults to 32."
+     },
+     "height": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 40,
+      "description": "Rows, 1 to 40. Defaults to 32."
+     },
+     "layers": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "roof",
+        "designations"
+       ],
+       "description": "Extra layer."
+      },
+      "description": "Extra grids to include."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "check-placement",
+   "group": "observe",
+   "name": "check_placement",
+   "description": "Check whether a building fits at x and z, or find where it fits in an area up to 20x20, with the game's build checks. Returns fitting positions (nearest the middle first) with footprint and interaction cell offsets, rejections grouped by reason, the cost, and blockers such as missingMaterial or noConstructor. Changes nothing; uses the map shown in game.",
+   "method": "GET",
+   "pathTemplate": "/v1/placement",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "def",
+    "stuff",
+    "rotation",
+    "x",
+    "z",
+    "width",
+    "height"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "def": {
+      "type": "string",
+      "description": "Building defName, such as Campfire, FueledStove, ButcherSpot, or Wall."
+     },
+     "stuff": {
+      "type": "string",
+      "description": "Material defName for buildings made from one, such as WoodLog or Steel. Defaults to the game's choice."
+     },
+     "rotation": {
+      "type": "string",
+      "enum": [
+       "north",
+       "east",
+       "south",
+       "west"
+      ],
+      "description": "Facing. Defaults to the building's usual facing."
+     },
+     "x": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "Position x, or the west edge of the positions to check."
+     },
+     "z": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "Position z, or the south edge of the positions to check."
+     },
+     "width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20,
+      "description": "Positions to check west to east, 1 to 20. Defaults to 1."
+     },
+     "height": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20,
+      "description": "Positions to check south to north, 1 to 20. Defaults to 1."
+     }
+    },
+    "required": [
+     "def",
+     "x",
+     "z"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "work",
+   "group": "observe",
+   "name": "list_work",
+   "description": "List work priorities, current jobs, draft state, schedules, and allowed-area context for core pawns.",
+   "method": "GET",
+   "pathTemplate": "/v1/work",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "production",
+   "group": "observe",
+   "name": "list_production",
+   "description": "Production bills, each with a state (active, suspended, done, paused, or targetReached) and, when active, what blocks it: missingIngredients, noWorker, needsFuel, or workbenchUnusable. detail=normal adds the usable ingredients needed and available. Reserved ingredients still count.",
+   "method": "GET",
+   "pathTemplate": "/v1/production",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "bill",
+   "group": "observe",
+   "name": "get_bill",
+   "description": "One bill by id: state, blockers, and the usable ingredients it needs and has (allowed, unforbidden, in its radius, reachable).",
+   "method": "GET",
+   "pathTemplate": "/v1/bills/{id}",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "id": {
+      "type": "string",
+      "description": "Bill id returned by list_production."
+     }
+    },
+    "required": [
+     "id"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-bill",
+   "group": "administration",
+   "name": "set_bill",
+   "description": "Update (mode=update) or delete (mode=delete) a bill by id. search_defs lists bill mode defs; list_zones gives stockpile ids for SpecificStockpile.",
+   "method": "PUT",
+   "pathTemplate": "/v1/bills/{id}",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "mode",
+    "suspended",
+    "repeatModeDefName",
+    "repeatCount",
+    "targetCount",
+    "pauseWhenSatisfied",
+    "unpauseWhenYouHave",
+    "ingredientSearchRadius",
+    "allowedSkillMin",
+    "allowedSkillMax",
+    "storeModeDefName",
+    "storeZoneId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "id": {
+      "type": "string",
+      "description": "Bill id returned by list_production or get_workshop."
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "update",
+       "delete"
+      ],
+      "description": "Whether to update fields on the bill or delete it."
+     },
+     "suspended": {
+      "type": "boolean",
+      "description": "Whether the bill should be suspended."
+     },
+     "repeatModeDefName": {
+      "type": "string",
+      "description": "BillRepeatModeDef defName from search_defs kind=billRepeatMode.",
+      "examples": [
+       "Forever",
+       "RepeatCount",
+       "TargetCount"
+      ]
+     },
+     "repeatCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999999,
+      "description": "Repeat count for RepeatCount mode."
+     },
+     "targetCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999999,
+      "description": "Target count for TargetCount mode."
+     },
+     "pauseWhenSatisfied": {
+      "type": "boolean",
+      "description": "Whether the bill pauses when its target is satisfied."
+     },
+     "unpauseWhenYouHave": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 999998,
+      "description": "Inventory count where a paused bill can unpause. Must be less than targetCount."
+     },
+     "ingredientSearchRadius": {
+      "type": "number",
+      "minimum": 3,
+      "maximum": 999,
+      "description": "Ingredient search radius in cells. 100 or more means unlimited and is stored as 999."
+     },
+     "allowedSkillMin": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20,
+      "description": "Minimum allowed pawn skill."
+     },
+     "allowedSkillMax": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20,
+      "description": "Maximum allowed pawn skill."
+     },
+     "storeModeDefName": {
+      "type": "string",
+      "description": "BillStoreModeDef defName from search_defs kind=billStoreMode. SpecificStockpile also requires storeZoneId.",
+      "examples": [
+       "DropOnFloor",
+       "BestStockpile",
+       "SpecificStockpile"
+      ]
+     },
+     "storeZoneId": {
+      "type": "string",
+      "description": "Stockpile zone id from list_zones. Required only when storeModeDefName is SpecificStockpile."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "id",
+     "mode"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "workshops",
+   "group": "observe",
+   "name": "list_workshops",
+   "description": "Workbenches that take bills, with bill and recipe counts. include=[\"recipes\"] or detail=full adds the recipes that can be added.",
+   "method": "GET",
+   "pathTemplate": "/v1/workshops",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "workshop",
+   "group": "observe",
+   "name": "get_workshop",
+   "description": "Get one workshop by ThingID or load id, including current bills and available recipes that can be added at that bench.",
+   "method": "GET",
+   "pathTemplate": "/v1/workshops/{id}",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "id": {
+      "type": "string",
+      "description": "Workshop ThingID or load id from list_workshops."
+     }
+    },
+    "required": [
+     "id"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "add-bill-to-workshop",
+   "group": "administration",
+   "name": "add_bill_to_workshop",
+   "description": "Add a bill for a recipe; duplicates are allowed. As in game, it does the recipe once unless repeatModeDefName is Forever, or TargetCount with targetCount. search_defs lists bill mode defs; list_zones gives stockpile ids for SpecificStockpile.",
+   "method": "POST",
+   "pathTemplate": "/v1/workshops/{workshopId}/bills",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "recipeDefName",
+    "suspended",
+    "repeatModeDefName",
+    "repeatCount",
+    "targetCount",
+    "pauseWhenSatisfied",
+    "unpauseWhenYouHave",
+    "ingredientSearchRadius",
+    "allowedSkillMin",
+    "allowedSkillMax",
+    "storeModeDefName",
+    "storeZoneId",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "workshopId": {
+      "type": "string",
+      "description": "Workshop ThingID or load id from list_workshops."
+     },
+     "recipeDefName": {
+      "type": "string",
+      "description": "RecipeDef defName from list_workshops include=[\"recipes\"] or get_workshop."
+     },
+     "suspended": {
+      "type": "boolean",
+      "description": "Whether the bill should be suspended."
+     },
+     "repeatModeDefName": {
+      "type": "string",
+      "description": "BillRepeatModeDef defName from search_defs kind=billRepeatMode.",
+      "examples": [
+       "Forever",
+       "RepeatCount",
+       "TargetCount"
+      ]
+     },
+     "repeatCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999999,
+      "description": "Repeat count for RepeatCount mode."
+     },
+     "targetCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999999,
+      "description": "Target count for TargetCount mode."
+     },
+     "pauseWhenSatisfied": {
+      "type": "boolean",
+      "description": "Whether the bill pauses when its target is satisfied."
+     },
+     "unpauseWhenYouHave": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 999998,
+      "description": "Inventory count where a paused bill can unpause. Must be less than targetCount."
+     },
+     "ingredientSearchRadius": {
+      "type": "number",
+      "minimum": 3,
+      "maximum": 999,
+      "description": "Ingredient search radius in cells. 100 or more means unlimited and is stored as 999."
+     },
+     "allowedSkillMin": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20,
+      "description": "Minimum allowed pawn skill."
+     },
+     "allowedSkillMax": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20,
+      "description": "Maximum allowed pawn skill."
+     },
+     "storeModeDefName": {
+      "type": "string",
+      "description": "BillStoreModeDef defName from search_defs kind=billStoreMode. SpecificStockpile also requires storeZoneId.",
+      "examples": [
+       "DropOnFloor",
+       "BestStockpile",
+       "SpecificStockpile"
+      ]
+     },
+     "storeZoneId": {
+      "type": "string",
+      "description": "Stockpile zone id from list_zones. Required only when storeModeDefName is SpecificStockpile."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat returns the bill it added instead of adding another. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "workshopId",
+     "recipeDefName"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "zones",
+   "group": "observe",
+   "name": "list_zones",
+   "description": "Stockpiles, growing zones, and allowed areas. Stockpiles show priority and accepts: the top-level categories taken fully (all), partly (some), or not at all (none), counting special filters that are off, and hit point and quality ranges when narrowed.",
+   "method": "GET",
+   "pathTemplate": "/v1/zones",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "zone",
+   "group": "observe",
+   "name": "get_zone",
+   "description": "Get full details for one zone or area by id.",
+   "method": "GET",
+   "pathTemplate": "/v1/zones/{id}",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "id": {
+      "type": "string",
+      "description": "Zone id returned by list_zones."
+     }
+    },
+    "required": [
+     "id"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "environment",
+   "group": "observe",
+   "name": "get_environment",
+   "description": "Weather, season, conditions, hazards, and enclosed rooms with role, size, unroofed cells, and temperature. Rooms open to the outdoors or under fog are not listed.",
+   "method": "GET",
+   "pathTemplate": "/v1/environment",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "power",
+   "group": "observe",
+   "name": "get_power",
+   "description": "Get power grid, stored energy, generation/consumption, and powered component context.",
+   "method": "GET",
+   "pathTemplate": "/v1/power",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "threats",
+   "group": "observe",
+   "name": "list_threats",
+   "description": "Active threats: hostiles, manhunters, predators, and fires. Fogged ones are hidden.",
+   "method": "GET",
+   "pathTemplate": "/v1/threats",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "research",
+   "group": "observe",
+   "name": "get_research",
+   "description": "Current research, what stops it (noProject, missingResearchBench, or noResearcher), and paged projects; availableOnly lists those that can start now.",
+   "method": "GET",
+   "pathTemplate": "/v1/research",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "availableOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "availableOnly": {
+      "type": "boolean",
+      "description": "Only projects that can be started now. Needs a loaded colony."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "ideoligions",
+   "group": "observe",
+   "name": "list_ideoligions",
+   "description": "Ideoligions with identity, memes, culture, and mode flags; active=false and an empty list without Ideology.",
+   "method": "GET",
+   "pathTemplate": "/v1/ideoligions",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "ideoligion",
+   "group": "observe",
+   "name": "get_ideoligion",
+   "description": "Get full details for one ideoligion by id returned from list_ideoligions, including description and precepts.",
+   "method": "GET",
+   "pathTemplate": "/v1/ideoligions/{id}",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "id": {
+      "type": "string",
+      "description": "Ideoligion id returned by list_ideoligions."
+     }
+    },
+    "required": [
+     "id"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "quests",
+   "group": "observe",
+   "name": "list_quests",
+   "description": "Quests as the Quests tab lists them, hidden ones left out; tab picks available, active, or historical (with dismissed ones). An available quest shows canAccept (else reason and unmetRequirements), expiresInTicks, rewardChoices (each with index, value, and needsAccepter), and accepters: the colonists who can accept it. An accepted quest shows its accepter and the reward chosen. detail=normal adds the description and parts.",
+   "method": "GET",
+   "pathTemplate": "/v1/quests",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "tab"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "tab": {
+      "type": "string",
+      "enum": [
+       "available",
+       "active",
+       "historical"
+      ],
+      "description": "Quests tab. Defaults to all three."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "answer-letter",
+   "group": "decisions",
+   "name": "answer_letter",
+   "description": "Answer a letter waiting (letterId) as its dialog does, by option and revision from get_events; refused if its options changed since. dismiss: true dismisses it where the game allows. Shown in game. If the answer leads to another question, dialogs has it for answer_dialog.",
+   "method": "POST",
+   "pathTemplate": "/v1/letters/{letterId}/answer",
+   "queryKeys": [],
+   "bodyKeys": [
+    "option",
+    "revision",
+    "dismiss",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "letterId": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The letter's id from get_events."
+     },
+     "option": {
+      "type": "string",
+      "description": "The option's id from the letter's options in get_events."
+     },
+     "revision": {
+      "type": "string",
+      "description": "The letter's revision from get_events, with option."
+     },
+     "dismiss": {
+      "type": "boolean",
+      "description": "Dismiss the letter instead of answering it, as right-clicking it does."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat returns the first result without acting again. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "letterId"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "respond-to-quest",
+   "group": "decisions",
+   "name": "respond_to_quest",
+   "description": "Accept a quest offer as the Quests tab does, or dismiss or restore a quest. An offer with rewardChoices is accepted for one (reward, its index), and one that needs an accepter takes accepter, one of its accepters in list_quests. If the game asks first, as before giving royal favor, dialogs has the question for answer_dialog. Shown in game.",
+   "method": "POST",
+   "pathTemplate": "/v1/quests/{questId}/response",
+   "queryKeys": [],
+   "bodyKeys": [
+    "action",
+    "reward",
+    "accepter",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "questId": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The quest's id from list_quests."
+     },
+     "action": {
+      "type": "string",
+      "enum": [
+       "accept",
+       "dismiss",
+       "restore"
+      ],
+      "description": "accept an offer; dismiss a quest to the Historical tab, or restore it."
+     },
+     "reward": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "For accept: the index of one of the quest's rewardChoices."
+     },
+     "accepter": {
+      "type": "string",
+      "description": "For accept: a colonist's id from the quest's accepters."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat returns the first result without acting again. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "questId",
+     "action"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "answer-dialog",
+   "group": "observe",
+   "name": "answer_dialog",
+   "description": "Answer a dialog an agent's call opened (interactionId) by page and option id, as clicking it does, under the same rules as the call that opened it; cancel: true closes it as Escape does, where allowed. Refused once that page is no longer showing: the player answered or closed it, or it moved on or changed, which makes a new page to read. Needs the tool that opened it to be on.",
+   "method": "POST",
+   "pathTemplate": "/v1/interactions/{interactionId}/answer",
+   "queryKeys": [],
+   "bodyKeys": [
+    "page",
+    "option",
+    "value",
+    "cancel",
+    "aimId",
+    "aimX",
+    "aimZ",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "interactionId": {
+      "type": "string",
+      "description": "The dialog's interactionId."
+     },
+     "page": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The page the options were read from."
+     },
+     "option": {
+      "type": "string",
+      "description": "The option's id on that page."
+     },
+     "value": {
+      "type": "integer",
+      "description": "For a count dialog: the count, within its valueRange."
+     },
+     "cancel": {
+      "type": "boolean",
+      "description": "Close the dialog as Escape does, instead of choosing an option."
+     },
+     "aimId": {
+      "type": "string",
+      "description": "For an answer that asks for a target: a thing's ThingID or load id."
+     },
+     "aimX": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "For an answer that asks for a target: cell x."
+     },
+     "aimZ": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "For an answer that asks for a target: cell z."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat returns the first result without acting again. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "interactionId",
+     "page"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "assign-owner",
+   "group": "administration",
+   "name": "assign_owner",
+   "description": "Assign a pawn to a bed, throne, or other building with owners, or unassign one, with the Assign dialog's checks (who it takes, bed size and kind, ideoligion). Assigning to a full bed replaces an owner, as in game; unassigned lists who lost it.",
+   "method": "POST",
+   "pathTemplate": "/v1/buildings/{buildingId}/owners",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "pawnId",
+    "action",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "buildingId": {
+      "type": "string",
+      "description": "The bed's or building's ThingID or load id."
+     },
+     "pawnId": {
+      "type": "string",
+      "description": "The pawn's ThingID or load id."
+     },
+     "action": {
+      "type": "string",
+      "enum": [
+       "assign",
+       "unassign"
+      ],
+      "description": "Defaults to assign."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat returns the first result without acting again. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "buildingId",
+     "pawnId"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "pawn-actions",
+   "group": "observe",
+   "name": "list_pawn_actions",
+   "description": "The right-click menu a player pawn gets on a thing (targetId) or a cell (x and z), as the game builds it: each option's id, text, disabled, origin (the mod, for mod content), and unsupported with why, such as trading, which opens a window agents cannot use. A thing gives its own options and its cell's; a cell gives everything there. Uses the map shown in game.",
+   "method": "GET",
+   "pathTemplate": "/v1/pawns/{pawnId}/actions",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "targetId",
+    "x",
+    "z"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "pawnId": {
+      "type": "string",
+      "description": "Pawn ThingID or load id."
+     },
+     "targetId": {
+      "type": "string",
+      "description": "A thing's or pawn's ThingID or load id."
+     },
+     "x": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "Cell x."
+     },
+     "z": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "Cell z."
+     }
+    },
+    "required": [
+     "pawnId"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "choose-pawn-action",
+   "group": "pawnControl",
+   "name": "choose_pawn_action",
+   "description": "Choose an option from list_pawn_actions (its revision and option, with the same target) as clicking it does; refused if the menu changed since. A mod's option that asks for a target takes aimId, or aimX and aimZ, checked against the mod's own rules; without one its targeting is cancelled. dialogs has any question that follows, for answer_dialog.",
+   "method": "POST",
+   "pathTemplate": "/v1/pawns/{pawnId}/actions",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "targetId",
+    "x",
+    "z",
+    "revision",
+    "option",
+    "aimId",
+    "aimX",
+    "aimZ",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "pawnId": {
+      "type": "string",
+      "description": "Pawn ThingID or load id."
+     },
+     "targetId": {
+      "type": "string",
+      "description": "The thing the menu was read on, as in list_pawn_actions."
+     },
+     "x": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "The cell the menu was read on: x."
+     },
+     "z": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "The cell the menu was read on: z."
+     },
+     "revision": {
+      "type": "string",
+      "description": "The menu's revision from list_pawn_actions."
+     },
+     "option": {
+      "type": "string",
+      "description": "The option's id."
+     },
+     "aimId": {
+      "type": "string",
+      "description": "For a mod's option that asks for a target: a thing's ThingID or load id."
+     },
+     "aimX": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "For a mod's option that asks for a target: cell x."
+     },
+     "aimZ": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "For a mod's option that asks for a target: cell z."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat returns the first result without acting again. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "pawnId",
+     "revision",
+     "option"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "gizmos",
+   "group": "observe",
+   "name": "list_gizmos",
+   "description": "The buttons a building or pawn (thingId) shows when selected: id, label, kind (toggle with on, action, or target with what it takes), disabledReason, origin, unsupported with why, and the tool that presses it. detail=normal adds descriptions.",
+   "method": "GET",
+   "pathTemplate": "/v1/things/{thingId}/gizmos",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "thingId": {
+      "type": "string",
+      "description": "The building's or pawn's ThingID or load id."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     }
+    },
+    "required": [
+     "thingId"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-building-toggle",
+   "group": "administration",
+   "name": "set_building_toggle",
+   "description": "Turn one of the game's building toggles on or off (gizmo and revision from list_gizmos), such as a power switch, a door held open, a medical bed, or a turret's hold fire. A power switch changes once a colonist flicks it; pending says so.",
+   "method": "POST",
+   "pathTemplate": "/v1/buildings/{buildingId}/toggles",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "gizmo",
+    "revision",
+    "on",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "buildingId": {
+      "type": "string",
+      "description": "The building's ThingID or load id."
+     },
+     "gizmo": {
+      "type": "string",
+      "description": "The toggle's id from list_gizmos."
+     },
+     "revision": {
+      "type": "string",
+      "description": "The buttons' revision from list_gizmos."
+     },
+     "on": {
+      "type": "boolean",
+      "description": "Whether the toggle should be on."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat returns the first result without acting again. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "buildingId",
+     "gizmo",
+     "revision",
+     "on"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "use-gizmo",
+   "group": "pawnControl",
+   "name": "use_gizmo",
+   "description": "Press a button from list_gizmos (gizmo and revision) as a click does: an action, a toggle on a pawn or from a mod (on), or a target button with targetId or x and z, and destinationX and destinationZ for a two-step ability, checked with the button's own rules before it is given. dialogs has any question that follows, for answer_dialog.",
+   "method": "POST",
+   "pathTemplate": "/v1/things/{thingId}/gizmos",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "gizmo",
+    "revision",
+    "on",
+    "targetId",
+    "x",
+    "z",
+    "destinationX",
+    "destinationZ",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "thingId": {
+      "type": "string",
+      "description": "The building's or pawn's ThingID or load id."
+     },
+     "gizmo": {
+      "type": "string",
+      "description": "The button's id from list_gizmos."
+     },
+     "revision": {
+      "type": "string",
+      "description": "The buttons' revision from list_gizmos."
+     },
+     "on": {
+      "type": "boolean",
+      "description": "For a toggle: whether it should be on."
+     },
+     "targetId": {
+      "type": "string",
+      "description": "For a target button: a thing's or pawn's ThingID or load id."
+     },
+     "x": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "For a target button: cell x."
+     },
+     "z": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "For a target button: cell z."
+     },
+     "destinationX": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "For a two-step ability: the destination's x."
+     },
+     "destinationZ": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "For a two-step ability: the destination's z."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat returns the first result without acting again. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "thingId",
+     "gizmo",
+     "revision"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "events",
+   "group": "observe",
+   "name": "get_events",
+   "description": "What the game is telling the player: alerts (with culprits: the pawns, things, or places they concern, up to 10 of culpritCount), letters waiting (text, expiry, quest, and a choice letter's options), and the History tab's letters and messages. Without since, history has the latest entries; with since (history.cursor from the last call), the entries after it, oldest first, with more if another page follows. repeated lists messages the game repeated since; reset means since was from another load, and incomplete that some entries may have been dropped. detail=normal adds alert explanations and letter texts in history.",
+   "method": "GET",
+   "pathTemplate": "/v1/events",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "since"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "since": {
+      "type": "string",
+      "description": "history.cursor from the previous call."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "History entries; defaults to 20."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "buildings",
+   "group": "observe",
+   "name": "list_buildings",
+   "description": "Colony buildings, compact by default; detail=normal adds size, passability, power, battery, fuel, and billGiver. category filters by production, power, bed, storage, or a defName substring; include=[\"contents\"] adds storage contents.",
+   "method": "GET",
+   "pathTemplate": "/v1/buildings",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "category"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "category": {
+      "type": "string",
+      "description": "Optional building category or defName substring. Known categories: production, power, bed, storage.",
+      "examples": [
+       "production",
+       "power",
+       "bed",
+       "storage",
+       "Shelf"
+      ]
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "building",
+   "group": "observe",
+   "name": "get_building",
+   "description": "One building by ThingID or load id: size, passability, power, fuel, bills, and storage contents.",
+   "method": "GET",
+   "pathTemplate": "/v1/buildings/{id}",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "id": {
+      "type": "string",
+      "description": "Building ThingID or load id from list_buildings."
+     }
+    },
+    "required": [
+     "id"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "world",
+   "group": "observe",
+   "name": "list_world",
+   "description": "List world-level context: factions and world objects.",
+   "method": "GET",
+   "pathTemplate": "/v1/world",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "defs-search",
+   "group": "observe",
+   "name": "search_defs",
+   "description": "Search loaded defs by kind (any Def type without the Def suffix, aliases such as research, or all), query, and category. sourceMod is the defining mod, not later patchers.",
+   "method": "GET",
+   "pathTemplate": "/v1/defs/search",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "kind",
+    "query",
+    "category"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "kind": {
+      "type": "string",
+      "description": "Def type without the Def suffix, an alias such as research, or all.",
+      "examples": [
+       "thing",
+       "hediff",
+       "ability",
+       "trainable",
+       "billStoreMode",
+       "billRepeatMode",
+       "timeAssignment",
+       "all"
+      ]
+     },
+     "query": {
+      "type": "string",
+      "description": "Search text for defName, label, or description."
+     },
+     "category": {
+      "type": "string",
+      "description": "Optional category filter."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "def",
+   "group": "observe",
+   "name": "get_def",
+   "description": "One def by defName, optionally of a kind as in search_defs. sourceMod is the defining mod, not later patchers.",
+   "method": "GET",
+   "pathTemplate": "/v1/defs/{defName}",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "kind"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "detail": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "normal",
+       "full"
+      ],
+      "description": "Defaults to summary."
+     },
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Extra sections, such as skills, gear, or stackTrace."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     },
+     "defName": {
+      "type": "string",
+      "description": "Def name to retrieve."
+     },
+     "kind": {
+      "type": "string",
+      "description": "Def type without the Def suffix, an alias such as research, or all.",
+      "examples": [
+       "thing",
+       "hediff",
+       "ability",
+       "trainable",
+       "billStoreMode",
+       "billRepeatMode",
+       "timeAssignment",
+       "all"
+      ]
+     }
+    },
+    "required": [
+     "defName"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-pawn-drafted",
+   "group": "pawnControl",
+   "name": "set_pawn_drafted",
+   "description": "Draft or undraft one player-controlled pawn by ThingID or load id.",
+   "method": "PUT",
+   "pathTemplate": "/v1/pawns/{pawnId}/drafted",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "drafted",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "pawnId": {
+      "type": "string",
+      "description": "Pawn ThingID or load id."
+     },
+     "drafted": {
+      "type": "boolean",
+      "description": "Whether the pawn should be drafted."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "pawnId",
+     "drafted"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-pawn-work-priority",
+   "group": "administration",
+   "name": "set_pawn_work_priority",
+   "description": "Set a player pawn's priority for a work type: 0 disables it, 1 is highest, 4 lowest.",
+   "method": "PUT",
+   "pathTemplate": "/v1/pawns/{pawnId}/work/{workTypeDefName}",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "priority",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "pawnId": {
+      "type": "string",
+      "description": "Pawn ThingID or load id."
+     },
+     "workTypeDefName": {
+      "type": "string",
+      "description": "WorkTypeDef defName."
+     },
+     "priority": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4,
+      "description": "Priority from 0 to 4."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "pawnId",
+     "workTypeDefName",
+     "priority"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-pawn-assignment",
+   "group": "administration",
+   "name": "set_pawn_assignment",
+   "description": "Set one Assign-style pawn setting: schedule, policy, medical care, self-tend, hostility response, allowed area, carried medicine, or prisoner interaction.",
+   "method": "PUT",
+   "pathTemplate": "/v1/pawns/{pawnId}/assignments/{assignmentKind}",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "assignments",
+    "policyKind",
+    "policyId",
+    "care",
+    "enabled",
+    "mode",
+    "areaId",
+    "count",
+    "medicineDefName",
+    "interactionModeDefName",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "pawnId": {
+      "type": "string",
+      "description": "Pawn ThingID or load id."
+     },
+     "assignmentKind": {
+      "type": "string",
+      "enum": [
+       "schedule",
+       "policy",
+       "medicalCare",
+       "selfTend",
+       "hostilityResponse",
+       "allowedArea",
+       "carryMedicine",
+       "prisonerInteraction"
+      ],
+      "description": "Assign-style setting to change."
+     },
+     "assignments": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Required when assignmentKind is schedule. Ranges are half-open, non-overlapping, and use hours 0 through 24.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "startHour": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 23,
+         "description": "Inclusive start hour from 0 to 23."
+        },
+        "endHour": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 24,
+         "description": "Exclusive end hour from 1 to 24."
+        },
+        "assignmentDefName": {
+         "type": "string",
+         "description": "TimeAssignmentDef defName, such as Anything, Work, Joy, Sleep, or Meditate."
+        }
+       },
+       "required": [
+        "startHour",
+        "endHour",
+        "assignmentDefName"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "policyKind": {
+      "type": "string",
+      "enum": [
+       "apparel",
+       "food",
+       "drug",
+       "reading"
+      ],
+      "description": "Required when assignmentKind is policy. Policy column to set."
+     },
+     "policyId": {
+      "type": "string",
+      "description": "Required when assignmentKind is policy. Policy id returned by list_pawns include=[\"assignmentOptions\"]."
+     },
+     "care": {
+      "type": "string",
+      "enum": [
+       "NoCare",
+       "NoMeds",
+       "HerbalOrWorse",
+       "NormalOrWorse",
+       "Best"
+      ],
+      "description": "Required when assignmentKind is medicalCare. Medical care category."
+     },
+     "enabled": {
+      "type": "boolean",
+      "description": "Required when assignmentKind is selfTend. Whether self-tend should be enabled."
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "Ignore",
+       "Attack",
+       "Flee"
+      ],
+      "description": "Required when assignmentKind is hostilityResponse. Hostility response mode."
+     },
+     "areaId": {
+      "type": "string",
+      "description": "Required when assignmentKind is allowedArea. Area id from assignmentOptions, or unrestricted to clear it."
+     },
+     "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3,
+      "description": "Required when assignmentKind is carryMedicine. Medicine count to carry."
+     },
+     "medicineDefName": {
+      "type": "string",
+      "description": "Optional when assignmentKind is carryMedicine. Medicine ThingDef defName from assignmentOptions; omit to keep the current medicine."
+     },
+     "interactionModeDefName": {
+      "type": "string",
+      "description": "Required when assignmentKind is prisonerInteraction. PrisonerInteractionModeDef defName, such as AttemptRecruit, ReduceResistance, Convert, or Release."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "pawnId",
+     "assignmentKind"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "designate-animal",
+   "group": "orders",
+   "name": "designate_animal",
+   "description": "Set or clear one animal's hunt, tame, or slaughter designation.",
+   "method": "PUT",
+   "pathTemplate": "/v1/animals/{pawnId}/designation",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "action",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "pawnId": {
+      "type": "string",
+      "description": "Animal pawn ThingID or load id."
+     },
+     "action": {
+      "type": "string",
+      "enum": [
+       "hunt",
+       "tame",
+       "slaughter",
+       "none"
+      ],
+      "description": "Animal designation action. none clears hunt, tame, and slaughter designations."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "pawnId",
+     "action"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-animal-training",
+   "group": "administration",
+   "name": "set_animal_training",
+   "description": "Set desired training flags for one colony animal by TrainableDef defName.",
+   "method": "PUT",
+   "pathTemplate": "/v1/animals/{pawnId}/training",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "assignments",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "pawnId": {
+      "type": "string",
+      "description": "Colony animal pawn ThingID or load id."
+     },
+     "assignments": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Training desired-state changes for one colony animal.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "trainableDefName": {
+         "type": "string",
+         "description": "TrainableDef defName, such as Tameness, Obedience, or Release."
+        },
+        "wanted": {
+         "type": "boolean",
+         "description": "Whether this trainable should be wanted."
+        }
+       },
+       "required": [
+        "trainableDefName",
+        "wanted"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "pawnId",
+     "assignments"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-research-current",
+   "group": "administration",
+   "name": "set_research_project",
+   "description": "Set the current research project by ResearchProjectDef defName. Returns blockers that would stop it progressing, such as a missing research bench.",
+   "method": "PUT",
+   "pathTemplate": "/v1/research/current",
+   "queryKeys": [],
+   "bodyKeys": [
+    "projectDefName",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "projectDefName": {
+      "type": "string",
+      "description": "ResearchProjectDef defName."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "projectDefName"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "designate",
+   "group": "orders",
+   "name": "designate",
+   "description": "Order things by thingIds or by cell rectangles (optionally one defName): forbid, unforbid, haul, cut, harvest, chopWood, mine, deconstruct, or cancel. Uses the game's checks; each target is applied, alreadySatisfied, or rejected with the reason. haul marks things not hauled automatically; cut leaves grown trees, which chopWood fells; harvest takes ripe crops and wild plants. Unexplored cells are never mined. Acts on the map shown in game.",
+   "method": "PUT",
+   "pathTemplate": "/v1/designations",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "kind",
+    "thingIds",
+    "rects",
+    "defName",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "forbid",
+       "unforbid",
+       "haul",
+       "cut",
+       "harvest",
+       "chopWood",
+       "mine",
+       "deconstruct",
+       "cancel"
+      ],
+      "description": "Order to apply."
+     },
+     "thingIds": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 300,
+      "description": "Ids of the things to order, such as items from find_things. Give these or rects."
+     },
+     "rects": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Cells whose items or plants get the order. Give these or thingIds. Each starts at its south-west corner (x, z) and extends east by width, north by height.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "x": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "West edge."
+        },
+        "z": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "South edge."
+        },
+        "width": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 60,
+         "description": "Columns; defaults to 1."
+        },
+        "height": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 60,
+         "description": "Rows; defaults to 1."
+        }
+       },
+       "required": [
+        "x",
+        "z"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "defName": {
+      "type": "string",
+      "description": "With rects, only things of this ThingDef, such as Plant_Berry or Plant_TreeOak."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "kind"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "place-blueprint",
+   "group": "orders",
+   "name": "place_blueprint",
+   "description": "Place up to 50 blueprints (def, optional stuff and rotation, at x and z) with the game's build tool, so research and placement rules apply. Each is applied, alreadySatisfied (with what is there: blueprint, frame, or built), or rejected with the reason; blockers lists missing materials or builders. check_placement finds spots. Acts on the map shown in game.",
+   "method": "POST",
+   "pathTemplate": "/v1/blueprints",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "placements",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "placements": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "description": "Buildings to place, in order.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "def": {
+         "type": "string",
+         "description": "Building defName, such as Campfire, FueledStove, ButcherSpot, or Wall."
+        },
+        "stuff": {
+         "type": "string",
+         "description": "Material defName for buildings made from one, such as WoodLog, Steel, or BlocksGranite. Defaults to the game's choice."
+        },
+        "x": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "Position x."
+        },
+        "z": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "Position z."
+        },
+        "rotation": {
+         "type": "string",
+         "enum": [
+          "north",
+          "east",
+          "south",
+          "west"
+         ],
+         "description": "Facing. Defaults to the building's usual facing."
+        }
+       },
+       "required": [
+        "def",
+        "x",
+        "z"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat returns the original result. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "placements"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-zone",
+   "group": "administration",
+   "name": "set_zone",
+   "description": "Create (kind and add, with requestId), grow, shrink, rename, or delete (by zoneId) a stockpile or growing zone. Cells are checked as the game's zone tools do; rejected cells are listed with reasons. A zone grows only into touching cells and keeps its connected part after removals. set_storage changes what a stockpile takes. Acts on the map shown in game.",
+   "method": "PUT",
+   "pathTemplate": "/v1/zones",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "zoneId",
+    "kind",
+    "add",
+    "remove",
+    "delete",
+    "label",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "zoneId": {
+      "type": "string",
+      "description": "Zone id from list_zones. Omit to create a zone."
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "stockpile",
+       "growing"
+      ],
+      "description": "Zone kind. Required when creating."
+     },
+     "add": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Cells to add. Each starts at its south-west corner (x, z) and extends east by width, north by height.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "x": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "West edge."
+        },
+        "z": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "South edge."
+        },
+        "width": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 60,
+         "description": "Columns; defaults to 1."
+        },
+        "height": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 60,
+         "description": "Rows; defaults to 1."
+        }
+       },
+       "required": [
+        "x",
+        "z"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "remove": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Cells to remove from the zone. Each starts at its south-west corner (x, z) and extends east by width, north by height.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "x": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "West edge."
+        },
+        "z": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "South edge."
+        },
+        "width": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 60,
+         "description": "Columns; defaults to 1."
+        },
+        "height": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 60,
+         "description": "Rows; defaults to 1."
+        }
+       },
+       "required": [
+        "x",
+        "z"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "delete": {
+      "type": "boolean",
+      "description": "Delete the whole zone given by zoneId."
+     },
+     "label": {
+      "type": "string",
+      "description": "New name for the zone."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries when creating. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-storage",
+   "group": "administration",
+   "name": "set_storage",
+   "description": "Set a stockpile's or storage building's priority and what it accepts. allow and disallow take category or thing names (such as FoodMeals or MealSimple), after allowAll or disallowAll; each entry is applied, alreadySatisfied, or rejected. Special filters (such as AllowRotten) change only when named; specialFiltersOff lists those still refusing part of an allowed entry, and fixedSpecialFiltersOff those the building refuses whatever its settings. accepts summarises the result as list_zones does.",
+   "method": "PUT",
+   "pathTemplate": "/v1/storage",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "zoneId",
+    "buildingId",
+    "priority",
+    "allowAll",
+    "disallowAll",
+    "allow",
+    "disallow",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "zoneId": {
+      "type": "string",
+      "description": "Stockpile zone id from list_zones. Give this or buildingId."
+     },
+     "buildingId": {
+      "type": "string",
+      "description": "Storage building id, such as a shelf, from list_buildings. Give this or zoneId."
+     },
+     "priority": {
+      "type": "string",
+      "enum": [
+       "Low",
+       "Normal",
+       "Preferred",
+       "Important",
+       "Critical"
+      ],
+      "description": "Hauling priority."
+     },
+     "allowAll": {
+      "type": "boolean",
+      "description": "Allow everything the storage can hold, before allow and disallow."
+     },
+     "disallowAll": {
+      "type": "boolean",
+      "description": "Allow nothing, before allow and disallow."
+     },
+     "allow": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "ThingCategoryDef, ThingDef, or SpecialThingFilterDef names to allow."
+     },
+     "disallow": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "ThingCategoryDef, ThingDef, or SpecialThingFilterDef names to disallow."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-growing-zone",
+   "group": "administration",
+   "name": "set_growing_zone",
+   "description": "Set a growing zone's crop (one the game's crop menu offers) and whether to sow it and cut other plants. Returns its growing state: sowableCells, sown, harvestable, averageGrowth, notGrowing with reasons (resting is the normal night rest, about 19:00 to 6:00; tooDark; temperature; other), and blockers such as noPlantableCells, outOfSeason, or noGrower.",
+   "method": "PUT",
+   "pathTemplate": "/v1/growing",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "zoneId",
+    "plant",
+    "allowSow",
+    "allowCut",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "zoneId": {
+      "type": "string",
+      "description": "Growing zone id from list_zones."
+     },
+     "plant": {
+      "type": "string",
+      "description": "Plant defName to grow, such as Plant_Rice, Plant_Potato, Plant_Corn, or Plant_Cotton."
+     },
+     "allowSow": {
+      "type": "boolean",
+      "description": "Whether colonists sow the crop."
+     },
+     "allowCut": {
+      "type": "boolean",
+      "description": "Whether colonists cut other plants in the zone."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "zoneId"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-area",
+   "group": "administration",
+   "name": "set_area",
+   "description": "Paint rectangles into or out of the Home area (areaId home) or an allowed area, rename or delete an allowed area, or create one by leaving out areaId (with requestId).",
+   "method": "PUT",
+   "pathTemplate": "/v1/areas",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "areaId",
+    "label",
+    "add",
+    "remove",
+    "delete",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "areaId": {
+      "type": "string",
+      "description": "\"home\" or an area id from list_zones. Omit to create an allowed area."
+     },
+     "label": {
+      "type": "string",
+      "description": "Name for an allowed area."
+     },
+     "add": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Cells to add to the area. Each starts at its south-west corner (x, z) and extends east by width, north by height.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "x": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "West edge."
+        },
+        "z": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "South edge."
+        },
+        "width": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 60,
+         "description": "Columns; defaults to 1."
+        },
+        "height": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 60,
+         "description": "Rows; defaults to 1."
+        }
+       },
+       "required": [
+        "x",
+        "z"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "remove": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Cells to remove from the area. Each starts at its south-west corner (x, z) and extends east by width, north by height.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "x": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "West edge."
+        },
+        "z": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 1000,
+         "description": "South edge."
+        },
+        "width": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 60,
+         "description": "Columns; defaults to 1."
+        },
+        "height": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 60,
+         "description": "Rows; defaults to 1."
+        }
+       },
+       "required": [
+        "x",
+        "z"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "delete": {
+      "type": "boolean",
+      "description": "Delete the allowed area given by areaId."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries when creating. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "order-pawn",
+   "group": "pawnControl",
+   "name": "order_pawn",
+   "description": "Order one player pawn with the game's right-click checks: equip or wear (targetId of an item), move to x and z (to a standable cell nearby, given as destination), attack (targetId; ranged pawns are refused out of range, others melee), rescue a downed pawn, or tend a pawn. move, attack, and tend need a drafted pawn. The order replaces the current job; equip and wear can queue behind it instead, like shift-click. Returns jobIssued, alreadySatisfied, rejected with the game's reason, or awaitingInput when the game asks the player. Acts on the map shown in game.",
+   "method": "POST",
+   "pathTemplate": "/v1/pawns/{pawnId}/orders",
+   "queryKeys": [],
+   "bodyKeys": [
+    "mapId",
+    "order",
+    "targetId",
+    "x",
+    "z",
+    "queue",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mapId": {
+      "type": "string",
+      "description": "Defaults to the current map."
+     },
+     "pawnId": {
+      "type": "string",
+      "description": "Pawn ThingID or load id."
+     },
+     "order": {
+      "type": "string",
+      "enum": [
+       "equip",
+       "wear",
+       "move",
+       "attack",
+       "rescue",
+       "tend"
+      ],
+      "description": "Order to give."
+     },
+     "targetId": {
+      "type": "string",
+      "description": "What the order acts on: an item id from find_things for equip and wear, a pawn or building id for attack, a pawn id for rescue and tend. Not used by move."
+     },
+     "x": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "Cell x for move."
+     },
+     "z": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "Cell z for move."
+     },
+     "queue": {
+      "type": "boolean",
+      "description": "For equip and wear: wait behind the pawn's current job and earlier orders instead of replacing them, like shift-click. An idle pawn starts at once."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat returns the original result, whatever its outcome, without giving the order again, so it never overrides an order given in between. The last 64 calls given a requestId in the loaded game are remembered."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "pawnId",
+     "order"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-game-speed",
+   "group": "time",
+   "name": "set_game_speed",
+   "description": "Pause the game or set its speed. Also ends any running advance_time.",
+   "method": "PUT",
+   "pathTemplate": "/v1/time/speed",
+   "queryKeys": [],
+   "bodyKeys": [
+    "speed",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "speed": {
+      "type": "string",
+      "enum": [
+       "Paused",
+       "Normal",
+       "Fast",
+       "Superfast",
+       "Ultrafast"
+      ],
+      "description": "Game speed. Ultrafast needs development mode."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "speed"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "advance-time",
+   "group": "time",
+   "name": "advance_time",
+   "description": "Run the game up to 24 in-game hours, then pause; it stops and pauses early on a stopOn condition, and reports what happened and why it ended. One run at a time; a requestId retry returns the existing run (the last 32 are kept). waitSeconds waits for the result; otherwise follow with get_advance. Cancelling the call does not stop the run; set_game_speed does.",
+   "method": "POST",
+   "pathTemplate": "/v1/time/advance",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "hours",
+    "speed",
+    "stopOn",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "hours": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 24,
+      "description": "In-game hours to run, from 0.01 to 24. One hour is 2,500 ticks, about 42 seconds at Normal speed; 0.01 hours is 25 ticks, for following a fight closely."
+     },
+     "speed": {
+      "type": "string",
+      "enum": [
+       "Normal",
+       "Fast",
+       "Superfast",
+       "Ultrafast"
+      ],
+      "description": "Speed while running. Defaults to Superfast. The game still drops to normal speed during danger, as it does for players. Ultrafast needs development mode."
+     },
+     "stopOn": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "death",
+        "downed",
+        "injured",
+        "mentalBreak",
+        "hostiles",
+        "lowFood",
+        "threatLetter",
+        "letter"
+       ],
+       "description": "Condition."
+      },
+      "description": "Conditions that end the run early and pause. Defaults to death, downed, injured (new injury or bleeding), mentalBreak, hostiles (a visible hostile threat appears), lowFood (stored food drops below the game's Low food threshold of 4 nutrition per colonist), and threatLetter. letter stops on any letter. An empty list runs to the end. Checked every frame; lowFood every 250 ticks."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries: a repeat with the same id returns the existing run."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for the run to end before replying."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "hours"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "get-advance",
+   "group": "observe",
+   "name": "get_advance",
+   "description": "The game's tick and speed, and an advance_time run (the latest, or runId): its status, what happened, and why it ended. waitSeconds waits for it to end.",
+   "method": "GET",
+   "pathTemplate": "/v1/time/advance",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "runId",
+    "waitSeconds"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "runId": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Run id returned by advance_time. Defaults to the most recent run."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for the run to end before replying."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "get-operation",
+   "group": "observe",
+   "name": "get_operation",
+   "description": "An operation by operationId (a save, load, world generation, site search, and so on): its state (queued, running, awaitingConfirmation, succeeded, failed, unverified, declined, cancelled, revoked, or interruptedByChange), step, the game's pending question, and result. Works while RimWorld loads and across game changes. Running operations and the last 32 finished are kept, and requestIds of the last 1,000 requests. waitSeconds waits for it to finish.",
+   "method": "GET",
+   "pathTemplate": "/v1/operations/{operationId}",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly",
+    "waitSeconds"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "operationId": {
+      "type": "string",
+      "description": "Operation id returned by the tool that started it."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     }
+    },
+    "required": [
+     "operationId"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "cancel-operation",
+   "group": "observe",
+   "name": "cancel_operation",
+   "description": "Stop an operation at its next safe step, keeping what it did; an uninterruptible step such as loading finishes first. Needs the tool that started it to be on. Works while RimWorld loads.",
+   "method": "POST",
+   "pathTemplate": "/v1/operations/{operationId}/cancel",
+   "queryKeys": [],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "operationId": {
+      "type": "string",
+      "description": "Operation id returned by the tool that started it."
+     }
+    },
+    "required": [
+     "operationId"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "list-saves",
+   "group": "observe",
+   "name": "list_saves",
+   "description": "Save files, newest first: name, time, size, game version, whether its mods match the running ones, and commitment mode. loadedColony says whether the loaded colony is in commitment mode. Works at the main menu.",
+   "method": "GET",
+   "pathTemplate": "/v1/saves",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "save-game",
+   "group": "gameSetup",
+   "name": "save_game",
+   "description": "Save the colony under a name (an operation; see get_operation). It succeeds only when verified, since the game hides its own save errors: the file is complete and nothing was logged as an error while saving. failed or unverified means don't rely on it. overwrite replaces an existing save. Not in commitment mode. A requestId retry returns the original operation.",
+   "method": "POST",
+   "pathTemplate": "/v1/saves",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "name",
+    "overwrite",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string",
+      "description": "Save name: the file name without .rws, as list_saves shows it."
+     },
+     "overwrite": {
+      "type": "boolean",
+      "description": "Replace an existing save with this name."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "name"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "load-game",
+   "group": "gameSetup",
+   "name": "load_game",
+   "description": "Load a save (an operation; see get_operation). With a colony loaded, give saveFirst (a save name) or discardUnsaved: true; saving first pauses and holds the game until it is replaced, and a failed save stops the load. If the save's version or mods differ, the game asks the player and the operation waits (awaitingConfirmation). Not while a commitment-mode game is loaded. A requestId retry returns the original operation.",
+   "method": "POST",
+   "pathTemplate": "/v1/session/load",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "name",
+    "saveFirst",
+    "discardUnsaved",
+    "overwrite",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string",
+      "description": "The save to load, as list_saves shows it."
+     },
+     "saveFirst": {
+      "type": "string",
+      "description": "Save the loaded colony under this name first. Give this or discardUnsaved when a colony is loaded."
+     },
+     "discardUnsaved": {
+      "type": "boolean",
+      "description": "Drop any unsaved changes to the loaded colony. Give this or saveFirst when a colony is loaded."
+     },
+     "overwrite": {
+      "type": "boolean",
+      "description": "Let saveFirst replace an existing save with that name."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "name"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "leave-game",
+   "group": "gameSetup",
+   "name": "leave_game",
+   "description": "Return to the main menu (an operation; see get_operation). Give saveFirst (a save name) or discardUnsaved: true; saving first pauses and leaves in the same moment, and a failed save stops it. Commitment-mode games save to their own slot, as in game, and take neither. A requestId retry returns the original operation.",
+   "method": "POST",
+   "pathTemplate": "/v1/session/leave",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "saveFirst",
+    "discardUnsaved",
+    "overwrite",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "saveFirst": {
+      "type": "string",
+      "description": "Save the loaded colony under this name first. Give this or discardUnsaved when a colony is loaded."
+     },
+     "discardUnsaved": {
+      "type": "boolean",
+      "description": "Drop any unsaved changes to the loaded colony. Give this or saveFirst when a colony is loaded."
+     },
+     "overwrite": {
+      "type": "boolean",
+      "description": "Let saveFirst replace an existing save with that name."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "list-scenarios",
+   "group": "observe",
+   "name": "list_scenarios",
+   "description": "Scenarios for a new game, as the scenario screen lists them, and whether RimMCP can set each up (supported); manualScreens lists screens to finish in game. Works at the main menu.",
+   "method": "GET",
+   "pathTemplate": "/v1/setup/scenarios",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Page size; defaults to 50."
+     },
+     "cursor": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "nextCursor from the previous page."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "get-setup",
+   "group": "observe",
+   "name": "get_setup",
+   "description": "The new game being set up: its screen (stage), revision, choices, and options. Setup commands take this revision as expectedRevision and are refused if anyone, such as the player, changed the setup since (lastChangeExternal); handoff says when to finish a screen in game. At the customIdeoligion stage it shows the ideoligion, each precept's id and box options, the meme catalog, and blocksNext.",
+   "method": "GET",
+   "pathTemplate": "/v1/setup",
+   "queryKeys": [
+    "mapId",
+    "detail",
+    "include",
+    "limit",
+    "cursor",
+    "idsOnly"
+   ],
+   "bodyKeys": [],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "include": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "preceptOptions"
+       ]
+      },
+      "description": "preceptOptions adds every option the custom ideoligion screen's Add buttons offer, allowed or with the reason."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "find-starting-sites",
+   "group": "observe",
+   "name": "find_starting_sites",
+   "description": "Search the world for settleable starting tiles (an operation; see get_operation), longest growing period first, by biome, hilliness, river, road, coast, temperature, rainfall, growing days, and distance to other factions' settlements, optionally leaving out tiles that would cost goodwill. Each site names its nearest counted settlement and any it encroaches on. Needs the starting site screen. A requestId retry returns the original operation.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup/sites/search",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "biomes",
+    "hilliness",
+    "river",
+    "road",
+    "coastal",
+    "minTemperature",
+    "maxTemperature",
+    "minRainfall",
+    "maxRainfall",
+    "minGrowingDays",
+    "minSettlementDistance",
+    "maxSettlementDistance",
+    "settlementRelations",
+    "avoidEncroaching",
+    "limit",
+    "requestId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "biomes": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 50,
+      "description": "BiomeDef names to accept, such as TemperateForest or AridShrubland."
+     },
+     "hilliness": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 50,
+      "description": "Hilliness to accept: Flat, SmallHills, LargeHills, or Mountainous."
+     },
+     "river": {
+      "type": "boolean",
+      "description": "true for tiles with a river, false for tiles without."
+     },
+     "road": {
+      "type": "boolean",
+      "description": "true for tiles with a road, false for tiles without."
+     },
+     "coastal": {
+      "type": "boolean",
+      "description": "true for coastal tiles, false for inland ones."
+     },
+     "minTemperature": {
+      "type": "number",
+      "description": "Lowest yearly average temperature, in C."
+     },
+     "maxTemperature": {
+      "type": "number",
+      "description": "Highest yearly average temperature, in C."
+     },
+     "minRainfall": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Least rainfall, in mm a year."
+     },
+     "maxRainfall": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Most rainfall, in mm a year."
+     },
+     "minGrowingDays": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 60,
+      "description": "Shortest growing period, in days of the 60-day year (60 is year-round)."
+     },
+     "minSettlementDistance": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Least distance, in world tiles, to the nearest counted settlement."
+     },
+     "maxSettlementDistance": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Most distance, in world tiles, to the nearest counted settlement; a site needs one within it."
+     },
+     "settlementRelations": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 50,
+      "description": "Which settlements count for the distances, by their faction's relation to the player: Ally, Neutral, or Hostile. All, when left out."
+     },
+     "avoidEncroaching": {
+      "type": "boolean",
+      "description": "Leave out tiles near enough to a settlement that its faction would lose goodwill, as the game warns."
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50,
+      "description": "Most sites to return. Defaults to 10."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "start-setup",
+   "group": "gameSetup",
+   "name": "start_setup",
+   "description": "Start setting up a new game from a scenario (an operation; see get_operation), opening the game's setup screens as New colony does. With a colony loaded, give saveFirst or discardUnsaved, as for leave_game. Then: set_setup_storyteller, generate_world, choose_starting_site, set_setup_ideoligion (Ideology), set_starting_pawns, and start_game. A requestId retry returns the original operation.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "scenario",
+    "category",
+    "saveFirst",
+    "discardUnsaved",
+    "overwrite",
+    "requestId",
+    "expectedLoadId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "scenario": {
+      "type": "string",
+      "description": "Scenario name, as list_scenarios shows it, such as Crashlanded."
+     },
+     "category": {
+      "type": "string",
+      "description": "The scenario's category from list_scenarios, such as FromDef for a built-in one or CustomLocal for the player's own. Needed only when two share a name."
+     },
+     "saveFirst": {
+      "type": "string",
+      "description": "When a colony is loaded: save it under this name first. Give this or discardUnsaved."
+     },
+     "discardUnsaved": {
+      "type": "boolean",
+      "description": "When a colony is loaded: drop any unsaved changes. Give this or saveFirst."
+     },
+     "overwrite": {
+      "type": "boolean",
+      "description": "Let saveFirst replace an existing save with that name."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     },
+     "expectedLoadId": {
+      "type": "string",
+      "description": "loadId from an earlier response; refused if another save was loaded since."
+     }
+    },
+    "required": [
+     "scenario"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "cancel-setup",
+   "group": "gameSetup",
+   "name": "cancel_setup",
+   "description": "Abandon the new game being set up, dropping its world and colonists, and return to the main menu (an operation; see get_operation). A requestId retry returns the original operation.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup/cancel",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "requestId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     }
+    },
+    "required": [],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "setup-back",
+   "group": "gameSetup",
+   "name": "setup_back",
+   "description": "Go back one setup screen, as its Back button does. Choices made on later screens may be lost, as in game.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup/back",
+   "queryKeys": [],
+   "bodyKeys": [
+    "expectedRevision"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "get_setup's revision; refused if the setup changed since."
+     }
+    },
+    "required": [
+     "expectedRevision"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-setup-storyteller",
+   "group": "gameSetup",
+   "name": "set_setup_storyteller",
+   "description": "Choose the storyteller, difficulty, and commitment mode, then go on to the world screen. For the custom difficulty, custom sets the panel's controls: base is the preset to start from (default: the current custom values, or Rough), and settings sets controls by name, within their own ranges and steps, as get_setup lists them.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup/storyteller",
+   "queryKeys": [],
+   "bodyKeys": [
+    "storyteller",
+    "difficulty",
+    "commitmentMode",
+    "custom",
+    "expectedRevision"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "storyteller": {
+      "type": "string",
+      "description": "StorytellerDef name, such as Cassandra, Phoebe, or Randy."
+     },
+     "difficulty": {
+      "type": "string",
+      "description": "DifficultyDef name: a preset, such as Peaceful, Easy, Medium, Rough, Hard, or Extreme, or the custom difficulty."
+     },
+     "custom": {
+      "type": "object",
+      "description": "With the custom difficulty: the panel's settings.",
+      "properties": {
+       "base": {
+        "type": "string",
+        "description": "A preset to start from, as the panel's Reset menu does."
+       },
+       "settings": {
+        "type": "array",
+        "maxItems": 80,
+        "items": {
+         "type": "object",
+         "properties": {
+          "setting": {
+           "type": "string",
+           "description": "The setting's name, as get_setup lists it, such as threatScale or allowMortars."
+          },
+          "value": {
+           "type": "number",
+           "description": "A slider's value, in its range and steps."
+          },
+          "enabled": {
+           "type": "boolean",
+           "description": "A checkbox, as the panel shows it."
+          }
+         },
+         "required": [
+          "setting"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "additionalProperties": false
+     },
+     "commitmentMode": {
+      "type": "boolean",
+      "description": "true for commitment mode (one save, kept as you play), false to save and reload any time."
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "get_setup's revision; refused if the setup changed since."
+     }
+    },
+    "required": [
+     "storyteller",
+     "difficulty",
+     "commitmentMode",
+     "expectedRevision"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "generate-world",
+   "group": "gameSetup",
+   "name": "generate_world",
+   "description": "Set the world screen's options and generate the world (an operation; see get_operation), ending at the starting site screen. Options left out keep their values. Other requests wait while it generates. A requestId retry returns the original operation.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup/world",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "seed",
+    "coverage",
+    "rainfall",
+    "temperature",
+    "population",
+    "landmarkDensity",
+    "pollution",
+    "expectedRevision",
+    "requestId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "seed": {
+      "type": "string",
+      "description": "World seed."
+     },
+     "coverage": {
+      "type": "integer",
+      "enum": [
+       30,
+       50,
+       100
+      ],
+      "description": "Percent of the planet to generate."
+     },
+     "rainfall": {
+      "type": "string",
+      "description": "Overall rainfall, as get_setup lists the options, such as Normal."
+     },
+     "temperature": {
+      "type": "string",
+      "description": "Overall temperature, as get_setup lists the options, such as Normal."
+     },
+     "population": {
+      "type": "string",
+      "description": "Overall population, as get_setup lists the options, such as Normal."
+     },
+     "landmarkDensity": {
+      "type": "string",
+      "description": "Landmark density (Odyssey), as get_setup lists the options."
+     },
+     "pollution": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Percent of the world polluted (Biotech)."
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "get_setup's revision; refused if the setup changed since."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     }
+    },
+    "required": [
+     "expectedRevision"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "choose-starting-site",
+   "group": "gameSetup",
+   "name": "choose_starting_site",
+   "description": "Choose the starting tile, and optionally map size and season, then go on (an operation; see get_operation). The game's checks apply; settling near another faction makes the game ask (awaitingConfirmation), for the player or, with unattended setup, answer_confirmation. A requestId retry returns the original operation.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup/site",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "tileId",
+    "mapSize",
+    "startingSeason",
+    "expectedRevision",
+    "requestId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "tileId": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Surface tile id, as find_starting_sites gives it."
+     },
+     "mapSize": {
+      "type": "integer",
+      "enum": [
+       200,
+       225,
+       250,
+       275,
+       300,
+       325
+      ],
+      "description": "Map size in cells along each side. Defaults to the screen's choice."
+     },
+     "startingSeason": {
+      "type": "string",
+      "description": "Starting season: Spring, Summer, Fall, Winter, or Undefined for the game's choice."
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "get_setup's revision; refused if the setup changed since."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     }
+    },
+    "required": [
+     "tileId",
+     "expectedRevision"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-setup-ideoligion",
+   "group": "gameSetup",
+   "name": "set_setup_ideoligion",
+   "description": "Choose the ideoligion (Ideology). classic and preset (with an optional structure meme) go on to the next screen; saved loads a file (an operation, since the game may ask about its version or mods); customFixed and customFluid create one from structure and memes under the meme dialogs' rules (one structure; 1 to 4 memes, exactly 1 if fluid; none excluding another), for edit_setup_ideoligion to change.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup/ideoligion",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "mode",
+    "preset",
+    "structure",
+    "memes",
+    "file",
+    "expectedRevision",
+    "requestId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "mode": {
+      "type": "string",
+      "enum": [
+       "classic",
+       "preset",
+       "saved",
+       "customFixed",
+       "customFluid"
+      ],
+      "description": "classic plays without ideoligion mechanics; preset starts from a preset; saved loads a saved ideoligion; customFixed and customFluid create one from structure and memes."
+     },
+     "preset": {
+      "type": "string",
+      "description": "With mode preset: the IdeoPresetDef name, as get_setup lists them."
+     },
+     "structure": {
+      "type": "string",
+      "description": "With mode preset: a structure MemeDef name, as get_setup lists them; defaults to the preset's own, or a random one. With a custom mode: the structure meme, required."
+     },
+     "memes": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 50,
+      "description": "With a custom mode: the normal MemeDef names, 1 to 4 (exactly 1 for customFluid)."
+     },
+     "file": {
+      "type": "string",
+      "description": "With mode saved: the saved ideoligion's file name, as get_setup lists them."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "get_setup's revision; refused if the setup changed since."
+     }
+    },
+    "required": [
+     "mode",
+     "expectedRevision"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "edit-setup-ideoligion",
+   "group": "gameSetup",
+   "name": "edit_setup_ideoligion",
+   "description": "Edit the custom ideoligion with the screen's rules. Parts apply in order, each applied, alreadySatisfied, or rejected with the game's reason: randomize; structure and memes (precepts, styles, and description then regenerate, so give memes first; a rejection stops the rest); culture; styles; precepts (add an option an Add button offers, or by id replaceWith, regenerate, rename, or remove, as its box allows; new ids carry through the request); names. done runs the screen's Next. Refused while a dialog is open. With no ideoligion yet, structure and memes create one.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup/ideoligion/edit",
+   "queryKeys": [],
+   "bodyKeys": [
+    "randomize",
+    "structure",
+    "memes",
+    "culture",
+    "styles",
+    "precepts",
+    "name",
+    "adjective",
+    "memberName",
+    "done",
+    "expectedRevision"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "randomize": {
+      "type": "string",
+      "enum": [
+       "all",
+       "precepts"
+      ],
+      "description": "Randomize all, or only the precepts, as the screen's buttons do; applied first."
+     },
+     "structure": {
+      "type": "string",
+      "description": "The structure MemeDef name."
+     },
+     "memes": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 50,
+      "description": "The normal MemeDef names, replacing the current ones: 1 to 4, or exactly 1 on a new fluid ideoligion."
+     },
+     "culture": {
+      "type": "string",
+      "description": "CultureDef name, as get_setup lists them."
+     },
+     "styles": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 50,
+      "description": "Up to three StyleCategoryDef names, the most dominant first, as get_setup lists them."
+     },
+     "precepts": {
+      "type": "array",
+      "maxItems": 40,
+      "description": "Precept edits, in order. Each does one thing.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "add": {
+         "type": "object",
+         "description": "Add an option an Add button offers, as get_setup with include preceptOptions lists it.",
+         "properties": {
+          "precept": {
+           "type": "string",
+           "description": "PreceptDef name."
+          },
+          "pattern": {
+           "type": "string",
+           "description": "RitualPatternDef name, for a ritual listed with one."
+          },
+          "thing": {
+           "type": "string",
+           "description": "ThingDef name, for a building, apparel, or other thing choice."
+          },
+          "weapons": {
+           "type": "string",
+           "description": "WeaponClassPairDef name, for noble and despised weapons."
+          },
+          "xenotype": {
+           "type": "string",
+           "description": "XenotypeDef name, for a preferred xenotype."
+          }
+         },
+         "required": [
+          "precept"
+         ],
+         "additionalProperties": false
+        },
+        "id": {
+         "type": "integer",
+         "description": "An existing precept's id, from get_setup."
+        },
+        "replaceWith": {
+         "type": "string",
+         "description": "With id: another PreceptDef for the precept's issue, from its replaceWith."
+        },
+        "regenerate": {
+         "type": "boolean",
+         "description": "With id: regenerate it, where its box offers that."
+        },
+        "rename": {
+         "type": "string",
+         "description": "With id: a new name, up to 32 letters, digits, spaces, apostrophes, and hyphens."
+        },
+        "remove": {
+         "type": "boolean",
+         "description": "With id: remove it, where its box offers that."
+        }
+       },
+       "additionalProperties": false
+      }
+     },
+     "name": {
+      "type": "string",
+      "description": "The ideoligion's name, up to 40 letters, digits, spaces, apostrophes, and hyphens."
+     },
+     "adjective": {
+      "type": "string",
+      "description": "Its adjective, likewise."
+     },
+     "memberName": {
+      "type": "string",
+      "description": "What a member is called, likewise."
+     },
+     "done": {
+      "type": "boolean",
+      "description": "After the edits, go on to the next screen, as Next does."
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "get_setup's revision; refused if the setup changed since."
+     }
+    },
+    "required": [
+     "expectedRevision"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "set-starting-pawns",
+   "group": "gameSetup",
+   "name": "set_starting_pawns",
+   "description": "Arrange, reroll, and rename starting colonists (an operation; see get_operation), in order: order (as dragging does; the first startingCount start), preferences (age and xenotype with Biotech, rerolling the slot), rerolls (Randomize until a colonist meets its criteria or maxAttempts runs out), then names. Slots refer to the new order. The result says what matched and what is missing, with the roster. Stops if anyone else changes the setup. A requestId retry returns the original operation.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup/pawns",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "order",
+    "preferences",
+    "rerolls",
+    "names",
+    "expectedRevision",
+    "requestId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "order": {
+      "type": "array",
+      "items": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "maxItems": 50,
+      "description": "Every slot, once, in the new order, as get_setup's roster numbers them."
+     },
+     "preferences": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Generation preferences per slot (Biotech). Changing one rerolls the colonist, except xenotype anyNonArchite.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "slot": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 50,
+         "description": "Colonist slot, in the order after order."
+        },
+        "stage": {
+         "type": "string",
+         "enum": [
+          "Adult",
+          "Child",
+          "Baby"
+         ],
+         "description": "Age stage."
+        },
+        "xenotype": {
+         "type": "string",
+         "description": "XenotypeDef name, or anyNonArchite."
+        }
+       },
+       "required": [
+        "slot"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "rerolls": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Colonists to reroll until they meet the criteria, in order.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "slot": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 50,
+         "description": "Colonist slot, 0 first, as get_setup's roster shows it."
+        },
+        "skills": {
+         "type": "array",
+         "maxItems": 12,
+         "description": "Minimum skills.",
+         "items": {
+          "type": "object",
+          "properties": {
+           "skill": {
+            "type": "string",
+            "description": "SkillDef name, such as Shooting, Melee, Construction, Mining, Cooking, Plants, Animals, Crafting, Artistic, Medicine, Social, or Intellectual."
+           },
+           "min": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20,
+            "description": "Lowest level."
+           },
+           "passion": {
+            "type": "string",
+            "enum": [
+             "None",
+             "Minor",
+             "Major"
+            ],
+            "description": "Least passion. Defaults to none."
+           }
+          },
+          "required": [
+           "skill",
+           "min"
+          ],
+          "additionalProperties": false
+         }
+        },
+        "traits": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "maxItems": 50,
+         "description": "TraitDef names the colonist must have, such as Industriousness or Tough."
+        },
+        "excludeTraits": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "maxItems": 50,
+         "description": "TraitDef names the colonist must not have, such as Pyromaniac."
+        },
+        "canDo": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "maxItems": 50,
+         "description": "WorkTypeDef names the colonist must be able to do, such as Doctor, Hunting, or Firefighter."
+        },
+        "xenotypes": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "maxItems": 50,
+         "description": "XenotypeDef names the colonist may be (Biotech), such as Baseliner or Hussar."
+        },
+        "minAge": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 200,
+         "description": "Youngest biological age."
+        },
+        "maxAge": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 200,
+         "description": "Oldest biological age."
+        },
+        "maxAttempts": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 500,
+         "description": "Most rerolls for this slot. Defaults to 100."
+        }
+       },
+       "required": [
+        "slot"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "names": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Names to give colonists, after any rerolls.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "slot": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 50,
+         "description": "Colonist slot, 0 first."
+        },
+        "first": {
+         "type": "string",
+         "description": "First name."
+        },
+        "nick": {
+         "type": "string",
+         "description": "Nickname, shown in game. Defaults to the first name."
+        },
+        "last": {
+         "type": "string",
+         "description": "Last name."
+        }
+       },
+       "required": [
+        "slot",
+        "first",
+        "last"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "get_setup's revision; refused if the setup changed since."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     }
+    },
+    "required": [
+     "expectedRevision"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "start-game",
+   "group": "gameSetup",
+   "name": "start_game",
+   "description": "Start the colony from the last setup screen (an operation; see get_operation); the result has the new loadId. The player approves this exact setup in game first (awaitingConfirmation) unless unattended setup is on, and a change while asking withdraws it. The game also asks if no colonist can do a required job. A requestId retry returns the original operation.",
+   "method": "POST",
+   "pathTemplate": "/v1/setup/start",
+   "queryKeys": [
+    "waitSeconds"
+   ],
+   "bodyKeys": [
+    "expectedRevision",
+    "requestId"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "get_setup's revision; refused if the setup changed since."
+     },
+     "requestId": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional id for safe retries."
+     },
+     "waitSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Seconds to wait for it to finish before replying."
+     }
+    },
+    "required": [
+     "expectedRevision"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  },
+  {
+   "handlerId": "answer-confirmation",
+   "group": "gameSetup",
+   "name": "answer_confirmation",
+   "description": "Answer the game's question during an operation, by confirmationId from get_operation, such as settling near a faction. Only with unattended setup on; otherwise the player answers in game. Refused once the question is stale.",
+   "method": "POST",
+   "pathTemplate": "/v1/operations/{operationId}/answer",
+   "queryKeys": [],
+   "bodyKeys": [
+    "confirmationId",
+    "accept"
+   ],
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "operationId": {
+      "type": "string",
+      "description": "The operation waiting for an answer."
+     },
+     "confirmationId": {
+      "type": "string",
+      "description": "The confirmationId get_operation shows for the question."
+     },
+     "accept": {
+      "type": "boolean",
+      "description": "true to go ahead, as the game's confirm button; false to go back."
+     }
+    },
+    "required": [
+     "operationId",
+     "confirmationId",
+     "accept"
+    ],
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "exposeAsMcp": true
+  }
+ ]
+}

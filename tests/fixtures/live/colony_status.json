@@ -1,0 +1,98 @@
+{
+ "schemaVersion": "1",
+ "loadId": "ed3f00ba-1",
+ "tick": 1223,
+ "mapId": "0",
+ "truncated": false,
+ "data": {
+  "map": {
+   "mapId": "0",
+   "label": "Colony",
+   "tile": "54005,0",
+   "biome": {
+    "defName": "TemperateForest",
+    "label": "Temperate forest"
+   },
+   "size": {
+    "x": 250,
+    "z": 250
+   }
+  },
+  "time": {
+   "ticksGame": 1223,
+   "paused": true,
+   "timeSpeed": "Paused",
+   "dayOfSeason": 1,
+   "quadrum": "Aprimay",
+   "hourOfDay": 6,
+   "season": "Spring"
+  },
+  "topRisks": [
+   {
+    "category": "resources",
+    "code": "lowFood",
+    "label": "Stored human-edible nutrition is below the game's Low food threshold of 4 per colonist.",
+    "count": 0,
+    "nextRead": "list_resources"
+   }
+  ],
+  "pawns": {
+   "wildAnimal": 50,
+   "colonist": 3,
+   "colonyAnimal": 1,
+   "core": 3
+  },
+  "resources": {
+   "trackedTypes": 16,
+   "foodTypes": 1,
+   "storedHumanNutrition": 0,
+   "meals": 57,
+   "medicine": 30
+  },
+  "food": {
+   "storedNutrition": {
+    "meals": 0,
+    "raw": 0,
+    "total": 0
+   },
+   "eatenPerDay": 5.6,
+   "daysLeft": 0,
+   "rotsWithin": {
+    "day": 0,
+    "threeDays": 0
+   }
+  },
+  "medical": {
+   "downed": 0,
+   "bleeding": 0,
+   "examples": []
+  },
+  "mood": {
+   "average": 0.56,
+   "lowMood": 0,
+   "examples": []
+  },
+  "threats": {
+   "hostiles": 0,
+   "manhunters": 0,
+   "predators": 4,
+   "fires": 0,
+   "total": 4
+  },
+  "environment": {
+   "weather": "Clear",
+   "outdoorTemperatureC": 10.95157,
+   "fires": 0,
+   "hotRooms": 0,
+   "freezingRooms": 0
+  },
+  "power": {
+   "gridCount": 0,
+   "netPowerW": 0,
+   "storedEnergy": 0,
+   "poweredComponents": 0,
+   "poweredOff": 0
+  },
+  "recentEvents": []
+ }
+}

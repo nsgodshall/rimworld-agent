@@ -1,0 +1,101 @@
+{
+ "schemaVersion": "1",
+ "loadId": "ed3f00ba-1",
+ "tick": 1223,
+ "mapId": "0",
+ "truncated": false,
+ "data": {
+  "zones": [
+   {
+    "id": "area:0:5",
+    "kind": "area",
+    "label": "Area 1",
+    "cellCount": 0,
+    "area": {
+     "assignable": true,
+     "color": {
+      "r": 0.35221076,
+      "g": 0.7470542,
+      "b": 0.56012845,
+      "a": 1
+     }
+    }
+   },
+   {
+    "id": "area:0:1",
+    "kind": "area",
+    "label": "Build roof",
+    "cellCount": 0,
+    "area": {
+     "assignable": false,
+     "color": {
+      "r": 0.9,
+      "g": 0.9,
+      "b": 0.5,
+      "a": 1
+     }
+    }
+   },
+   {
+    "id": "area:0:0",
+    "kind": "area",
+    "label": "Home",
+    "cellCount": 0,
+    "area": {
+     "assignable": true,
+     "color": {
+      "r": 0.3,
+      "g": 0.3,
+      "b": 0.9,
+      "a": 1
+     }
+    }
+   },
+   {
+    "id": "area:0:2",
+    "kind": "area",
+    "label": "No roof",
+    "cellCount": 0,
+    "area": {
+     "assignable": false,
+     "color": {
+      "r": 0.9,
+      "g": 0.5,
+      "b": 0.1,
+      "a": 1
+     }
+    }
+   },
+   {
+    "id": "area:0:4",
+    "kind": "area",
+    "label": "Pollution clear",
+    "cellCount": 0,
+    "area": {
+     "assignable": false,
+     "color": {
+      "r": 0.1,
+      "g": 0.8,
+      "b": 0.1,
+      "a": 1
+     }
+    }
+   },
+   {
+    "id": "area:0:3",
+    "kind": "area",
+    "label": "Snow clear",
+    "cellCount": 0,
+    "area": {
+     "assignable": false,
+     "color": {
+      "r": 0.8,
+      "g": 0.1,
+      "b": 0.1,
+      "a": 1
+     }
+    }
+   }
+  ]
+ }
+}

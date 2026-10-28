@@ -1,0 +1,297 @@
+{
+ "schemaVersion": "1",
+ "loadId": "ed3f00ba-1",
+ "tick": 1223,
+ "mapId": "0",
+ "truncated": false,
+ "data": {
+  "manualPriorities": false,
+  "workTypes": [
+   {
+    "defName": "Research",
+    "label": "Research",
+    "naturalPriority": 100
+   },
+   {
+    "defName": "Cleaning",
+    "label": "Cleaning",
+    "naturalPriority": 200
+   },
+   {
+    "defName": "Hauling",
+    "label": "Hauling",
+    "naturalPriority": 300
+   },
+   {
+    "defName": "Crafting",
+    "label": "Crafting",
+    "naturalPriority": 400
+   },
+   {
+    "defName": "Art",
+    "label": "Art",
+    "naturalPriority": 430
+   },
+   {
+    "defName": "Tailoring",
+    "label": "Tailoring",
+    "naturalPriority": 450
+   },
+   {
+    "defName": "Smithing",
+    "label": "Smithing",
+    "naturalPriority": 470
+   },
+   {
+    "defName": "PlantCutting",
+    "label": "PlantCutting",
+    "naturalPriority": 500
+   },
+   {
+    "defName": "Mining",
+    "label": "Mining",
+    "naturalPriority": 600
+   },
+   {
+    "defName": "Growing",
+    "label": "Growing",
+    "naturalPriority": 700
+   },
+   {
+    "defName": "Construction",
+    "label": "Construction",
+    "naturalPriority": 900
+   },
+   {
+    "defName": "Hunting",
+    "label": "Hunting",
+    "naturalPriority": 950
+   },
+   {
+    "defName": "Cooking",
+    "label": "Cooking",
+    "naturalPriority": 1000
+   },
+   {
+    "defName": "Handling",
+    "label": "Handling",
+    "naturalPriority": 1050
+   },
+   {
+    "defName": "Warden",
+    "label": "Warden",
+    "naturalPriority": 1100
+   },
+   {
+    "defName": "BasicWorker",
+    "label": "BasicWorker",
+    "naturalPriority": 1150
+   },
+   {
+    "defName": "Childcare",
+    "label": "Childcare",
+    "naturalPriority": 1175
+   },
+   {
+    "defName": "PatientBedRest",
+    "label": "PatientBedRest",
+    "naturalPriority": 1200
+   },
+   {
+    "defName": "Doctor",
+    "label": "Doctor",
+    "naturalPriority": 1300
+   },
+   {
+    "defName": "Patient",
+    "label": "Patient",
+    "naturalPriority": 1350
+   },
+   {
+    "defName": "Firefighter",
+    "label": "Firefighter",
+    "naturalPriority": 1400
+   }
+  ],
+  "pawns": [
+   {
+    "id": "Human466",
+    "name": "David Bishop",
+    "role": "colonist",
+    "drafted": false,
+    "downed": false,
+    "currentJob": {
+     "defName": "GotoWander",
+     "label": "GotoWander",
+     "report": "wandering."
+    },
+    "work": [
+     {
+      "defName": "Research",
+      "priority": 3
+     },
+     {
+      "defName": "Cleaning",
+      "priority": 3
+     },
+     {
+      "defName": "Hauling",
+      "priority": 3
+     },
+     {
+      "defName": "Crafting",
+      "priority": 3
+     },
+     {
+      "defName": "Tailoring",
+      "priority": 3
+     },
+     {
+      "defName": "Smithing",
+      "priority": 3
+     },
+     {
+      "defName": "Mining",
+      "priority": 3
+     },
+     {
+      "defName": "Construction",
+      "priority": 3
+     },
+     {
+      "defName": "Hunting",
+      "priority": 3
+     },
+     {
+      "defName": "Cooking",
+      "priority": 3
+     },
+     {
+      "defName": "Handling",
+      "priority": 3
+     },
+     {
+      "defName": "BasicWorker",
+      "priority": 3
+     },
+     {
+      "defName": "Childcare",
+      "priority": 3
+     },
+     {
+      "defName": "PatientBedRest",
+      "priority": 3
+     },
+     {
+      "defName": "Doctor",
+      "priority": 3
+     },
+     {
+      "defName": "Patient",
+      "priority": 3
+     },
+     {
+      "defName": "Firefighter",
+      "priority": 3
+     }
+    ]
+   },
+   {
+    "id": "Human433",
+    "name": "Hikari Miyazaki",
+    "role": "colonist",
+    "drafted": false,
+    "downed": false,
+    "currentJob": {
+     "defName": "GotoWander",
+     "label": "GotoWander",
+     "report": "wandering."
+    },
+    "work": [
+     {
+      "defName": "Cleaning",
+      "priority": 3
+     },
+     {
+      "defName": "Hauling",
+      "priority": 3
+     },
+     {
+      "defName": "Art",
+      "priority": 3
+     },
+     {
+      "defName": "PlantCutting",
+      "priority": 3
+     },
+     {
+      "defName": "Growing",
+      "priority": 3
+     },
+     {
+      "defName": "BasicWorker",
+      "priority": 3
+     },
+     {
+      "defName": "Childcare",
+      "priority": 3
+     },
+     {
+      "defName": "PatientBedRest",
+      "priority": 3
+     },
+     {
+      "defName": "Patient",
+      "priority": 3
+     },
+     {
+      "defName": "Firefighter",
+      "priority": 3
+     }
+    ]
+   },
+   {
+    "id": "Human436",
+    "name": "Parker 'Sparky' Strobeck",
+    "role": "colonist",
+    "drafted": false,
+    "downed": false,
+    "currentJob": {
+     "defName": "Wait_Wander",
+     "label": "Wait_Wander",
+     "report": "wandering."
+    },
+    "work": [
+     {
+      "defName": "Construction",
+      "priority": 3
+     },
+     {
+      "defName": "Warden",
+      "priority": 3
+     },
+     {
+      "defName": "BasicWorker",
+      "priority": 3
+     },
+     {
+      "defName": "Childcare",
+      "priority": 3
+     },
+     {
+      "defName": "PatientBedRest",
+      "priority": 3
+     },
+     {
+      "defName": "Patient",
+      "priority": 3
+     },
+     {
+      "defName": "Firefighter",
+      "priority": 3
+     }
+    ]
+   }
+  ]
+ }
+}

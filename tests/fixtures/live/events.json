@@ -1,0 +1,34 @@
+{
+ "schemaVersion": "1",
+ "loadId": "ed3f00ba-1",
+ "tick": 1223,
+ "mapId": "0",
+ "truncated": false,
+ "data": {
+  "alerts": [
+   {
+    "type": "Alert_NeedColonistBeds",
+    "label": "Need colonist beds",
+    "priority": "High"
+   },
+   {
+    "type": "Alert_NeedJoySources",
+    "label": "Need recreation variety",
+    "priority": "Medium"
+   }
+  ],
+  "letters": [],
+  "history": {
+   "entries": [
+    {
+     "id": "ArchivedDialog_0",
+     "kind": "dialog",
+     "tick": 0,
+     "label": "The three of you awake in your cryptosleep sarcophagi to the sound of sirens and ripping metal. You barely get to the escape pods before the ship is torn apart. Some time later, you land on this unknown rimworld. As pieces of the shredded starship fall around you, you start making plans to survive."
+    }
+   ],
+   "more": false,
+   "cursor": "MgplZDNmMDBiYS0xCjEyMjMKODYzNDIKNTA0MQowCjEyMjM"
+  }
+ }
+}

@@ -1,0 +1,2475 @@
+{
+ "schemaVersion": "1",
+ "loadId": "ed3f00ba-1",
+ "tick": 1223,
+ "mapId": "0",
+ "truncated": false,
+ "data": {
+  "filter": "core",
+  "pawns": [
+   {
+    "ids": {
+     "id": "Human466",
+     "loadId": "Thing_Human466"
+    },
+    "name": "David Bishop",
+    "label": "Bishop",
+    "role": "colonist",
+    "def": {
+     "defName": "Human",
+     "label": "Human"
+    },
+    "kindDef": {
+     "defName": "Colonist",
+     "label": "Colonist"
+    },
+    "faction": {
+     "name": "New Arrivals",
+     "defName": "PlayerColony"
+    },
+    "gender": "Male",
+    "ageBiologicalYears": 38,
+    "downed": false,
+    "dead": false,
+    "drafted": false,
+    "position": {
+     "x": 117,
+     "y": 0,
+     "z": 139
+    },
+    "currentJob": {
+     "defName": "GotoWander",
+     "label": "GotoWander",
+     "report": "wandering."
+    },
+    "ideoligion": {
+     "id": "Ideo_16",
+     "numericId": 16,
+     "name": "Astropolitan"
+    },
+    "needs": [
+     {
+      "defName": "Beauty",
+      "label": "Beauty",
+      "level": 0.471200049,
+      "seeking": false
+     },
+     {
+      "defName": "Comfort",
+      "label": "Comfort",
+      "level": 0.4807999,
+      "seeking": false
+     },
+     {
+      "defName": "DrugDesire",
+      "label": "Chemical",
+      "level": 0.5,
+      "seeking": false
+     },
+     {
+      "defName": "Food",
+      "label": "Food",
+      "level": 0.767999947,
+      "seeking": false
+     },
+     {
+      "defName": "Joy",
+      "label": "Recreation",
+      "level": 0.5026246,
+      "seeking": false
+     },
+     {
+      "defName": "Mood",
+      "label": "Mood",
+      "level": 0.5576,
+      "seeking": false
+     },
+     {
+      "defName": "Outdoors",
+      "label": "Outdoors",
+      "level": 1,
+      "seeking": false
+     },
+     {
+      "defName": "Rest",
+      "label": "Sleep",
+      "level": 0.8846972,
+      "seeking": false
+     },
+     {
+      "defName": "RoomSize",
+      "label": "Room size",
+      "level": 0.93200016,
+      "seeking": false
+     }
+    ],
+    "mood": {
+     "level": 0.5576,
+     "instantLevel": 0.71,
+     "thoughts": [
+      {
+       "defName": "CrashedTogether",
+       "label": "Crashed together",
+       "moodOffset": 0
+      },
+      {
+       "defName": "CrashedTogether",
+       "label": "Crashed together",
+       "moodOffset": 0
+      },
+      {
+       "defName": "NewColonyOptimism",
+       "label": "Initial optimism",
+       "moodOffset": 10
+      }
+     ]
+    },
+    "health": {
+     "dead": false,
+     "downed": false,
+     "pain": 0,
+     "summaryHealthPercent": 1,
+     "hediffs": [
+      {
+       "defName": "Stab",
+       "label": "Stab scar",
+       "severity": 2,
+       "part": "Torso"
+      }
+     ],
+     "capacities": [
+      {
+       "defName": "BloodFiltration",
+       "label": "Blood filtration",
+       "level": 1
+      },
+      {
+       "defName": "BloodPumping",
+       "label": "Blood pumping",
+       "level": 1
+      },
+      {
+       "defName": "Breathing",
+       "label": "Breathing",
+       "level": 1
+      },
+      {
+       "defName": "Consciousness",
+       "label": "Consciousness",
+       "level": 1
+      },
+      {
+       "defName": "Eating",
+       "label": "Eating",
+       "level": 1
+      },
+      {
+       "defName": "Hearing",
+       "label": "Hearing",
+       "level": 1
+      },
+      {
+       "defName": "Manipulation",
+       "label": "Manipulation",
+       "level": 1
+      },
+      {
+       "defName": "Metabolism",
+       "label": "Digestion",
+       "level": 1
+      },
+      {
+       "defName": "Moving",
+       "label": "Moving",
+       "level": 1
+      },
+      {
+       "defName": "Sight",
+       "label": "Sight",
+       "level": 1
+      },
+      {
+       "defName": "Talking",
+       "label": "Talking",
+       "level": 1
+      }
+     ]
+    },
+    "skills": [
+     {
+      "defName": "Animals",
+      "label": "Animals",
+      "level": 8,
+      "passion": "None"
+     },
+     {
+      "defName": "Artistic",
+      "label": "Artistic",
+      "level": 0,
+      "passion": "None"
+     },
+     {
+      "defName": "Construction",
+      "label": "Construction",
+      "level": 10,
+      "passion": "Major"
+     },
+     {
+      "defName": "Cooking",
+      "label": "Cooking",
+      "level": 4,
+      "passion": "None"
+     },
+     {
+      "defName": "Crafting",
+      "label": "Crafting",
+      "level": 10,
+      "passion": "Major"
+     },
+     {
+      "defName": "Intellectual",
+      "label": "Intellectual",
+      "level": 7,
+      "passion": "None"
+     },
+     {
+      "defName": "Medicine",
+      "label": "Medical",
+      "level": 5,
+      "passion": "None"
+     },
+     {
+      "defName": "Melee",
+      "label": "Melee",
+      "level": 4,
+      "passion": "None"
+     },
+     {
+      "defName": "Mining",
+      "label": "Mining",
+      "level": 2,
+      "passion": "None"
+     },
+     {
+      "defName": "Plants",
+      "label": "Plants",
+      "level": 3,
+      "passion": "None"
+     },
+     {
+      "defName": "Shooting",
+      "label": "Shooting",
+      "level": 9,
+      "passion": "Minor"
+     },
+     {
+      "defName": "Social",
+      "label": "Social",
+      "level": 4,
+      "passion": "None"
+     }
+    ],
+    "traits": [
+     {
+      "defName": "Nerves",
+      "label": "Volatile"
+     }
+    ],
+    "work": [
+     {
+      "defName": "Research",
+      "label": "Research",
+      "naturalPriority": 100,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Cleaning",
+      "label": "Cleaning",
+      "naturalPriority": 200,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Hauling",
+      "label": "Hauling",
+      "naturalPriority": 300,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Crafting",
+      "label": "Crafting",
+      "naturalPriority": 400,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Art",
+      "label": "Art",
+      "naturalPriority": 430,
+      "disabled": true,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Tailoring",
+      "label": "Tailoring",
+      "naturalPriority": 450,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Smithing",
+      "label": "Smithing",
+      "naturalPriority": 470,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "PlantCutting",
+      "label": "PlantCutting",
+      "naturalPriority": 500,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Mining",
+      "label": "Mining",
+      "naturalPriority": 600,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Growing",
+      "label": "Growing",
+      "naturalPriority": 700,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Construction",
+      "label": "Construction",
+      "naturalPriority": 900,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Hunting",
+      "label": "Hunting",
+      "naturalPriority": 950,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Cooking",
+      "label": "Cooking",
+      "naturalPriority": 1000,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Handling",
+      "label": "Handling",
+      "naturalPriority": 1050,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Warden",
+      "label": "Warden",
+      "naturalPriority": 1100,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "BasicWorker",
+      "label": "BasicWorker",
+      "naturalPriority": 1150,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Childcare",
+      "label": "Childcare",
+      "naturalPriority": 1175,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "PatientBedRest",
+      "label": "PatientBedRest",
+      "naturalPriority": 1200,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Doctor",
+      "label": "Doctor",
+      "naturalPriority": 1300,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Patient",
+      "label": "Patient",
+      "naturalPriority": 1350,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Firefighter",
+      "label": "Firefighter",
+      "naturalPriority": 1400,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     }
+    ],
+    "schedule": {
+     "hours": [
+      {
+       "hour": 0,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 1,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 2,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 3,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 4,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 5,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 6,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 7,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 8,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 9,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 10,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 11,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 12,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 13,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 14,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 15,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 16,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 17,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 18,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 19,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 20,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 21,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 22,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 23,
+       "assignment": "Sleep"
+      }
+     ]
+    },
+    "assignments": {
+     "schedule": {
+      "hours": [
+       {
+        "hour": 0,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 1,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 2,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 3,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 4,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 5,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 6,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 7,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 8,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 9,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 10,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 11,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 12,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 13,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 14,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 15,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 16,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 17,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 18,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 19,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 20,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 21,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 22,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 23,
+        "assignment": "Sleep"
+       }
+      ]
+     },
+     "policies": {
+      "apparel": {
+       "id": "ApparelPolicy_Anything_1",
+       "numericId": "1",
+       "label": "Anything",
+       "renamableLabel": "Anything"
+      },
+      "food": {
+       "id": "FoodPolicy_Lavish_1",
+       "numericId": "1",
+       "label": "Lavish",
+       "renamableLabel": "Lavish"
+      },
+      "drug": {
+       "id": "DrugPolicy_Social drugs_1",
+       "numericId": "1",
+       "label": "Social drugs",
+       "renamableLabel": "Social drugs"
+      },
+      "reading": {
+       "id": "ReadingPolicy_Anything_1",
+       "numericId": "1",
+       "label": "Anything",
+       "renamableLabel": "Anything"
+      }
+     },
+     "medicalCare": {
+      "value": "Best",
+      "label": "best quality medicine"
+     },
+     "selfTend": false,
+     "hostilityResponse": "Flee",
+     "carryMedicine": {
+      "count": 0,
+      "thing": {
+       "defName": "MedicineIndustrial",
+       "label": "Medicine"
+      }
+     },
+     "prisonerInteraction": {
+      "defName": "MaintainOnly",
+      "label": "Maintain only"
+     }
+    },
+    "gear": {
+     "equipment": [],
+     "apparel": [
+      {
+       "ids": {
+        "id": "Apparel_CollarShirt467",
+        "loadId": "Thing_Apparel_CollarShirt467"
+       },
+       "def": {
+        "defName": "Apparel_CollarShirt",
+        "label": "Button-down shirt"
+       },
+       "label": "Synthread button-down shirt (normal)",
+       "stackCount": 1,
+       "hitPoints": 130,
+       "quality": "Normal"
+      },
+      {
+       "ids": {
+        "id": "Apparel_Pants468",
+        "loadId": "Thing_Apparel_Pants468"
+       },
+       "def": {
+        "defName": "Apparel_Pants",
+        "label": "Pants"
+       },
+       "label": "Synthread pants (normal)",
+       "stackCount": 1,
+       "hitPoints": 130,
+       "quality": "Normal"
+      }
+     ]
+    },
+    "inventory": [],
+    "relations": []
+   },
+   {
+    "ids": {
+     "id": "Human433",
+     "loadId": "Thing_Human433"
+    },
+    "name": "Hikari Miyazaki",
+    "label": "Miyazaki",
+    "role": "colonist",
+    "def": {
+     "defName": "Human",
+     "label": "Human"
+    },
+    "kindDef": {
+     "defName": "Colonist",
+     "label": "Colonist"
+    },
+    "faction": {
+     "name": "New Arrivals",
+     "defName": "PlayerColony"
+    },
+    "gender": "Female",
+    "ageBiologicalYears": 40,
+    "downed": false,
+    "dead": false,
+    "drafted": false,
+    "position": {
+     "x": 117,
+     "y": 0,
+     "z": 142
+    },
+    "currentJob": {
+     "defName": "GotoWander",
+     "label": "GotoWander",
+     "report": "wandering."
+    },
+    "ideoligion": {
+     "id": "Ideo_16",
+     "numericId": 16,
+     "name": "Astropolitan"
+    },
+    "needs": [
+     {
+      "defName": "Beauty",
+      "label": "Beauty",
+      "level": 0.466400057,
+      "seeking": false
+     },
+     {
+      "defName": "Comfort",
+      "label": "Comfort",
+      "level": 0.4783999,
+      "seeking": false
+     },
+     {
+      "defName": "DrugDesire",
+      "label": "Chemical",
+      "level": 0.5,
+      "seeking": false
+     },
+     {
+      "defName": "Food",
+      "label": "Food",
+      "level": 0.763999939,
+      "seeking": false
+     },
+     {
+      "defName": "Joy",
+      "label": "Recreation",
+      "level": 0.493586242,
+      "seeking": false
+     },
+     {
+      "defName": "Mood",
+      "label": "Mood",
+      "level": 0.5648,
+      "seeking": false
+     },
+     {
+      "defName": "Outdoors",
+      "label": "Outdoors",
+      "level": 1,
+      "seeking": false
+     },
+     {
+      "defName": "Rest",
+      "label": "Sleep",
+      "level": 0.9398484,
+      "seeking": false
+     },
+     {
+      "defName": "RoomSize",
+      "label": "Room size",
+      "level": 0.9860002,
+      "seeking": false
+     }
+    ],
+    "mood": {
+     "level": 0.5648,
+     "instantLevel": 0.63,
+     "thoughts": [
+      {
+       "defName": "CrashedTogether",
+       "label": "Crashed together",
+       "moodOffset": 0
+      },
+      {
+       "defName": "CrashedTogether",
+       "label": "Crashed together",
+       "moodOffset": 0
+      },
+      {
+       "defName": "NewColonyOptimism",
+       "label": "Initial optimism",
+       "moodOffset": 10
+      }
+     ]
+    },
+    "health": {
+     "dead": false,
+     "downed": false,
+     "pain": 0,
+     "summaryHealthPercent": 1,
+     "hediffs": [
+      {
+       "defName": "CryptosleepSickness",
+       "label": "Cryptosleep sickness (4h)",
+       "severity": 1
+      }
+     ],
+     "capacities": [
+      {
+       "defName": "BloodFiltration",
+       "label": "Blood filtration",
+       "level": 1
+      },
+      {
+       "defName": "BloodPumping",
+       "label": "Blood pumping",
+       "level": 1
+      },
+      {
+       "defName": "Breathing",
+       "label": "Breathing",
+       "level": 1
+      },
+      {
+       "defName": "Consciousness",
+       "label": "Consciousness",
+       "level": 0.8
+      },
+      {
+       "defName": "Eating",
+       "label": "Eating",
+       "level": 0.8
+      },
+      {
+       "defName": "Hearing",
+       "label": "Hearing",
+       "level": 1
+      },
+      {
+       "defName": "Manipulation",
+       "label": "Manipulation",
+       "level": 0.72
+      },
+      {
+       "defName": "Metabolism",
+       "label": "Digestion",
+       "level": 1
+      },
+      {
+       "defName": "Moving",
+       "label": "Moving",
+       "level": 0.72
+      },
+      {
+       "defName": "Sight",
+       "label": "Sight",
+       "level": 1
+      },
+      {
+       "defName": "Talking",
+       "label": "Talking",
+       "level": 0.8
+      }
+     ]
+    },
+    "skills": [
+     {
+      "defName": "Animals",
+      "label": "Animals",
+      "level": 1,
+      "passion": "None"
+     },
+     {
+      "defName": "Artistic",
+      "label": "Artistic",
+      "level": 9,
+      "passion": "Minor"
+     },
+     {
+      "defName": "Construction",
+      "label": "Construction",
+      "level": 4,
+      "passion": "Minor"
+     },
+     {
+      "defName": "Cooking",
+      "label": "Cooking",
+      "level": 2,
+      "passion": "None"
+     },
+     {
+      "defName": "Crafting",
+      "label": "Crafting",
+      "level": 0,
+      "passion": "None"
+     },
+     {
+      "defName": "Intellectual",
+      "label": "Intellectual",
+      "level": 0,
+      "passion": "None"
+     },
+     {
+      "defName": "Medicine",
+      "label": "Medical",
+      "level": 0,
+      "passion": "None"
+     },
+     {
+      "defName": "Melee",
+      "label": "Melee",
+      "level": 3,
+      "passion": "None"
+     },
+     {
+      "defName": "Mining",
+      "label": "Mining",
+      "level": 2,
+      "passion": "None"
+     },
+     {
+      "defName": "Plants",
+      "label": "Plants",
+      "level": 9,
+      "passion": "Major"
+     },
+     {
+      "defName": "Shooting",
+      "label": "Shooting",
+      "level": 3,
+      "passion": "Minor"
+     },
+     {
+      "defName": "Social",
+      "label": "Social",
+      "level": 2,
+      "passion": "None"
+     }
+    ],
+    "traits": [
+     {
+      "defName": "Greedy",
+      "label": "Greedy"
+     },
+     {
+      "defName": "NightOwl",
+      "label": "Night owl"
+     }
+    ],
+    "work": [
+     {
+      "defName": "Research",
+      "label": "Research",
+      "naturalPriority": 100,
+      "disabled": true,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Cleaning",
+      "label": "Cleaning",
+      "naturalPriority": 200,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Hauling",
+      "label": "Hauling",
+      "naturalPriority": 300,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Crafting",
+      "label": "Crafting",
+      "naturalPriority": 400,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Art",
+      "label": "Art",
+      "naturalPriority": 430,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Tailoring",
+      "label": "Tailoring",
+      "naturalPriority": 450,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Smithing",
+      "label": "Smithing",
+      "naturalPriority": 470,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "PlantCutting",
+      "label": "PlantCutting",
+      "naturalPriority": 500,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Mining",
+      "label": "Mining",
+      "naturalPriority": 600,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Growing",
+      "label": "Growing",
+      "naturalPriority": 700,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Construction",
+      "label": "Construction",
+      "naturalPriority": 900,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Hunting",
+      "label": "Hunting",
+      "naturalPriority": 950,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Cooking",
+      "label": "Cooking",
+      "naturalPriority": 1000,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Handling",
+      "label": "Handling",
+      "naturalPriority": 1050,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Warden",
+      "label": "Warden",
+      "naturalPriority": 1100,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "BasicWorker",
+      "label": "BasicWorker",
+      "naturalPriority": 1150,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Childcare",
+      "label": "Childcare",
+      "naturalPriority": 1175,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "PatientBedRest",
+      "label": "PatientBedRest",
+      "naturalPriority": 1200,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Doctor",
+      "label": "Doctor",
+      "naturalPriority": 1300,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Patient",
+      "label": "Patient",
+      "naturalPriority": 1350,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Firefighter",
+      "label": "Firefighter",
+      "naturalPriority": 1400,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     }
+    ],
+    "schedule": {
+     "hours": [
+      {
+       "hour": 0,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 1,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 2,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 3,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 4,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 5,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 6,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 7,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 8,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 9,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 10,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 11,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 12,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 13,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 14,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 15,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 16,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 17,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 18,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 19,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 20,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 21,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 22,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 23,
+       "assignment": "Sleep"
+      }
+     ]
+    },
+    "assignments": {
+     "schedule": {
+      "hours": [
+       {
+        "hour": 0,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 1,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 2,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 3,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 4,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 5,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 6,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 7,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 8,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 9,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 10,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 11,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 12,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 13,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 14,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 15,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 16,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 17,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 18,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 19,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 20,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 21,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 22,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 23,
+        "assignment": "Sleep"
+       }
+      ]
+     },
+     "policies": {
+      "apparel": {
+       "id": "ApparelPolicy_Anything_1",
+       "numericId": "1",
+       "label": "Anything",
+       "renamableLabel": "Anything"
+      },
+      "food": {
+       "id": "FoodPolicy_Lavish_1",
+       "numericId": "1",
+       "label": "Lavish",
+       "renamableLabel": "Lavish"
+      },
+      "drug": {
+       "id": "DrugPolicy_Social drugs_1",
+       "numericId": "1",
+       "label": "Social drugs",
+       "renamableLabel": "Social drugs"
+      },
+      "reading": {
+       "id": "ReadingPolicy_Anything_1",
+       "numericId": "1",
+       "label": "Anything",
+       "renamableLabel": "Anything"
+      }
+     },
+     "medicalCare": {
+      "value": "Best",
+      "label": "best quality medicine"
+     },
+     "selfTend": false,
+     "hostilityResponse": "Flee",
+     "carryMedicine": {
+      "count": 0,
+      "thing": {
+       "defName": "MedicineIndustrial",
+       "label": "Medicine"
+      }
+     },
+     "prisonerInteraction": {
+      "defName": "MaintainOnly",
+      "label": "Maintain only"
+     }
+    },
+    "gear": {
+     "equipment": [],
+     "apparel": [
+      {
+       "ids": {
+        "id": "Apparel_Pants434",
+        "loadId": "Thing_Apparel_Pants434"
+       },
+       "def": {
+        "defName": "Apparel_Pants",
+        "label": "Pants"
+       },
+       "label": "Synthread pants (normal)",
+       "stackCount": 1,
+       "hitPoints": 130,
+       "quality": "Normal"
+      },
+      {
+       "ids": {
+        "id": "Apparel_BasicShirt435",
+        "loadId": "Thing_Apparel_BasicShirt435"
+       },
+       "def": {
+        "defName": "Apparel_BasicShirt",
+        "label": "T-shirt"
+       },
+       "label": "Synthread T-shirt (normal)",
+       "stackCount": 1,
+       "hitPoints": 130,
+       "quality": "Normal"
+      }
+     ]
+    },
+    "inventory": [],
+    "relations": [
+     {
+      "defName": "Parent",
+      "label": "Father",
+      "otherPawnId": "Human443",
+      "otherPawn": "Kalinda 'Kali' Armaita"
+     },
+     {
+      "defName": "Parent",
+      "label": "Father",
+      "otherPawnId": "Human447",
+      "otherPawn": "Ratten 'Shorty' Miyazaki"
+     },
+     {
+      "defName": "Bond",
+      "label": "Bond",
+      "otherPawnId": "Husky7768",
+      "otherPawn": "Defiler"
+     }
+    ]
+   },
+   {
+    "ids": {
+     "id": "Human436",
+     "loadId": "Thing_Human436"
+    },
+    "name": "Parker 'Sparky' Strobeck",
+    "label": "Sparky",
+    "role": "colonist",
+    "def": {
+     "defName": "Human",
+     "label": "Human"
+    },
+    "kindDef": {
+     "defName": "Colonist",
+     "label": "Colonist"
+    },
+    "faction": {
+     "name": "New Arrivals",
+     "defName": "PlayerColony"
+    },
+    "gender": "Female",
+    "ageBiologicalYears": 39,
+    "downed": false,
+    "dead": false,
+    "drafted": false,
+    "position": {
+     "x": 116,
+     "y": 0,
+     "z": 140
+    },
+    "currentJob": {
+     "defName": "Wait_Wander",
+     "label": "Wait_Wander",
+     "report": "wandering."
+    },
+    "ideoligion": {
+     "id": "Ideo_16",
+     "numericId": 16,
+     "name": "Astropolitan"
+    },
+    "needs": [
+     {
+      "defName": "Beauty",
+      "label": "Beauty",
+      "level": 0.471200049,
+      "seeking": false
+     },
+     {
+      "defName": "Comfort",
+      "label": "Comfort",
+      "level": 0.4807999,
+      "seeking": false
+     },
+     {
+      "defName": "DrugDesire",
+      "label": "Chemical",
+      "level": 0.5,
+      "seeking": false
+     },
+     {
+      "defName": "Food",
+      "label": "Food",
+      "level": 0.752000153,
+      "seeking": false
+     },
+     {
+      "defName": "Joy",
+      "label": "Recreation",
+      "level": 0.5613059,
+      "seeking": false
+     },
+     {
+      "defName": "Mood",
+      "label": "Mood",
+      "level": 0.5576,
+      "seeking": false
+     },
+     {
+      "defName": "Outdoors",
+      "label": "Outdoors",
+      "level": 1,
+      "seeking": false
+     },
+     {
+      "defName": "Rest",
+      "label": "Sleep",
+      "level": 0.9607148,
+      "seeking": false
+     },
+     {
+      "defName": "RoomSize",
+      "label": "Room size",
+      "level": 0.93200016,
+      "seeking": false
+     }
+    ],
+    "mood": {
+     "level": 0.5576,
+     "instantLevel": 0.75,
+     "thoughts": [
+      {
+       "defName": "CrashedTogether",
+       "label": "Crashed together",
+       "moodOffset": 0
+      },
+      {
+       "defName": "CrashedTogether",
+       "label": "Crashed together",
+       "moodOffset": 0
+      },
+      {
+       "defName": "NewColonyOptimism",
+       "label": "Initial optimism",
+       "moodOffset": 10
+      },
+      {
+       "defName": "Nuzzled",
+       "label": "Nuzzled",
+       "moodOffset": 4
+      }
+     ]
+    },
+    "health": {
+     "dead": false,
+     "downed": false,
+     "pain": 0,
+     "summaryHealthPercent": 1,
+     "hediffs": [],
+     "capacities": [
+      {
+       "defName": "BloodFiltration",
+       "label": "Blood filtration",
+       "level": 1
+      },
+      {
+       "defName": "BloodPumping",
+       "label": "Blood pumping",
+       "level": 1
+      },
+      {
+       "defName": "Breathing",
+       "label": "Breathing",
+       "level": 1
+      },
+      {
+       "defName": "Consciousness",
+       "label": "Consciousness",
+       "level": 1
+      },
+      {
+       "defName": "Eating",
+       "label": "Eating",
+       "level": 1
+      },
+      {
+       "defName": "Hearing",
+       "label": "Hearing",
+       "level": 1
+      },
+      {
+       "defName": "Manipulation",
+       "label": "Manipulation",
+       "level": 1
+      },
+      {
+       "defName": "Metabolism",
+       "label": "Digestion",
+       "level": 1
+      },
+      {
+       "defName": "Moving",
+       "label": "Moving",
+       "level": 1
+      },
+      {
+       "defName": "Sight",
+       "label": "Sight",
+       "level": 1
+      },
+      {
+       "defName": "Talking",
+       "label": "Talking",
+       "level": 1
+      }
+     ]
+    },
+    "skills": [
+     {
+      "defName": "Animals",
+      "label": "Animals",
+      "level": 3,
+      "passion": "None"
+     },
+     {
+      "defName": "Artistic",
+      "label": "Artistic",
+      "level": 5,
+      "passion": "Major"
+     },
+     {
+      "defName": "Construction",
+      "label": "Construction",
+      "level": 11,
+      "passion": "Major"
+     },
+     {
+      "defName": "Cooking",
+      "label": "Cooking",
+      "level": 0,
+      "passion": "None"
+     },
+     {
+      "defName": "Crafting",
+      "label": "Crafting",
+      "level": 4,
+      "passion": "None"
+     },
+     {
+      "defName": "Intellectual",
+      "label": "Intellectual",
+      "level": 0,
+      "passion": "None"
+     },
+     {
+      "defName": "Medicine",
+      "label": "Medical",
+      "level": 3,
+      "passion": "None"
+     },
+     {
+      "defName": "Melee",
+      "label": "Melee",
+      "level": 4,
+      "passion": "Major"
+     },
+     {
+      "defName": "Mining",
+      "label": "Mining",
+      "level": 1,
+      "passion": "None"
+     },
+     {
+      "defName": "Plants",
+      "label": "Plants",
+      "level": 0,
+      "passion": "None"
+     },
+     {
+      "defName": "Shooting",
+      "label": "Shooting",
+      "level": 0,
+      "passion": "None"
+     },
+     {
+      "defName": "Social",
+      "label": "Social",
+      "level": 5,
+      "passion": "Major"
+     }
+    ],
+    "traits": [
+     {
+      "defName": "Gourmand",
+      "label": "Gourmand"
+     },
+     {
+      "defName": "Beauty",
+      "label": "Beautiful"
+     }
+    ],
+    "work": [
+     {
+      "defName": "Research",
+      "label": "Research",
+      "naturalPriority": 100,
+      "disabled": true,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Cleaning",
+      "label": "Cleaning",
+      "naturalPriority": 200,
+      "disabled": true,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Hauling",
+      "label": "Hauling",
+      "naturalPriority": 300,
+      "disabled": true,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Crafting",
+      "label": "Crafting",
+      "naturalPriority": 400,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Art",
+      "label": "Art",
+      "naturalPriority": 430,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Tailoring",
+      "label": "Tailoring",
+      "naturalPriority": 450,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Smithing",
+      "label": "Smithing",
+      "naturalPriority": 470,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "PlantCutting",
+      "label": "PlantCutting",
+      "naturalPriority": 500,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Mining",
+      "label": "Mining",
+      "naturalPriority": 600,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Growing",
+      "label": "Growing",
+      "naturalPriority": 700,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Construction",
+      "label": "Construction",
+      "naturalPriority": 900,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Hunting",
+      "label": "Hunting",
+      "naturalPriority": 950,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Cooking",
+      "label": "Cooking",
+      "naturalPriority": 1000,
+      "disabled": true,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Handling",
+      "label": "Handling",
+      "naturalPriority": 1050,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Warden",
+      "label": "Warden",
+      "naturalPriority": 1100,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "BasicWorker",
+      "label": "BasicWorker",
+      "naturalPriority": 1150,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Childcare",
+      "label": "Childcare",
+      "naturalPriority": 1175,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "PatientBedRest",
+      "label": "PatientBedRest",
+      "naturalPriority": 1200,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Doctor",
+      "label": "Doctor",
+      "naturalPriority": 1300,
+      "disabled": false,
+      "active": false,
+      "priority": 0
+     },
+     {
+      "defName": "Patient",
+      "label": "Patient",
+      "naturalPriority": 1350,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     },
+     {
+      "defName": "Firefighter",
+      "label": "Firefighter",
+      "naturalPriority": 1400,
+      "disabled": false,
+      "active": true,
+      "priority": 3
+     }
+    ],
+    "schedule": {
+     "hours": [
+      {
+       "hour": 0,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 1,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 2,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 3,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 4,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 5,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 6,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 7,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 8,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 9,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 10,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 11,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 12,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 13,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 14,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 15,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 16,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 17,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 18,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 19,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 20,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 21,
+       "assignment": "Anything"
+      },
+      {
+       "hour": 22,
+       "assignment": "Sleep"
+      },
+      {
+       "hour": 23,
+       "assignment": "Sleep"
+      }
+     ]
+    },
+    "assignments": {
+     "schedule": {
+      "hours": [
+       {
+        "hour": 0,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 1,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 2,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 3,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 4,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 5,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 6,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 7,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 8,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 9,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 10,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 11,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 12,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 13,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 14,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 15,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 16,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 17,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 18,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 19,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 20,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 21,
+        "assignment": "Anything"
+       },
+       {
+        "hour": 22,
+        "assignment": "Sleep"
+       },
+       {
+        "hour": 23,
+        "assignment": "Sleep"
+       }
+      ]
+     },
+     "policies": {
+      "apparel": {
+       "id": "ApparelPolicy_Anything_1",
+       "numericId": "1",
+       "label": "Anything",
+       "renamableLabel": "Anything"
+      },
+      "food": {
+       "id": "FoodPolicy_Lavish_1",
+       "numericId": "1",
+       "label": "Lavish",
+       "renamableLabel": "Lavish"
+      },
+      "drug": {
+       "id": "DrugPolicy_Social drugs_1",
+       "numericId": "1",
+       "label": "Social drugs",
+       "renamableLabel": "Social drugs"
+      },
+      "reading": {
+       "id": "ReadingPolicy_Anything_1",
+       "numericId": "1",
+       "label": "Anything",
+       "renamableLabel": "Anything"
+      }
+     },
+     "medicalCare": {
+      "value": "Best",
+      "label": "best quality medicine"
+     },
+     "selfTend": false,
+     "hostilityResponse": "Flee",
+     "carryMedicine": {
+      "count": 0,
+      "thing": {
+       "defName": "MedicineIndustrial",
+       "label": "Medicine"
+      }
+     },
+     "prisonerInteraction": {
+      "defName": "MaintainOnly",
+      "label": "Maintain only"
+     }
+    },
+    "gear": {
+     "equipment": [],
+     "apparel": [
+      {
+       "ids": {
+        "id": "Apparel_BasicShirt437",
+        "loadId": "Thing_Apparel_BasicShirt437"
+       },
+       "def": {
+        "defName": "Apparel_BasicShirt",
+        "label": "T-shirt"
+       },
+       "label": "Synthread T-shirt (normal)",
+       "stackCount": 1,
+       "hitPoints": 130,
+       "quality": "Normal"
+      },
+      {
+       "ids": {
+        "id": "Apparel_Pants438",
+        "loadId": "Thing_Apparel_Pants438"
+       },
+       "def": {
+        "defName": "Apparel_Pants",
+        "label": "Pants"
+       },
+       "label": "Synthread pants (normal)",
+       "stackCount": 1,
+       "hitPoints": 130,
+       "quality": "Normal"
+      }
+     ]
+    },
+    "inventory": [],
+    "relations": [
+     {
+      "defName": "ExLover",
+      "label": "Ex-lover",
+      "otherPawnId": "Human442",
+      "otherPawn": "Jose Hernlop"
+     }
+    ]
+   }
+  ],
+  "assignmentOptions": {
+   "assignmentKinds": [
+    "schedule",
+    "policy",
+    "medicalCare",
+    "selfTend",
+    "hostilityResponse",
+    "allowedArea",
+    "carryMedicine",
+    "prisonerInteraction"
+   ],
+   "timeAssignments": [
+    {
+     "defName": "Anything",
+     "label": "Anything"
+    },
+    {
+     "defName": "Joy",
+     "label": "Recreation"
+    },
+    {
+     "defName": "Sleep",
+     "label": "Sleep"
+    },
+    {
+     "defName": "Work",
+     "label": "Work"
+    }
+   ],
+   "policies": {
+    "apparel": [
+     {
+      "id": "ApparelPolicy_Anything_1",
+      "numericId": "1",
+      "label": "Anything",
+      "renamableLabel": "Anything"
+     },
+     {
+      "id": "ApparelPolicy_Worker_2",
+      "numericId": "2",
+      "label": "Worker",
+      "renamableLabel": "Worker"
+     },
+     {
+      "id": "ApparelPolicy_Soldier_3",
+      "numericId": "3",
+      "label": "Soldier",
+      "renamableLabel": "Soldier"
+     },
+     {
+      "id": "ApparelPolicy_Nudist_4",
+      "numericId": "4",
+      "label": "Nudist",
+      "renamableLabel": "Nudist"
+     },
+     {
+      "id": "ApparelPolicy_Slave_5",
+      "numericId": "5",
+      "label": "Slave",
+      "renamableLabel": "Slave"
+     }
+    ],
+    "food": [
+     {
+      "id": "FoodPolicy_Lavish_1",
+      "numericId": "1",
+      "label": "Lavish",
+      "renamableLabel": "Lavish"
+     },
+     {
+      "id": "FoodPolicy_Fine_2",
+      "numericId": "2",
+      "label": "Fine",
+      "renamableLabel": "Fine"
+     },
+     {
+      "id": "FoodPolicy_Simple_3",
+      "numericId": "3",
+      "label": "Simple",
+      "renamableLabel": "Simple"
+     },
+     {
+      "id": "FoodPolicy_Paste_4",
+      "numericId": "4",
+      "label": "Paste",
+      "renamableLabel": "Paste"
+     },
+     {
+      "id": "FoodPolicy_Raw_5",
+      "numericId": "5",
+      "label": "Raw",
+      "renamableLabel": "Raw"
+     },
+     {
+      "id": "FoodPolicy_Nothing_6",
+      "numericId": "6",
+      "label": "Nothing",
+      "renamableLabel": "Nothing"
+     },
+     {
+      "id": "FoodPolicy_Vegetarian_7",
+      "numericId": "7",
+      "label": "Vegetarian",
+      "renamableLabel": "Vegetarian"
+     },
+     {
+      "id": "FoodPolicy_Carnivore_8",
+      "numericId": "8",
+      "label": "Carnivore",
+      "renamableLabel": "Carnivore"
+     },
+     {
+      "id": "FoodPolicy_Cannibal_9",
+      "numericId": "9",
+      "label": "Cannibal",
+      "renamableLabel": "Cannibal"
+     },
+     {
+      "id": "FoodPolicy_Insect meat_10",
+      "numericId": "10",
+      "label": "Insect meat",
+      "renamableLabel": "Insect meat"
+     }
+    ],
+    "drug": [
+     {
+      "id": "DrugPolicy_Social drugs_1",
+      "numericId": "1",
+      "label": "Social drugs",
+      "renamableLabel": "Social drugs"
+     },
+     {
+      "id": "DrugPolicy_No drugs_2",
+      "numericId": "2",
+      "label": "No drugs",
+      "renamableLabel": "No drugs"
+     },
+     {
+      "id": "DrugPolicy_Unrestricted_3",
+      "numericId": "3",
+      "label": "Unrestricted",
+      "renamableLabel": "Unrestricted"
+     },
+     {
+      "id": "DrugPolicy_One drink per day_4",
+      "numericId": "4",
+      "label": "One drink per day",
+      "renamableLabel": "One drink per day"
+     }
+    ],
+    "reading": [
+     {
+      "id": "ReadingPolicy_Anything_1",
+      "numericId": "1",
+      "label": "Anything",
+      "renamableLabel": "Anything"
+     },
+     {
+      "id": "ReadingPolicy_Textbooks_2",
+      "numericId": "2",
+      "label": "Textbooks",
+      "renamableLabel": "Textbooks"
+     },
+     {
+      "id": "ReadingPolicy_Schematics_3",
+      "numericId": "3",
+      "label": "Schematics",
+      "renamableLabel": "Schematics"
+     },
+     {
+      "id": "ReadingPolicy_Novels_4",
+      "numericId": "4",
+      "label": "Novels",
+      "renamableLabel": "Novels"
+     },
+     {
+      "id": "ReadingPolicy_None_5",
+      "numericId": "5",
+      "label": "None",
+      "renamableLabel": "None"
+     }
+    ]
+   },
+   "medicalCare": [
+    {
+     "value": "NoCare",
+     "label": "no medical care"
+    },
+    {
+     "value": "NoMeds",
+     "label": "doctor care, but no medicine"
+    },
+    {
+     "value": "HerbalOrWorse",
+     "label": "herbal medicine or worse"
+    },
+    {
+     "value": "NormalOrWorse",
+     "label": "industrial-tech medicine or worse"
+    },
+    {
+     "value": "Best",
+     "label": "best quality medicine"
+    }
+   ],
+   "hostilityResponse": [
+    "Ignore",
+    "Attack",
+    "Flee"
+   ],
+   "allowedAreas": [
+    {
+     "id": "area:0:5",
+     "numericId": "5",
+     "label": "Area 1"
+    },
+    {
+     "id": "area:0:0",
+     "numericId": "0",
+     "label": "Home"
+    }
+   ],
+   "medicineCarry": {
+    "minCount": 0,
+    "maxCount": 3,
+    "medicineOptions": [
+     {
+      "defName": "MedicineHerbal",
+      "label": "Herbal medicine"
+     },
+     {
+      "defName": "MedicineIndustrial",
+      "label": "Medicine"
+     },
+     {
+      "defName": "MedicineUltratech",
+      "label": "Glitterworld medicine"
+     }
+    ]
+   },
+   "prisonerInteractionModes": [
+    {
+     "defName": "AttemptRecruit",
+     "label": "Recruit"
+    },
+    {
+     "defName": "Convert",
+     "label": "Convert"
+    },
+    {
+     "defName": "Enslave",
+     "label": "Enslave"
+    },
+    {
+     "defName": "Execution",
+     "label": "Execute"
+    },
+    {
+     "defName": "MaintainOnly",
+     "label": "Maintain only"
+    },
+    {
+     "defName": "ReduceResistance",
+     "label": "Reduce resistance only"
+    },
+    {
+     "defName": "ReduceWill",
+     "label": "Reduce will only"
+    },
+    {
+     "defName": "Release",
+     "label": "Release"
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,226 @@
+{
+ "schemaVersion": "1",
+ "loadId": "ed3f00ba-1",
+ "tick": 1223,
+ "mapId": "0",
+ "truncated": false,
+ "data": {
+  "summary": {
+   "trackedTypes": 16,
+   "foodTypes": 1,
+   "storedHumanNutrition": 0,
+   "meals": 57,
+   "medicine": 30
+  },
+  "resources": [
+   {
+    "defName": "Apparel_FlakPants",
+    "label": "Flak pants",
+    "group": "ApparelArmor",
+    "thingCategories": [
+     "ApparelArmor"
+    ],
+    "count": 1,
+    "stacks": 1,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 1,
+    "unroofedStacks": 1
+   },
+   {
+    "defName": "Apparel_FlakVest",
+    "label": "Flak vest",
+    "group": "ApparelArmor",
+    "thingCategories": [
+     "ApparelArmor"
+    ],
+    "count": 1,
+    "stacks": 1,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 1,
+    "unroofedStacks": 1
+   },
+   {
+    "defName": "Apparel_AdvancedHelmet",
+    "label": "Flak helmet",
+    "group": "ArmorHeadgear",
+    "thingCategories": [
+     "ArmorHeadgear"
+    ],
+    "count": 1,
+    "stacks": 1,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 1,
+    "unroofedStacks": 1
+   },
+   {
+    "defName": "ChunkMechanoidSlag",
+    "label": "Mechanoid slag chunk",
+    "group": "Chunks",
+    "thingCategories": [
+     "Chunks"
+    ],
+    "count": 9,
+    "stacks": 9,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 0,
+    "unroofedStacks": 9
+   },
+   {
+    "defName": "ChunkSlagSteel",
+    "label": "Steel slag chunk",
+    "group": "Chunks",
+    "thingCategories": [
+     "Chunks"
+    ],
+    "count": 3,
+    "stacks": 3,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 0,
+    "unroofedStacks": 3
+   },
+   {
+    "defName": "MealSurvivalPack",
+    "label": "Packaged survival meal",
+    "group": "FoodMeals",
+    "thingCategories": [
+     "FoodMeals"
+    ],
+    "count": 57,
+    "stacks": 11,
+    "estimatedNutrition": 51.3,
+    "forbiddenStacks": 11,
+    "unroofedStacks": 11
+   },
+   {
+    "defName": "ComponentIndustrial",
+    "label": "Component",
+    "group": "Manufactured",
+    "thingCategories": [
+     "Manufactured"
+    ],
+    "count": 30,
+    "stacks": 1,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 1,
+    "unroofedStacks": 1
+   },
+   {
+    "defName": "MedicineIndustrial",
+    "label": "Medicine",
+    "group": "Medicine",
+    "thingCategories": [
+     "Medicine"
+    ],
+    "count": 30,
+    "stacks": 2,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 2,
+    "unroofedStacks": 2
+   },
+   {
+    "defName": "Silver",
+    "label": "Silver",
+    "group": "ResourcesRaw",
+    "thingCategories": [
+     "ResourcesRaw"
+    ],
+    "count": 800,
+    "stacks": 2,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 2,
+    "unroofedStacks": 2
+   },
+   {
+    "defName": "Steel",
+    "label": "Steel",
+    "group": "ResourcesRaw",
+    "thingCategories": [
+     "ResourcesRaw"
+    ],
+    "count": 1170,
+    "stacks": 20,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 20,
+    "unroofedStacks": 20
+   },
+   {
+    "defName": "WoodLog",
+    "label": "Wood",
+    "group": "ResourcesRaw",
+    "thingCategories": [
+     "ResourcesRaw"
+    ],
+    "count": 300,
+    "stacks": 6,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 6,
+    "unroofedStacks": 6
+   },
+   {
+    "defName": "ChunkLimestone",
+    "label": "Limestone chunk",
+    "group": "StoneChunks",
+    "thingCategories": [
+     "StoneChunks"
+    ],
+    "count": 607,
+    "stacks": 607,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 0,
+    "unroofedStacks": 607
+   },
+   {
+    "defName": "ChunkMarble",
+    "label": "Marble chunk",
+    "group": "StoneChunks",
+    "thingCategories": [
+     "StoneChunks"
+    ],
+    "count": 670,
+    "stacks": 670,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 0,
+    "unroofedStacks": 670
+   },
+   {
+    "defName": "MeleeWeapon_Knife",
+    "label": "Knife",
+    "group": "WeaponsMelee",
+    "thingCategories": [
+     "WeaponsMelee"
+    ],
+    "count": 1,
+    "stacks": 1,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 1,
+    "unroofedStacks": 1
+   },
+   {
+    "defName": "Gun_BoltActionRifle",
+    "label": "Bolt-action rifle",
+    "group": "WeaponsRanged",
+    "thingCategories": [
+     "WeaponsRanged"
+    ],
+    "count": 1,
+    "stacks": 1,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 1,
+    "unroofedStacks": 1
+   },
+   {
+    "defName": "Gun_Revolver",
+    "label": "Revolver",
+    "group": "WeaponsRanged",
+    "thingCategories": [
+     "WeaponsRanged"
+    ],
+    "count": 1,
+    "stacks": 1,
+    "estimatedNutrition": 0,
+    "forbiddenStacks": 1,
+    "unroofedStacks": 1
+   }
+  ]
+ }
+}
