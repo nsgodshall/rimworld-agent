@@ -34,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--focus-wait", type=float, default=600.0, help="seconds to wait for an unfocused RimWorld")
     run.add_argument("--escalate", choices=["halt", "claude"], default="halt", help="who handles incidents")
     run.add_argument("--max-escalations", type=int, default=5, help="fixing sessions allowed per run")
-    run.add_argument("--budget-usd", type=float, default=3.0, help="spending cap per fixing session")
+    run.add_argument("--budget-usd", type=float, default=3.0, help="cap per fixing session, in estimated API dollars (plan usage on a subscription)")
     run.add_argument("--model", help="model for fixing sessions (Claude Code's default if unset)")
     ev = sub.add_parser("eval", help="load a baseline save, play it with the current code, and score it")
     ev.add_argument("--save", required=True, help="save to start from, e.g. rimagent-start")
@@ -44,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--speed", choices=["Normal", "Fast", "Superfast"])
     ev.add_argument("--escalate", choices=["halt", "claude"], default="halt")
     ev.add_argument("--max-escalations", type=int, default=5)
-    ev.add_argument("--budget-usd", type=float, default=3.0)
+    ev.add_argument("--budget-usd", type=float, default=3.0, help="as for run --budget-usd")
     ev.add_argument("--model")
     ev.add_argument("--focus-wait", type=float, default=600.0)
     sub.add_parser("evals", help="compare every evaluation so far")
@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
             result = run_eval(rim, cfg, run_dir, escalator, REPO)
         s, a = result["score"], result["autonomy"]
         print(f"\nScore {s['total']}/100 over {s['daysPlayed']} of {cfg.days} days ({result['endReason']}): {s['parts']}")
-        print(f"Autonomy: {a['escalations']} escalations ({a['resumed']} resumed, ${a['costUsd']:.2f}), incidents {a['incidents']}")
+        print(f"Autonomy: {a['escalations']} escalations ({a['resumed']} resumed, est. API cost ${a['costUsd']:.2f}), incidents {a['incidents']}")
         print(f"Saved {run_dir / 'eval.json'}")
         return 0 if result["endReason"] == "done" else 1
 

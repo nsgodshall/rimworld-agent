@@ -76,7 +76,9 @@ The score has five parts:
 | Shelter | 10 | beds per colonist |
 | Completion | 15 | share of the planned days actually played |
 
-**Autonomy** is reported separately: incidents, fixing sessions, how many resumed, and their cost.
+**Autonomy** is reported separately: incidents, fixing sessions, how many resumed, and their
+estimated API cost. That estimate is what Claude Code reports (`total_cost_usd`). Signed in with a
+Claude subscription, it isn't billed: sessions count against the plan's usage limits instead.
 Each result records the git commit it ran, in `runs/<timestamp>/eval.json`. The storyteller is
 random, so compare several trials.
 

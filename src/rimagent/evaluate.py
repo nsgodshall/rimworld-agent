@@ -3,7 +3,7 @@
     uv run python -m rimagent eval --save rimagent-start --days 3 --label baseline
     uv run python -m rimagent evals                      # every evaluation so far, oldest first
 
-A score says how the colony did; autonomy (escalations, their cost, halts) says how much help the code
+A score says how the colony did; autonomy (escalations, their estimated API cost, halts) says how much help the code
 needed. RimWorld's storyteller is random, so compare several trials, not single runs.
 """
 
@@ -121,7 +121,8 @@ def score(start: dict[str, Any], end: dict[str, Any], samples: list[dict[str, An
 
 
 def autonomy(journal: Path) -> dict[str, Any]:
-    """What the run needed from outside: incidents by kind, fixing sessions, their cost."""
+    """What the run needed from outside: incidents by kind, fixing sessions, their estimated API cost
+    (Claude Code's total_cost_usd: billing with an API key, plan usage with a subscription)."""
     incidents: dict[str, int] = {}
     escalations = resumed = 0
     cost = 0.0
@@ -191,7 +192,7 @@ def compare(runs: Path) -> str:
             f"{p['survival']:.2f}", f"{p['food']:.2f}", f"{p['mood']:.2f}", f"{p['shelter']:.2f}",
             str(a["escalations"]), f"${a['costUsd']:.2f}", ",".join(r["managers"]),
         ])
-    head = ["run", "label", "code", "days", "end", "score", "surv", "food", "mood", "shelter", "esc", "cost", "managers"]
+    head = ["run", "label", "code", "days", "end", "score", "surv", "food", "mood", "shelter", "esc", "est. API $", "managers"]
     if not rows:
         return "No evaluations yet: uv run python -m rimagent eval --save <name> --days N"
     widths = [max(len(str(x)) for x in col) for col in zip(head, *rows)]

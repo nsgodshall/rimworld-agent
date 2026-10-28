@@ -107,6 +107,7 @@ class ClaudeEscalator:
         diff = self._diff(before, self._sources())
         Path(f"{stem}.diff").write_text(diff)
         details: dict[str, Any] = {
+            # Claude Code's estimate at API prices: billed with an API key, plan usage on a subscription.
             "cost_usd": (output or {}).get("total_cost_usd"),
             "session_id": (output or {}).get("session_id"),
             "diff": f"{stem}.diff",
