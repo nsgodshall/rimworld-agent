@@ -161,3 +161,52 @@ def test_fighters_stand_two_cells_apart_against_grenades(tmp_path):
     cells = [(c["x"], c["z"]) for c in rim.called("order_pawn") if c["order"] == "move"]
     assert len(cells) == 3
     assert all(max(abs(a[0] - b[0]), abs(a[1] - b[1])) >= 2 for i, a in enumerate(cells) for b in cells[i + 1:])
+
+
+def test_between_fights_a_barricade_line_goes_up_on_each_side(tmp_path):
+    rim = colony()
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    (call,) = rim.called("place_blueprint")
+    placed = {(p["x"], p["z"]) for p in call["placements"]}
+    assert {(p["def"], p.get("stuff")) for p in call["placements"]} == {("Barricade", "WoodLog")}
+    # Five cells across each side, four cells out from the stockpile at (50, 50).
+    assert placed == ({(x, 54) for x in range(48, 53)} | {(x, 46) for x in range(48, 53)}
+                      | {(54, z) for z in range(48, 53)} | {(46, z) for z in range(48, 53)})
+
+
+def test_barricades_are_planned_once_and_skip_fields(tmp_path):
+    rim = colony()
+    for x in range(40, 61):
+        rim.cells[(x, 54)] = ":"  # rich soil north of the base: a field's place, not a barricade's
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    DefenseManager().update(ctx_for(rim, tmp_path))  # re-created, as on reload
+    first, second = rim.called("place_blueprint")
+    assert first["placements"] == second["placements"] and len(rim.blueprints) == 20
+    north = {(p["x"], p["z"]) for p in first["placements"] if p["z"] > 53}
+    assert north == {(x, 55) for x in range(48, 53)}
+
+
+def test_built_barricades_are_left_alone_and_give_shooters_cover(tmp_path):
+    rim = colony()
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    for n, p in enumerate(rim.blueprints):
+        rim.cells[(p["x"], p["z"])] = "b"
+        rim.buildings.append({"ids": {"id": f"Barricade{n}"}, "def": {"defName": "Barricade"},
+                              "position": {"x": p["x"], "y": 0, "z": p["z"]}})
+    rim.blueprints = []
+    rim.calls = []
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    assert rim.called("place_blueprint") == []
+
+    rim.threats = [raider("R1", 80, 50)]  # raiders to the east
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    moves = [(c["x"], c["z"]) for c in rim.called("order_pawn") if c["order"] == "move"]
+    assert moves and all(rim.cells[(x + 1, z)] == "b" for x, z in moves)
+
+
+def test_need_defenses_alert_no_longer_halts(tmp_path):
+    rim = colony()
+    rim.alerts = [{"type": "Alert_NeedDefenses", "label": "Need defenses", "priority": "High"}]
+    rt = Runtime(rim, tmp_path / "run", managers=[DefenseManager()], tripwires=[], echo=False)
+    assert rt.run(24) == "done"
+    assert rim.called("place_blueprint")

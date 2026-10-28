@@ -13,6 +13,20 @@ def grid(width: int, height: int, fill: str = ".") -> dict[tuple[int, int], str]
     return {(x, z): fill for x in range(width) for z in range(height)}
 
 
+# check_placement's footprintOffset and interactionCellOffset, facing north, as the live game gives them.
+FOOTPRINTS = {
+    "FueledStove": ({"x": -1, "z": 0, "width": 3, "height": 1}, {"x": 0, "z": -1}),
+    "Campfire": ({"x": 0, "z": 0, "width": 1, "height": 1}, {"x": 0, "z": -1}),
+}
+
+
+def _footprint(def_: str, x: int, z: int) -> list[tuple[int, int]]:
+    if def_ == "Bed":
+        return [(x, z), (x, z - 1)]  # facing south
+    fp, _ = FOOTPRINTS.get(def_, ({"x": 0, "z": 0, "width": 1, "height": 1}, None))
+    return [(x + fp["x"] + i, z + fp["z"] + j) for i in range(fp["width"]) for j in range(fp["height"])]
+
+
 class FakeRim(RimClient):
     def __init__(self, *, map_size=(100, 100), cells=None, colonists=None):
         super().__init__(FakeTransport())
@@ -32,6 +46,9 @@ class FakeRim(RimClient):
         self.alerts: list[dict[str, Any]] = []
         self.beds: list[dict[str, Any]] = []        # built beds, as list_buildings shows them
         self.blueprints: list[dict[str, Any]] = []  # placements not built yet
+        self.buildings: list[dict[str, Any]] = []   # other built buildings, as list_buildings shows them
+        self.bills: list[dict[str, Any]] = []       # as list_production shows them
+        self.unavailable: set[str] = set()          # defs check_placement says aren't available (research)
         self.threats: list[dict[str, Any]] = []     # as list_threats shows them
         self.weapons: list[dict[str, Any]] = []     # as find_things shows them
         self.medicine: list[dict[str, Any]] = []    # as find_things shows them
@@ -119,14 +136,31 @@ class FakeRim(RimClient):
         return Result({"data": {"projects": [{"defName": "A", "finished": True}, {"defName": "B", "finished": False}]}})
 
     def list_buildings(self, *, category=None, **_: Any) -> Result:
-        return Result({"data": {"buildings": self.beds if category == "bed" else []}})
+        beds = [{"ids": {"id": b["id"]}, "def": {"defName": "Bed"}, **b} for b in self.beds]
+        return Result({"data": {"buildings": self.beds if category == "bed" else beds + self.buildings}})
 
-    def check_placement(self, *, def_, x, z, width=1, height=1, **_: Any) -> Result:
-        # As in game: any taken cell is "Space already occupied.", whether a blueprint, a bed or an item.
-        taken = [{"x": cx, "z": cz} for cx in range(x, x + width) for cz in range(z, z + height)
-                 if self.cells.get((cx, cz)) not in (".", ":", "_")]
-        rejected = [{"reason": "Space already occupied.", "count": len(taken)}] if taken else []
-        return Result({"data": {"rejected": rejected}})
+    def list_production(self, **_: Any) -> Result:
+        return Result({"data": {"bills": self.bills}})
+
+    def add_bill_to_workshop(self, workshop_id, *, recipe_def_name, **kw: Any) -> Result:
+        self._record("add_bill_to_workshop", workshop_id=workshop_id, recipe_def_name=recipe_def_name, **kw)
+        self.bills.append({"workshop": workshop_id, "recipe": recipe_def_name})
+        return Result({"changed": True, "data": {}})
+
+    def check_placement(self, *, def_, x, z, width=1, height=1, rotation=None, **_: Any) -> Result:
+        """As in game: positions whose footprint (and interaction cell) is open ground fit; taken cells,
+        whether a blueprint, a bed or an item, are "Space already occupied."."""
+        fp, ic = FOOTPRINTS.get(def_, ({"x": 0, "z": 0, "width": 1, "height": 1}, None))
+        fits, taken = [], []
+        for cz in range(z, z + height):
+            for cx in range(x, x + width):
+                cells = _footprint(def_, cx, cz) + ([(cx + ic["x"], cz + ic["z"])] if ic else [])
+                (fits if all(self.cells.get(c) in (".", ":", "_") for c in cells) else taken).append({"x": cx, "z": cz})
+        rejected = [{"reason": "Space already occupied.", "count": len(taken), "positions": taken[:10]}] if taken else []
+        return Result({"data": {"building": {"def": {"defName": def_}, "rotation": rotation or "north",
+                                             "footprintOffset": fp, "interactionCellOffset": ic},
+                                "available": def_ not in self.unavailable, "fitsCount": len(fits),
+                                "fits": fits[:50], "rejected": rejected}})
 
     def find_things(self, *, category=None, forbidden=None, **_: Any) -> Result:
         things = [{"id": i} for i in self.forbidden_food] if category == "Foods" and forbidden else []
@@ -182,7 +216,7 @@ class FakeRim(RimClient):
         self._record("place_blueprint", placements=placements)
         results = []
         for p in placements:
-            footprint = [(p["x"], p["z"]), (p["x"], p["z"] - 1)] if p["def"] == "Bed" else [(p["x"], p["z"])]
+            footprint = _footprint(p["def"], p["x"], p["z"])
             same = (p["def"], p["x"], p["z"], p.get("rotation"), p.get("stuff"))
             if any((b["def"], b["x"], b["z"], b.get("rotation"), b.get("stuff")) == same for b in self.blueprints):
                 results.append({**p, "outcome": "alreadySatisfied", "state": "blueprint", "reason": None})
