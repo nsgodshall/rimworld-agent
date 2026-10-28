@@ -180,6 +180,16 @@ def test_unclaimed_high_alert_escalates_after_twelve_hours(tmp_path):
     assert record["incident"]["tick"] == 12 * 2500
 
 
+def test_gap_alerts_escalate_despite_medium_priority(tmp_path):
+    rim = FakeRim()
+    rim.alerts = [{"type": "Alert_NeedMealSource", "label": "Need meal source", "priority": "Medium"}]
+    rt, esc = make(tmp_path, rim, chunk_hours=2)
+    rt.run(12)
+    assert esc.calls == ["unhandledAlert:Alert_NeedMealSource"]
+    record = json.loads(next((tmp_path / "run" / "incidents").glob("*.json")).read_text())
+    assert record["incident"]["tick"] == 6 * 2500
+
+
 def test_claimed_alert_and_medium_alert_do_not_escalate(tmp_path):
     class Beds(Manager):
         name = "beds"

@@ -9,13 +9,24 @@ def sample(tick, food=5.0, mood=0.6, colonists=3):
     return {"tick": tick, "colonists": colonists, "downed": 0, "mood": mood, "foodDays": food, "hostiles": 0}
 
 
-def test_score_perfect_run():
-    start = {"tick": 0, "colonists": 3}
-    end = {"tick": 3 * TICKS_PER_DAY, "colonists": 3, "beds": 3}
+def test_score_productive_run():
+    start = {"tick": 0, "colonists": 3, "researchFinished": 10, "buildings": 5}
+    end = {"tick": 3 * TICKS_PER_DAY, "colonists": 3, "beds": 3, "ownFood": 30, "researchFinished": 12, "buildings": 20}
     samples = [sample(t * TICKS_PER_DAY // 4) for t in range(13)]
     s = score(start, end, samples, days=3)
-    assert s["parts"] == {"survival": 1.0, "food": 1.0, "mood": 0.6, "shelter": 1.0, "completion": 1.0}
-    assert s["total"] == 40 + 20 + 9 + 10 + 15 and s["daysPlayed"] == 3
+    assert s["parts"] == {"survival": 1.0, "food": 1.0, "production": 1.0, "mood": 0.6, "shelter": 1.0,
+                          "progress": 1.0, "busy": 1.0, "completion": 1.0}
+    assert s["total"] == 100 - 10 * 0.4 and s["version"] == 2
+
+
+def test_rations_and_idleness_no_longer_score_well():
+    """The run score v1 gave 95.7: alive, fed from starting rations, beds, and everyone idle."""
+    start = {"tick": 0, "colonists": 3, "researchFinished": 10, "buildings": 0}
+    end = {"tick": 2 * TICKS_PER_DAY, "colonists": 3, "beds": 3, "ownFood": 0.5, "researchFinished": 10, "buildings": 3}
+    samples = [{**sample(t * TICKS_PER_DAY // 4, mood=0.72), "idle": 3 if t > 4 else 0} for t in range(9)]
+    s = score(start, end, samples, days=2)
+    assert s["parts"]["production"] < 0.05 and s["parts"]["progress"] == 0.1 and s["parts"]["busy"] == 0.556
+    assert s["total"] < 75
 
 
 def test_score_penalises_deaths_hunger_and_stopping_early():

@@ -31,6 +31,13 @@ UNHANDLED: dict[str, Severity] = {
 
 # How long an unclaimed Critical/High alert may show before it counts as a gap in the code.
 ALERT_HOLD_HOURS = 12
+# Alerts the game rates below High that still mean the colony's code is missing something,
+# with how many game hours each may show (unclaimed, continuously) before it halts.
+GAP_ALERTS = {
+    "Alert_NeedMealSource": 6,       # nowhere to cook: living on rations
+    "Alert_ColonistsIdle": 6,        # nothing for colonists to do
+    "Alert_NeedResearchProject": 6,  # a research bench stands unused
+}
 # The same problem (Incident.key) gets this many fixes before the runtime gives up on it.
 MAX_REPEATS = 2
 # Incidents new code can't fix (a window forcing a pause, the colony gone): these stop for a person.
@@ -114,6 +121,7 @@ class Runtime:
         self.max_escalations = max_escalations
         # Called with each cycle's snapshot after the managers ran (e.g. evaluation metrics).
         self.observers = observers or []
+        self.requested_chunk: float | None = None
         self.escalations = 0
         self.escalated_keys: list[str] = []
 
@@ -136,7 +144,8 @@ class Runtime:
             if self.pending:
                 continue  # an event re-delivered after a fix (say, a raid) is handled before time runs
             hours_left = (target - snap.tick) / TICKS_PER_HOUR
-            if not self.advance(min(self.chunk_hours, hours_left)):
+            chunk = min(self.chunk_hours, hours_left, self.requested_chunk or self.chunk_hours)
+            if not self.advance(chunk):
                 return self._stop("halted", snap.tick)
 
     def cycle(self, snap: Snapshot) -> bool:
@@ -163,6 +172,7 @@ class Runtime:
             self.check_alerts(ctx)
         for observe in self.observers:
             observe(snap)
+        self.requested_chunk = ctx.chunk_hours
         return self.handle_incidents(ctx)
 
     def dispatch(self, ctx: Context, event: Event) -> None:
@@ -185,8 +195,9 @@ class Runtime:
             ))
 
     def check_alerts(self, ctx: Context) -> None:
-        """A Critical/High game alert no manager claims, still showing after ALERT_HOLD_HOURS, is a gap
-        in the code: halt so it gets a manager. Lesser unclaimed alerts are noted once."""
+        """A Critical/High game alert, or one of GAP_ALERTS, that no manager claims and that keeps
+        showing past its hold time is a gap in the code: halt so it gets a manager. Other unclaimed
+        alerts are noted once."""
         snap = ctx.snapshot
         claimed = {a for m in self.managers for a in m.alerts}
         active = {a["type"]: a for a in snap.alerts if a.get("type")}
@@ -196,8 +207,9 @@ class Runtime:
             if kind in claimed or kind in self.alerts_reported:
                 continue
             since = self.alert_since.setdefault(kind, snap.tick)
-            if alert.get("priority") in ("Critical", "High"):
-                if snap.tick - since >= ALERT_HOLD_HOURS * TICKS_PER_HOUR:
+            hold = GAP_ALERTS.get(kind, ALERT_HOLD_HOURS if alert.get("priority") in ("Critical", "High") else None)
+            if hold is not None:
+                if snap.tick - since >= hold * TICKS_PER_HOUR:
                     self.alerts_reported.add(kind)
                     ctx.incidents.append(Incident(
                         "unhandledAlert", f"'{alert.get('label')}' ({kind}) has shown for "

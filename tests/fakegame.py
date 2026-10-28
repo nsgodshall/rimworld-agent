@@ -21,7 +21,8 @@ class FakeRim(RimClient):
         self.map_size = map_size
         self.cells = cells if cells is not None else grid(*map_size)
         self.colonists = colonists if colonists is not None else [
-            {"name": n, "position": {"x": 50, "y": 0, "z": 50}} for n in ("A", "B", "C")
+            {"ids": {"id": f"Human{n}"}, "name": n, "position": {"x": 50, "y": 0, "z": 50},
+             "drafted": False, "downed": False, "gear": {"equipment": [], "apparel": []}} for n in ("A", "B", "C")
         ]
         self.zones: list[dict[str, Any]] = []
         self.forbidden_food: list[str] = []
@@ -31,6 +32,9 @@ class FakeRim(RimClient):
         self.alerts: list[dict[str, Any]] = []
         self.beds: list[dict[str, Any]] = []        # built beds, as list_buildings shows them
         self.blueprints: list[dict[str, Any]] = []  # placements not built yet
+        self.threats: list[dict[str, Any]] = []     # as list_threats shows them
+        self.weapons: list[dict[str, Any]] = []     # as find_things shows them
+        self.resources: list[dict[str, Any]] = []   # as list_resources shows them
         self.calls: list[tuple[str, dict[str, Any]]] = []
 
     def _record(self, tool: str, /, **args: Any) -> None:
@@ -63,11 +67,21 @@ class FakeRim(RimClient):
             "map": {"size": {"x": self.map_size[0], "z": self.map_size[1]}},
             "time": {"ticksGame": self.tick},
             "food": self.food,
-            "threats": {"hostiles": 0},
+            "threats": {"hostiles": sum(t.get("threatKind") != "animal" for t in self.threats),
+                        "total": len(self.threats)},
         }})
 
     def list_pawns(self, **_: Any) -> Result:
         return Result({"data": {"pawns": self.colonists}})
+
+    def list_threats(self, **_: Any) -> Result:
+        return Result({"data": {"summary": {}, "threats": self.threats}})
+
+    def list_resources(self, **_: Any) -> Result:
+        return Result({"data": {"resources": self.resources}})
+
+    def pawn(self, pawn_id: str) -> dict[str, Any]:
+        return next(p for p in self.colonists if p["ids"]["id"] == pawn_id)
 
     def list_zones(self, **_: Any) -> Result:
         return Result({"data": {"zones": self.zones}})
@@ -112,6 +126,8 @@ class FakeRim(RimClient):
 
     def find_things(self, *, category=None, forbidden=None, **_: Any) -> Result:
         things = [{"id": i} for i in self.forbidden_food] if category == "Foods" and forbidden else []
+        if category == "Weapons":
+            things = [w for w in self.weapons if forbidden is None or w["forbidden"] == forbidden]
         return Result({"data": {"things": things}})
 
     # --- changes -----------------------------------------------------------------------------
@@ -136,6 +152,15 @@ class FakeRim(RimClient):
             zone["representativeCell"] = {"x": add[0]["x"], "y": 0, "z": add[0]["z"]}
         self.zones.append(zone)
         return Result({"changed": True, "data": {"zone": zone, "created": True}})
+
+    def set_pawn_drafted(self, pawn_id, *, drafted, **_: Any) -> Result:
+        self._record("set_pawn_drafted", pawn_id=pawn_id, drafted=drafted)
+        self.pawn(pawn_id)["drafted"] = drafted
+        return Result({"changed": True, "data": {}})
+
+    def order_pawn(self, pawn_id, *, order, target_id=None, x=None, z=None, queue=None, **_: Any) -> Result:
+        self._record("order_pawn", pawn_id=pawn_id, order=order, target_id=target_id, x=x, z=z)
+        return Result({"changed": True, "data": {"order": order, "outcome": "jobIssued", "reason": None}})
 
     def set_growing_zone(self, *, zone_id, plant=None, allow_sow=None, allow_cut=None, **_: Any) -> Result:
         self._record("set_growing_zone", zone_id=zone_id, plant=plant)

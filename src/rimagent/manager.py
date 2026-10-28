@@ -25,6 +25,12 @@ class Context:
     snapshot: Snapshot
     journal: Journal
     incidents: list[Incident] = field(default_factory=list)
+    # The shortest time run any manager asked for this cycle (None: the runtime's usual chunk).
+    chunk_hours: float | None = None
+
+    def request_chunk(self, hours: float) -> None:
+        """Ask for the next time run to be at most `hours` long, e.g. 0.1 while a fight is on."""
+        self.chunk_hours = hours if self.chunk_hours is None else min(self.chunk_hours, hours)
 
     @property
     def tick(self) -> int:

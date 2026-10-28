@@ -52,7 +52,16 @@ Rules:
 - **Problems you can't solve in code** go through `ctx.raise_incident(kind, summary, "warn" | "halt", **details)`.
   Exceptions also become incidents, but a clear incident is better.
 - **Claim an alert in `alerts` only if the manager really deals with it.** An unclaimed
-  Critical/High alert that shows for 12 game hours stops the runtime to ask for code.
+  Critical/High alert that shows for 12 game hours stops the runtime to ask for code. So do the
+  lower-priority alerts in `runtime.GAP_ALERTS` (no meal source, idle colonists, an unused research
+  bench) after 6 hours.
+- **Ask for short time runs when needed.** A manager that needs time to pass in small steps (say,
+  during a fight) calls `ctx.request_chunk(hours)` each cycle. `managers/defense.py` asks for 0.1
+  hours (250 ticks) while hostiles are near.
+- **Defense is in `managers/defense.py`.** It arms colonists, drafts and gathers them at the base
+  when hostiles come within 45 cells, undrafts after, and rescues the downed. It handles
+  `hostiles`, `downed`, and threat letters while hostiles are on the map. Improve the tactic
+  there; don't write a second defense manager.
 - **Write a test** in `tests/` using `FakeRim`. Extend `FakeRim` when a manager needs a call it
   doesn't fake yet.
 - **Never guess a reply's shape.** Before code reads a field, or `FakeRim` fakes a call, look at a
