@@ -32,19 +32,22 @@ def test_near_raid_drafts_everyone_gathers_them_and_shortens_time(tmp_path):
     DefenseManager().update(ctx)
     assert {c["pawn_id"] for c in rim.called("set_pawn_drafted")} == {"HumanA", "HumanB", "HumanC"}
     assert all(p["drafted"] for p in rim.colonists)
-    # No cover on this bare map: a tight group at the base. B already stands on its spot, so isn't moved.
-    assert [c["pawn_id"] for c in rim.called("order_pawn") if c["order"] == "move"] == ["HumanA", "HumanC"]
+    # No cover on this bare map: a group at the base, two cells apart.
+    moves = {c["pawn_id"]: (c["x"], c["z"]) for c in rim.called("order_pawn") if c["order"] == "move"}
+    assert moves == {"HumanA": (50, 50), "HumanB": (52, 50), "HumanC": (48, 50)}
     assert ctx.chunk_hours == COMBAT_CHUNK_HOURS
 
 
-def test_far_raid_is_watched_not_fought(tmp_path):
+def test_raiders_anywhere_on_the_map_bring_everyone_home(tmp_path):
+    """The second live raid: raiders 70 cells away, a colonist working out by them, no defense at all."""
     rim = colony()
     rim.threats = [raider("R1", 99, 99), {"kind": "pawn", "threatKind": "animal", "position": {"x": 51, "z": 51}}]
+    rim.colonists[0]["position"] = {"x": 95, "y": 0, "z": 95}
     ctx = ctx_for(rim, tmp_path)
     manager = DefenseManager()
     manager.update(ctx)
-    assert rim.called("set_pawn_drafted") == []
-    # Its raid letter counts as handled: the raiders are on the map, and will be fought when near.
+    assert all(p["drafted"] for p in rim.colonists)
+    assert "HumanA" in [c["pawn_id"] for c in rim.called("order_pawn") if c["order"] == "move"]
     assert manager.on_event(ctx, Event("threatLetter", 1, "run", "Raid")) is True
 
 
@@ -145,3 +148,16 @@ def test_shooters_take_cover_facing_the_raiders_and_melee_waits_behind(tmp_path)
         x, z = moves.get(shooter, (50, 50))
         assert rim.cells[(x + 1, z)] == "t", f"{shooter} at {(x, z)} has no tree between it and the raiders"
     assert moves["HumanC"][0] < 50  # the knife waits west of the base, away from the shooting
+
+
+def test_fighters_stand_two_cells_apart_against_grenades(tmp_path):
+    rim = colony()
+    for z in range(40, 61):
+        rim.cells[(53, z)] = "t"
+    rim.threats = [raider("R1", 80, 50)]
+    for p in rim.colonists:
+        p["position"] = {"x": 10, "y": 0, "z": 10}  # far off, so every fighter gets a move order
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    cells = [(c["x"], c["z"]) for c in rim.called("order_pawn") if c["order"] == "move"]
+    assert len(cells) == 3
+    assert all(max(abs(a[0] - b[0]), abs(a[1] - b[1])) >= 2 for i, a in enumerate(cells) for b in cells[i + 1:])

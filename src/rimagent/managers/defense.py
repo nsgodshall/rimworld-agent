@@ -1,9 +1,12 @@
 """Defense: keep colonists armed, gather and fight when hostiles come near, rescue the downed after.
 
-The tactic: draft everyone who can fight and hold near the base (the stockpile), each shooter on a
+The tactic: as soon as live hostiles are anywhere on the map, draft everyone who can fight and hold
+near the base (the stockpile), each shooter on a
 cell with cover (a tree, rock, wall or building) between them and the raiders, melee fighters a few
 cells behind; undraft once no live hostile is near. In the first raid test, three colonists standing
-together in the open went down in seconds. Chokepoints and retreats are for later.
+together in the open went down in seconds. In the second, the raiders were still far from the base
+when a colonist working across the map walked into them, so the code no longer waits for hostiles
+to come near: colonists come home. Chokepoints and retreats are for later.
 """
 
 from __future__ import annotations
@@ -19,10 +22,11 @@ from rimsdk.mapview import MapView, Rect
 
 from .beds import base_anchor
 
-ENGAGE_RADIUS = 45        # cells from the base within which hostiles are fought
+ENGAGE_RADIUS = None      # hostiles this many cells from the base trigger the defense; None: anywhere
 COMBAT_CHUNK_HOURS = 0.1  # time runs while fighting: 250 ticks, about 4 seconds at Normal speed
 MAX_COMBAT_HOURS = 8      # drafted this long means the fight isn't going the way this code expects
 COVER_SEARCH = 10         # cells around the base searched for covered positions
+SPACING = 2               # least distance between two fighters' cells
 TEND_JOBS = {"TendPatient"}
 BUSY_HELPING = {"Rescue", *TEND_JOBS, "TakeToBedToOperate"}
 SPREAD = [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)]
@@ -79,7 +83,7 @@ class DefenseManager(Manager):
             return
         if self.combat_since is None:
             self.combat_since = ctx.tick
-            ctx.log(self.name, f"{len(threats)} hostiles within {ENGAGE_RADIUS} cells: drafting.",
+            ctx.log(self.name, f"{len(threats)} hostiles on the map: drafting everyone home.",
                     threats=[describe(t) for t in threats][:10])
         elif ctx.tick - self.combat_since >= MAX_COMBAT_HOURS * 2500:
             ctx.raise_incident("longFight", f"Drafted for {MAX_COMBAT_HOURS}h against {len(threats)} hostiles.",
@@ -184,10 +188,17 @@ def positions(view: MapView, anchor: tuple[int, int], enemy: tuple[float, float]
          if ch in ground and view.is_((xz[0] + dx, xz[1] + dz), cover) and (dx or dz)),
         key=lambda xz: (abs(xz[0] - anchor[0]) + abs(xz[1] - anchor[1]), xz),
     )
-    spots = covered[:shooters]
-    spots += [(anchor[0] + sx, anchor[1] + sz) for sx, sz in SPREAD[: shooters - len(spots)]]
+    # Two cells apart at least: raiders throw grenades, and one shouldn't catch two colonists.
+    spots: list[tuple[int, int]] = []
+    for xz in covered:
+        if len(spots) == shooters:
+            break
+        if all(max(abs(xz[0] - s[0]), abs(xz[1] - s[1])) >= SPACING for s in spots):
+            spots.append(xz)
+    spread = [(anchor[0] + SPACING * sx, anchor[1] + SPACING * sz) for sx, sz in SPREAD]
+    spots += [s for s in spread if s not in spots][: shooters - len(spots)]
     back = (anchor[0] - 3 * dx, anchor[1] - 3 * dz)
-    spots += [(back[0] + sx, back[1] + sz) for sx, sz in SPREAD[:melee]]
+    spots += [(back[0] + SPACING * sx, back[1] + SPACING * sz) for sx, sz in SPREAD[:melee]]
     return spots
 
 
