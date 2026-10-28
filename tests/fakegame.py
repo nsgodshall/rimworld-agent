@@ -33,8 +33,8 @@ class FakeRim(RimClient):
         self.blueprints: list[dict[str, Any]] = []  # placements not built yet
         self.calls: list[tuple[str, dict[str, Any]]] = []
 
-    def _record(self, name: str, **args: Any) -> None:
-        self.calls.append((name, {k: v for k, v in args.items() if v is not None}))
+    def _record(self, tool: str, /, **args: Any) -> None:
+        self.calls.append((tool, {k: v for k, v in args.items() if v is not None}))
 
     def called(self, name: str) -> list[dict[str, Any]]:
         return [args for n, args in self.calls if n == name]
@@ -82,6 +82,23 @@ class FakeRim(RimClient):
         return Result({"data": {"origin": {"x": x, "z": z}, "width": width, "height": height, "rows": rows,
                                 "legend": {".": "soil", ":": "rich soil", "_": "ground too poor to farm, or floor",
                                            "x": "blueprint or unfinished building", "b": "other building"}}})
+
+    def get_game_context(self, **_: Any) -> Result:
+        return Result({"data": {"programState": "Playing"}})
+
+    def load_game(self, *, name, save_first=None, overwrite=None, **_: Any) -> Result:
+        self._record("load_game", name=name, save_first=save_first)
+        self.tick = 0
+        return Result({"data": {"operationId": "op1", "state": "succeeded", "done": True}})
+
+    def get_operation(self, operation_id, **_: Any) -> Result:
+        return Result({"data": {"operationId": operation_id, "state": "succeeded", "done": True}})
+
+    def health(self) -> dict[str, Any]:
+        return {"status": "ok"}
+
+    def get_research(self, **_: Any) -> Result:
+        return Result({"data": {"projects": [{"defName": "A", "finished": True}, {"defName": "B", "finished": False}]}})
 
     def list_buildings(self, *, category=None, **_: Any) -> Result:
         return Result({"data": {"buildings": self.beds if category == "bed" else []}})

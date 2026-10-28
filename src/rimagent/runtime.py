@@ -62,7 +62,8 @@ class Tripwire:
 
 def default_tripwires() -> list[Tripwire]:
     return [
-        Tripwire("colonyLost", lambda s: None if s.colonists else "No living colonists on the map."),
+        # Held a while: at a game's start the colonists are still in their drop pods.
+        Tripwire("colonyLost", lambda s: None if s.colonists else "No living colonists on the map.", hold_hours=2),
         Tripwire(
             "foodCritical",
             lambda s: f"{s.food_days:.1f} days of stored food." if s.food_days is not None and s.food_days < 1 else None,
@@ -86,6 +87,7 @@ class Runtime:
         speed: str | None = None,
         watch_alerts: bool = True,
         max_escalations: int = 5,
+        observers: list[Callable[[Snapshot], None]] | None = None,
         echo: bool = True,
     ):
         self.rim = rim
@@ -110,6 +112,8 @@ class Runtime:
         self.alert_since: dict[str, int] = {}
         self.alerts_reported: set[str] = set()
         self.max_escalations = max_escalations
+        # Called with each cycle's snapshot after the managers ran (e.g. evaluation metrics).
+        self.observers = observers or []
         self.escalations = 0
         self.escalated_keys: list[str] = []
 
@@ -157,6 +161,8 @@ class Runtime:
                 ctx.incidents.append(incident)
         if self.watch_alerts:
             self.check_alerts(ctx)
+        for observe in self.observers:
+            observe(snap)
         return self.handle_incidents(ctx)
 
     def dispatch(self, ctx: Context, event: Event) -> None:
@@ -206,7 +212,11 @@ class Runtime:
     def advance(self, hours: float) -> bool:
         """Run game time; queue what happened as events. False when the game can't be run."""
         before = self.rim.get_advance().data["time"]["tick"]
-        run = self.rim.advance(max(hours, 0.01), speed=self.speed)
+        try:
+            run = self.rim.advance(max(hours, 0.01), speed=self.speed)
+        except errors.Conflict as exc:
+            # The game refused to change speed: a window forcing a pause, such as a scenario's intro.
+            run = {"status": "interrupted", "endReason": f"refused: {exc.message}", "tick": before}
         self.journal.write(
             "run", tick=run.get("tick"), status=run.get("status"), endReason=run.get("endReason"),
             hours=run.get("hoursElapsed"), events=len(run.get("events") or []),

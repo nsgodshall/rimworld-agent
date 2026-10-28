@@ -63,6 +63,31 @@ uv run python -m rimagent run --dry-run                      # what managers wou
 uv run python -m rimagent inspect --tools                    # read-only look at the live game
 ```
 
+## Evaluation
+
+`eval` loads a baseline save, plays it with the current code, and scores the colony out of 100.
+The score has five parts:
+
+| Part | Weight | Measures |
+|---|---|---|
+| Survival | 40 | colonists alive at the end |
+| Food | 20 | share of samples after day one with at least 2 days of stored food |
+| Mood | 15 | average mood across samples |
+| Shelter | 10 | beds per colonist |
+| Completion | 15 | share of the planned days actually played |
+
+**Autonomy** is reported separately: incidents, fixing sessions, how many resumed, and their cost.
+Each result records the git commit it ran, in `runs/<timestamp>/eval.json`. The storyteller is
+random, so compare several trials.
+
+```sh
+uv run python -m rimagent eval --save rimagent-start --days 3 --label baseline
+uv run python -m rimagent eval --save rimagent-start --days 3 --escalate claude --label self-fixing
+uv run python -m rimagent evals          # compare every evaluation so far
+```
+
+The colony loaded when an eval starts is saved first as `rimagent-before-eval-<timestamp>`.
+
 ## Commands
 
 ```sh

@@ -99,6 +99,22 @@ def test_stalled_time_halts_as_blocked(tmp_path, monkeypatch):
     assert (tmp_path / "run" / "incidents" / "001-blocked.md").exists()
 
 
+def test_refused_time_control_is_blocked_not_a_crash(tmp_path, monkeypatch):
+    from rimsdk import errors
+
+    monkeypatch.setattr("rimagent.runtime.time.sleep", lambda s: None)
+    rim = FakeRim()
+
+    def refuse(hours, **kw):
+        raise errors.Conflict("RimWorld is not accepting time control right now.", status=409)
+
+    rim.advance = refuse
+    rt = runtime(rim, tmp_path, [])
+    assert rt.run(24) == "halted"
+    report = (tmp_path / "run" / "incidents" / "001-blocked.md").read_text()
+    assert "not accepting time control" in report
+
+
 def test_one_interruption_is_retried(tmp_path, monkeypatch):
     monkeypatch.setattr("rimagent.runtime.time.sleep", lambda s: None)
     rim = FakeRim()
