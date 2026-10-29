@@ -6,10 +6,13 @@ end on their own and harm little, so they are waited out. Breaks that hurt or lo
 (berserk, fire starting, giving up and leaving, a drug binge, ...) are left unhandled, so the
 runtime stops for code that deals with them.
 
-Before a break, the game warns with minor and major break-risk alerts. The cheapest lasting lift
-is a dining table with a chair per colonist: it ends "Ate without table" and gives comfort. So
-there is always one by the stockpile, and the worst thoughts of colonists at risk are logged.
-Extreme break risk is left unclaimed: those breaks can be berserk rages, and need more than this.
+Before a break, the game warns with break-risk alerts: Alert_MinorBreakRisk, and one alert for
+major and extreme, Alert_MajorOrExtremeBreakRisk (there is no Alert_MajorBreakRisk; claiming that
+name left the real alert unclaimed in run 20261029-074313, where Sparky, starving behind a blocked
+door, sat at major risk). The cheapest lasting lift is a dining table with a chair per colonist: it
+ends "Ate without table" and gives comfort. So there is always one by the stockpile, and the worst
+thoughts and emptiest needs of colonists at risk are logged (hunger shows as a need, not a thought).
+Extreme risk (mood under 5%) can mean berserk rages and needs more than this, so it stops the run.
 """
 
 from __future__ import annotations
@@ -32,7 +35,9 @@ WAIT_OUT = frozenset({
     "Tantrum", "BedroomTantrum", "TargetedTantrum",
 })
 
-BREAK_RISK = ("Alert_MinorBreakRisk", "Alert_MajorBreakRisk")
+BREAK_RISK = ("Alert_MinorBreakRisk", "Alert_MajorOrExtremeBreakRisk")
+EXTREME = 0.05  # mood under which a normal pawn is at extreme break risk (traits shift it)
+LOW_NEED = 0.15  # needs at or below this are logged with the thoughts
 TABLE = "Table2x2c"  # footprint offset (0, 0), 2x2: position is its south-west cell
 CHAIR = "DiningChair"
 STUFF = "WoodLog"
@@ -47,7 +52,7 @@ SEATS = (
 class MoodManager(Manager):
     name = "mood"
     priority = 30  # after food, beds and kitchen: the table goes where they left room
-    every_hours = 24
+    every_hours = 6  # break risk is checked within hours; the dining pass is a read when it's done
     handles = ("mentalBreak",)
     alerts = BREAK_RISK
 
@@ -135,15 +140,23 @@ class MoodManager(Manager):
         return result, rejected
 
     def report_risks(self, ctx: Context) -> None:
-        """Log what pulls down the mood of each colonist at break risk, for whoever reads the journal."""
+        """Log what pulls down the mood of each colonist at break risk, for whoever reads the journal;
+        stop the run for one at extreme risk."""
         for alert in ctx.snapshot.alerts:
             if alert.get("type") not in BREAK_RISK:
                 continue
             for culprit in alert.get("culprits") or []:
                 pawn = ctx.rim.get_pawn(culprit["id"]).data or {}
                 mood = pawn.get("mood") or {}
+                level = mood.get("level", 0)
                 worst = sorted((t for t in mood.get("thoughts") or [] if (t.get("moodOffset") or 0) < 0),
                                key=lambda t: t["moodOffset"])[:4]
+                details = {"alert": alert.get("type"), "mood": round(level, 3),
+                           "thoughts": [f"{t.get('label')} {t['moodOffset']:+g}" for t in worst],
+                           "needs": [f"{n.get('label')} {n.get('level', 0):.2f}" for n in pawn.get("needs") or []
+                                     if n.get("defName") != "Mood" and n.get("level", 1) <= LOW_NEED]}
                 ctx.log(self.name, f"{culprit.get('label')} is at {alert.get('label', '').lower()} "
-                        f"(mood {mood.get('level', 0):.2f}).", alert=alert.get("type"),
-                        thoughts=[f"{t.get('label')} {t['moodOffset']:+g}" for t in worst])
+                        f"(mood {level:.2f}).", **details)
+                if level < EXTREME:
+                    ctx.raise_incident("extremeBreakRisk", f"{culprit.get('label')} is at extreme break risk "
+                                       f"(mood {level:.2f}); no code for that.", "halt", pawn=culprit["id"], **details)

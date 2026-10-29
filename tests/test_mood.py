@@ -31,9 +31,39 @@ def test_a_dangerous_break_is_left_unhandled(tmp_path):
     assert MoodManager().on_event(context(rim, tmp_path), break_event("Berserk")) is False
 
 
-def test_break_risk_alerts_are_claimed_but_not_extreme():
-    assert {"Alert_MinorBreakRisk", "Alert_MajorBreakRisk"} <= set(MoodManager.alerts)
-    assert "Alert_ExtremeBreakRisk" not in MoodManager.alerts
+def test_break_risk_alerts_are_claimed_by_their_real_names():
+    # The game's types (run 20261029-074313): major and extreme share one alert.
+    assert {"Alert_MinorBreakRisk", "Alert_MajorOrExtremeBreakRisk"} <= set(MoodManager.alerts)
+
+
+def at_major_risk(rim: FakeRim, level: float) -> None:
+    rim.colonists[0]["mood"] = {"level": level, "thoughts": [  # as get_pawn reports them
+        {"defName": "SleptInBarracks", "label": "Awful barracks", "moodOffset": -7}]}
+    rim.colonists[0]["needs"] = [
+        {"defName": "Food", "label": "Food", "level": 0, "seeking": True},
+        {"defName": "Mood", "label": "Mood", "level": level, "seeking": True},
+        {"defName": "Rest", "label": "Sleep", "level": 0.94, "seeking": False},
+    ]
+    rim.alerts = [{"type": "Alert_MajorOrExtremeBreakRisk", "label": "Major break risk", "priority": "Critical",
+                   "culprits": [{"id": "HumanA", "label": "A"}], "culpritCount": 1}]
+
+
+def test_major_risk_logs_empty_needs_without_stopping(tmp_path):
+    rim = FakeRim()
+    at_major_risk(rim, 0.185)
+    ctx = context(rim, tmp_path)
+    MoodManager().update(ctx)
+    lines = (tmp_path / "j.jsonl").read_text()
+    assert "Food 0.00" in lines and "Awful barracks -7" in lines and "Sleep" not in lines
+    assert ctx.incidents == []
+
+
+def test_extreme_risk_stops_the_run(tmp_path):
+    rim = FakeRim()
+    at_major_risk(rim, 0.03)
+    ctx = context(rim, tmp_path)
+    MoodManager().update(ctx)
+    assert [(i.kind, i.severity) for i in ctx.incidents] == [("extremeBreakRisk", "halt")]
 
 
 def placed(rim: FakeRim, def_: str) -> list[dict]:

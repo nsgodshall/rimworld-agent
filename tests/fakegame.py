@@ -46,6 +46,11 @@ class FakeRim(RimClient):
         ]
         self.zones: list[dict[str, Any]] = []
         self.forbidden_food: list[str] = []
+        self.loose_food: list[dict[str, Any]] = []  # food outside storage, as find_things shows it
+        self.stored_food: list[dict[str, Any]] = [] # food in storage, as find_things shows it
+        self.no_path: set[str] = set()              # pawns that can't reach any food (shut in)
+        self.animals: list[dict[str, Any]] = []     # wild animals, as list_pawns filter=wildAnimals shows them
+        self.hunting: set[str] = set()              # animals designated for hunting
         self.food = {"eatenPerDay": 5.6, "daysLeft": 5.0}
         self.run_script: list[dict[str, Any]] = []  # runs to return, in order; then plain completed runs
         self.history: list[dict[str, Any]] = []
@@ -111,8 +116,22 @@ class FakeRim(RimClient):
                         "total": len(self.threats)},
         }})
 
-    def list_pawns(self, **_: Any) -> Result:
-        return Result({"data": {"pawns": self.colonists}})
+    def list_pawns(self, *, filter=None, **_: Any) -> Result:
+        return Result({"data": {"pawns": self.animals if filter == "wildAnimals" else self.colonists}})
+
+    def list_pawn_actions(self, pawn_id, *, target_id=None, **_: Any) -> Result:
+        """As in game for a food stack (fixtures: list_pawn_actions on MealSurvivalPack7759; shut in, run
+        20261029-074313: a single disabled "Consume packaged survival meal: No path")."""
+        stack = next((t for t in self.loose_food + self.stored_food if t["id"] == target_id), None)
+        if stack is None:
+            raise errors.NotFound("No such thing.", status=404)
+        if pawn_id in self.no_path:
+            options = [{"id": "1", "text": f"Consume {stack['label'].lower()}: No path", "disabled": True}]
+        else:
+            options = [{"id": "1", "text": f"Consume {stack['label'].lower()}"},
+                       {"id": "2", "text": f"Prioritize hauling {stack['label'].lower()} x{stack['count']}"}]
+        return Result({"data": {"pawn": {"ids": {"id": pawn_id}}, "target": {"id": target_id},
+                                "revision": "r1", "options": options}})
 
     def list_threats(self, **_: Any) -> Result:
         return Result({"data": {"summary": {}, "threats": self.threats}})
@@ -138,7 +157,8 @@ class FakeRim(RimClient):
         rows = ["".join(self.cells.get((cx, cz), "?") for cx in range(x, x + width)) for cz in range(z + height - 1, z - 1, -1)]
         return Result({"data": {"origin": {"x": x, "z": z}, "width": width, "height": height, "rows": rows,
                                 "legend": {".": "soil", ":": "rich soil", "_": "ground too poor to farm, or floor",
-                                           "x": "blueprint or unfinished building", "b": "other building", "t": "tree"}}})
+                                           "x": "blueprint or unfinished building", "b": "other building", "t": "tree",
+                                           "#": "wall or impassable building", "^": "natural rock", "?": "unexplored"}}})
 
     def get_game_context(self, **_: Any) -> Result:
         return Result({"data": {"programState": "Playing"}})
@@ -192,8 +212,12 @@ class FakeRim(RimClient):
                                 "available": def_ not in self.unavailable, "fitsCount": len(fits),
                                 "fits": fits[:50], "rejected": rejected}})
 
-    def find_things(self, *, category=None, forbidden=None, **_: Any) -> Result:
+    def find_things(self, *, category=None, forbidden=None, in_storage=None, **_: Any) -> Result:
         things = [{"id": i} for i in self.forbidden_food] if category == "Foods" and forbidden else []
+        if category == "Foods" and in_storage is False:
+            things = [t for t in self.loose_food if forbidden is None or t["forbidden"] == forbidden]
+        if category == "Foods" and in_storage is None and forbidden is False:
+            things = [t for t in self.stored_food + self.loose_food if not t["forbidden"]]
         if category == "Weapons":
             things = [w for w in self.weapons if forbidden is None or w["forbidden"] == forbidden]
         if category == "Medicine":
@@ -211,6 +235,15 @@ class FakeRim(RimClient):
             for g in self.goods:
                 if g["id"] in (thing_ids or []):
                     g["forbidden"] = False
+        return Result({"changed": True, "data": {}})
+
+    def choose_pawn_action(self, pawn_id, *, revision, option, target_id=None, **_: Any) -> Result:
+        self._record("choose_pawn_action", pawn_id=pawn_id, target_id=target_id, revision=revision, option=option)
+        return Result({"changed": True, "data": {}})
+
+    def designate_animal(self, pawn_id, *, action, **_: Any) -> Result:
+        self._record("designate_animal", pawn_id=pawn_id, action=action)
+        (self.hunting.add if action == "hunt" else self.hunting.discard)(pawn_id)
         return Result({"changed": True, "data": {}})
 
     def set_zone(self, *, kind=None, add=None, request_id=None, **_: Any) -> Result:
@@ -240,7 +273,8 @@ class FakeRim(RimClient):
 
     def list_work(self, **_: Any) -> Result:
         pawns = [{"id": p["ids"]["id"], "name": p["name"], "role": "colonist", "drafted": p["drafted"],
-                  "downed": p["downed"], "work": self.work[p["ids"]["id"]]} for p in self.colonists]
+                  "downed": p["downed"], "currentJob": p.get("currentJob"), "work": self.work[p["ids"]["id"]]}
+                 for p in self.colonists]
         return Result({"data": {"manualPriorities": False, "pawns": pawns}})
 
     def set_pawn_work_priority(self, pawn_id, work_type_def_name, *, priority, **_: Any) -> Result:
