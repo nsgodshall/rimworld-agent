@@ -78,7 +78,9 @@ class DefenseManager(Manager):
                 self.armed_at = ctx.tick
             # Barricades wait for the house (or day 4): they take wood the beds and walls need, and early
             # threats are small (docs/reference/threats.md).
-            house_done = ctx.board.get("house_stage", 3) >= 3 or ctx.tick >= 4 * 24 * 2500
+            # Defense runs before the house manager: no note yet means no house yet (trial 11 put barricades
+            # down on day 0 when this defaulted to finished).
+            house_done = ctx.board.get("house_stage", 0) >= 3 or ctx.tick >= 4 * 24 * 2500
             if house_done and (self.fortified_at is None or ctx.tick - self.fortified_at >= FORTIFY_EVERY):
                 self.fortify(ctx)
                 self.fortified_at = ctx.tick

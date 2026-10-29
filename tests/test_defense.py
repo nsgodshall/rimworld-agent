@@ -7,7 +7,8 @@ from .fakegame import FakeRim
 
 
 def ctx_for(rim, tmp_path):
-    return Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False))
+    # The house is finished: barricades wait for it (or day 4).
+    return Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False), board={"house_stage": 3})
 
 
 def raider(name, x, z, **kw):
@@ -209,6 +210,7 @@ def test_need_defenses_alert_no_longer_halts(tmp_path):
     rim = colony()
     rim.alerts = [{"type": "Alert_NeedDefenses", "label": "Need defenses", "priority": "High"}]
     rt = Runtime(rim, tmp_path / "run", managers=[DefenseManager()], tripwires=[], echo=False)
+    rt.board["house_stage"] = 3
     assert rt.run(24) == "done"
     assert rim.called("place_blueprint")
 
@@ -226,3 +228,10 @@ def test_a_predator_hunting_a_colonist_is_fought(tmp_path):
     rim.calls = []
     DefenseManager().update(ctx_for(rim, tmp_path))
     assert not [c for c in rim.called("set_pawn_drafted") if c["drafted"]]  # a wandering wolf is left alone
+
+
+def test_barricades_wait_for_the_house(tmp_path):
+    """Trial 11: defense runs before the house manager, and put barricades down on day 0."""
+    rim = colony()
+    DefenseManager().update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False), board={}))
+    assert rim.called("place_blueprint") == []

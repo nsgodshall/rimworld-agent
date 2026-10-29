@@ -34,7 +34,7 @@ SEARCH = (40, 80)     # squares around the base to look for trees in, the small 
 
 class SuppliesManager(Manager):
     name = "supplies"
-    priority = 15  # after food has made the stockpile
+    priority = 2  # first: what it unforbids (the starting steel) is what the house and research benches choose from
     every_hours = 2
     alerts = (IDLE_ALERT,)
 
