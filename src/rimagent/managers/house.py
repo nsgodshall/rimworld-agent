@@ -71,6 +71,9 @@ def plan(origin: tuple[int, int], bedrooms: int) -> dict:
         "chairs": [(c, cz + 1), (c, cz + 2), (c + 3, cz + 1), (c + 3, cz + 2)],
         "horseshoes": (c + 3, ctop),
         "chess": (c + 5, cz + 2),
+        # Beauty and wealth for impressiveness: every bedroom was "awful" (-2) with a bed and a lamp alone.
+        "end_tables": [(r.x + 2, ctop - 1) for r in rooms],
+        "pots": [(r.x + 2, r.z + 1) for r in rooms] + [(c, cz), (c, ctop)],
     }
 
 
@@ -90,6 +93,7 @@ def stages(p: dict, walls: str, furniture: str, beds: str | None = None) -> list
     comforts = [put("HorseshoesPin", p["horseshoes"], STEEL), put("ChessTable", p["chess"], furniture),
                 put("DiningChair", (cx, cz - 1), furniture, "north"), put("DiningChair", (cx, cz + 1), furniture, "south")]
     comforts += [put("TorchLamp", xz) for xz in p["lamps"]]
+    comforts += [put("EndTable", xz, furniture) for xz in p["end_tables"]] + [put("PlantPot", xz, STEEL) for xz in p["pots"]]
     return [daily, shell, comforts]
 
 

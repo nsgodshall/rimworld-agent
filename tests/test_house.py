@@ -29,7 +29,9 @@ def test_every_bedroom_is_closed_with_its_own_door_and_bed():
         assert len(ring & set(p["doors"])) == 1, f"{room} needs exactly one door"
     for room, (bx, bz) in zip(p["bedrooms"], p["beds"]):
         assert {(bx, bz), (bx, bz - 1)} <= set(room.cells())  # both cells of a south-facing bed
-    furniture = [p["table"], (p["table"][0] + 1, p["table"][1]), *p["chairs"], p["horseshoes"], p["chess"], *p["lamps"]]
+    cx, cz = p["chess"]
+    furniture = [p["table"], (p["table"][0] + 1, p["table"][1]), *p["chairs"], p["horseshoes"], p["chess"], *p["lamps"],
+                 *p["end_tables"], *p["pots"], (cx, cz - 1), (cx, cz + 1)]
     assert len(set(furniture)) == len(furniture) and not set(furniture) & solid
     door_inside = [(x, z + 1) for x, z in p["doors"]]
     assert not set(door_inside) & set(furniture + p["beds"])  # nothing blocks a doorway
