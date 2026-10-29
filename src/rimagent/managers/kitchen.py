@@ -16,7 +16,7 @@ from rimsdk.mapview import Rect
 
 from ..manager import Context, Manager
 from .beds import base_anchor
-from .food import _chars
+from .food import _chars, best_site
 
 COOKERS = ("FueledStove", "ElectricStove", "Campfire")
 # Tried in order: a fueled stove (steel, cooks indoors and faster), else a campfire (wood, no research).
@@ -25,6 +25,7 @@ BUTCHERS = ("ButcherSpot", "TableButcher")
 BUTCHER_BUILD = ("ButcherSpot",)
 ROTATION = "north"
 RECIPE = "CookMealSimple"
+CORPSE_STORE = (3, 3)  # a stockpile beside the butcher spot that takes fresh animal corpses
 BUTCHER_RECIPE = "ButcherCorpseFlesh"  # "Butcher creature"; butchering has no count to target, so Forever
 MEALS_PER_COLONIST = 10  # the bill's target: a few days of meals in store
 WINDOW = 20  # side of the square around the base anchor (check_placement's limit)
@@ -52,6 +53,36 @@ class KitchenManager(Manager):
                 bills = ctx.rim.list_production().data.get("bills") or []
             if not any((b.get("recipe") or {}).get("defName") == recipe for b in bills):
                 self.add_bill(ctx, found[0], recipe, mode)
+            if recipe == BUTCHER_RECIPE:
+                self.ensure_corpse_store(ctx, found[0])
+
+    def ensure_corpse_store(self, ctx: Context, butcher: dict) -> None:
+        """A small stockpile for fresh animal corpses beside the butcher spot. With nowhere that takes
+        corpses, hunters leave kills where they fall: in trial 9, 31 lay across the map, rotted before anyone
+        butchered them, and "Observed rotting corpse" (-6) hit the colonists who passed them."""
+        zone_id = self.memory.get("corpse_zone")
+        if zone_id and any(z.get("id") == zone_id for z in ctx.snapshot.zones_of("stockpile")):
+            return
+        pos = butcher.get("position") or {}
+        if "x" not in pos:
+            return
+        view = ctx.snapshot.view(Rect.around(pos["x"], pos["z"], 13, 13))
+        site = best_site(view, (pos["x"], pos["z"]), *CORPSE_STORE, good=_chars(view, "soil", "ground too poor"), min_fill=1.0)
+        if site is None:
+            ctx.raise_incident("noCorpseStore", f"No room for a corpse stockpile by the butcher spot at {pos}.", "warn")
+            return
+        zone = (ctx.rim.set_zone(kind="stockpile", add=[site.to_api()], request_id=uuid.uuid4().hex).data or {}).get("zone") or {}
+        if not zone.get("id"):
+            return
+        # Fresh animal corpses only: rotten ones can't be butchered, and smell up wherever they're carried.
+        result = ctx.rim.set_storage(zone_id=zone["id"], disallow_all=True, allow=["CorpsesAnimal"],
+                                     disallow=["AllowRotten"]).data or {}
+        self.memory["corpse_zone"] = zone["id"]
+        rejected = [e for e in result.get("entries") or [] if e.get("outcome") == "rejected"]  # ZoneCommandService
+        ctx.log(self.name, f"Made a corpse stockpile {zone['id']} at {site} beside the butcher spot.", rejected=rejected)
+        if rejected:
+            ctx.raise_incident("corpseStoreFilter", f"The corpse stockpile's filter was partly refused.", "warn",
+                               rejected=rejected)
 
     def add_bill(self, ctx: Context, workbench: dict, recipe: str, mode: str) -> None:
         workbench_id = workbench["ids"]["id"]

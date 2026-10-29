@@ -113,3 +113,19 @@ def test_need_meal_source_alert_no_longer_halts(tmp_path):
     rim.alerts = [{"type": "Alert_NeedMealSource", "label": "Need meal source", "priority": "Medium"}]
     rt = Runtime(rim, tmp_path / "run", managers=[KitchenManager()], tripwires=[], echo=False)
     assert rt.run(24) == "done"
+
+
+def test_a_stockpile_for_fresh_animal_corpses_beside_the_butcher_spot(tmp_path):
+    """Trial 9: 31 kills lay where they fell and rotted ("Observed rotting corpse", -6)."""
+    rim = FakeRim()
+    rim.buildings = [{"ids": {"id": "Campfire1"}, "def": {"defName": "Campfire"}, "position": {"x": 50, "y": 0, "z": 50}},
+                     {"ids": {"id": "ButcherSpot8"}, "def": {"defName": "ButcherSpot"}, "position": {"x": 55, "y": 0, "z": 50}}]
+    kitchen = KitchenManager()
+    kitchen.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    (zone,) = [c for c in rim.called("set_zone") if c["kind"] == "stockpile"]
+    (storage,) = rim.called("set_storage")
+    assert storage["disallow_all"] and storage["allow"] == ["CorpsesAnimal"] and storage["disallow"] == ["AllowRotten"]
+    x, z = zone["add"][0]["x"], zone["add"][0]["z"]
+    assert abs(x - 55) <= 6 and abs(z - 50) <= 6
+    kitchen.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    assert len(rim.called("set_storage")) == 1  # made once
