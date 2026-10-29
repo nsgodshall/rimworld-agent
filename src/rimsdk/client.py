@@ -16,6 +16,9 @@ from .transport import HttpTransport, RetryPolicy
 
 # Long-poll length for advance_time / get_advance / get_operation; the bridge caps it at 30s.
 POLL_SECONDS = 30
+# Polls in a row that may find a run paused without progress before advance() gives up on it.
+# A window that forces a pause (the speed stays set) never ends a run: trial 4 sat 7 hours on one.
+STALLED_POLLS = 3
 
 
 @dataclass
@@ -155,15 +158,27 @@ class RimClient(GeneratedTools):
         interrupted (paused, speed changed, game unloaded). `events` lists what happened.
         stop_on=None uses RimMCP's defaults (death, downed, injured, mentalBreak, hostiles, lowFood,
         threatLetter); [] runs to the end no matter what.
+
+        A run the game holds paused without its speed changing (a window that forces a pause) would
+        never end; after STALLED_POLLS such polls it is ended and returned as interrupted with
+        endReason "forcedPause".
         """
         started = self.advance_time(
             hours=hours, speed=speed, stop_on=stop_on, request_id=uuid.uuid4().hex, wait_seconds=POLL_SECONDS
         )
         run = started.data
+        stalled = 0
         while run.get("status") == "running":
             if on_poll:
                 on_poll(run)
-            run = self.get_advance(run_id=run["id"], wait_seconds=POLL_SECONDS).data["run"]
+            last_tick = run.get("tick")
+            polled = self.get_advance(run_id=run["id"], wait_seconds=POLL_SECONDS).data
+            run = polled["run"]
+            held = run.get("status") == "running" and (polled.get("time") or {}).get("paused") and run.get("tick") == last_tick
+            stalled = stalled + 1 if held else 0
+            if stalled >= STALLED_POLLS:
+                ended = self.set_game_speed(speed="Paused").data.get("endedAdvance") or run
+                return {**ended, "status": "interrupted", "endReason": "forcedPause"}
         return run
 
     def wait_operation(self, operation: Result | dict[str, Any] | str, timeout: float = 600.0) -> dict[str, Any]:

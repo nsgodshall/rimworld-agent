@@ -53,6 +53,27 @@ def test_advance_polls_until_the_run_ends(rim, fake):
     assert all("runId=7" in p[1] and "waitSeconds=30" in p[1] for p in polls)
 
 
+def test_a_run_held_paused_by_a_window_is_ended(rim, fake):
+    """Trial 4: the game paused itself mid-run with its speed unchanged, and the run stayed 'running' for 7 hours."""
+    held = {"data": {"time": {"tick": 258200, "speed": "Superfast", "paused": True},
+                     "run": {"id": 129, "status": "running", "tick": 258200}}}
+    ended = {"id": 129, "status": "interrupted", "endReason": "set_game_speed", "tick": 258200, "hoursElapsed": 1.37}
+
+    def handler(method, path, body):
+        if method == "POST":
+            return {"changed": True, "data": {"id": 129, "status": "running", "tick": 258000}}
+        if method == "PUT":
+            return {"changed": True, "data": {"speed": "Paused", "endedAdvance": ended}}
+        return held
+
+    fake.handler = handler
+    run = rim.advance(2)
+    assert (run["status"], run["endReason"], run["tick"]) == ("interrupted", "forcedPause", 258200)
+    polls = [p for p in fake.requests if p[0] == "GET"]
+    assert len(polls) == 4  # one that sees progress stop, then three held polls
+    assert fake.requests[-1][2] == {"speed": "Paused"}
+
+
 def test_wait_operation_stops_at_done_or_question(rim, fake):
     replies = iter([
         {"data": {"operationId": "op1", "state": "running", "done": False}},
