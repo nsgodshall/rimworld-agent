@@ -18,6 +18,7 @@ FOOTPRINTS = {
     "FueledStove": ({"x": -1, "z": 0, "width": 3, "height": 1}, {"x": 0, "z": -1}),
     "Campfire": ({"x": 0, "z": 0, "width": 1, "height": 1}, {"x": 0, "z": -1}),
     "Table2x2c": ({"x": 0, "z": 0, "width": 2, "height": 2}, None),
+    "SimpleResearchBench": ({"x": -1, "z": 0, "width": 3, "height": 2}, {"x": 0, "z": -1}),
 }
 
 
@@ -56,6 +57,11 @@ class FakeRim(RimClient):
         self.goods: list[dict[str, Any]] = []       # find_things without a category: items near the base
         self.resources: list[dict[str, Any]] = []   # as list_resources shows them
         self.medical: dict[str, Any] = {"downed": 0, "bleeding": 0, "examples": []}
+        self.projects: list[dict[str, Any]] = [     # as get_research shows them; "available" is the fake's own
+            {"defName": "A", "label": "A", "baseCost": 300, "finished": True},
+            {"defName": "B", "label": "B", "baseCost": 500, "finished": False},
+        ]
+        self.research_project: str | None = None
         self.calls: list[tuple[str, dict[str, Any]]] = []
 
     def _record(self, tool: str, /, **args: Any) -> None:
@@ -136,8 +142,16 @@ class FakeRim(RimClient):
     def health(self) -> dict[str, Any]:
         return {"status": "ok"}
 
-    def get_research(self, **_: Any) -> Result:
-        return Result({"data": {"projects": [{"defName": "A", "finished": True}, {"defName": "B", "finished": False}]}})
+    def get_research(self, *, available_only=None, **_: Any) -> Result:
+        """As in game: blockers name what stops research; availableOnly leaves out what can't start now."""
+        blockers = []
+        if self.research_project is None:
+            blockers.append({"kind": "noProject", "message": "No research project is chosen."})
+        if not any(b["def"]["defName"] in ("SimpleResearchBench", "HiTechResearchBench") for b in self.buildings):
+            blockers.append({"kind": "missingResearchBench", "message": "There is no research bench."})
+        projects = [p for p in self.projects if not available_only or (p.get("available", True) and not p["finished"])]
+        return Result({"data": {"blockers": blockers,
+                                "projects": [{k: v for k, v in p.items() if k != "available"} for p in projects]}})
 
     def list_buildings(self, *, category=None, **_: Any) -> Result:
         beds = [{"ids": {"id": b["id"]}, "def": {"defName": "Bed"}, **b} for b in self.beds]
@@ -201,6 +215,11 @@ class FakeRim(RimClient):
             zone["representativeCell"] = {"x": add[0]["x"], "y": 0, "z": add[0]["z"]}
         self.zones.append(zone)
         return Result({"changed": True, "data": {"zone": zone, "created": True}})
+
+    def set_research_project(self, *, project_def_name, **_: Any) -> Result:
+        self._record("set_research_project", project_def_name=project_def_name)
+        self.research_project = project_def_name
+        return Result({"changed": True, "data": {}})
 
     def set_pawn_drafted(self, pawn_id, *, drafted, **_: Any) -> Result:
         self._record("set_pawn_drafted", pawn_id=pawn_id, drafted=drafted)
