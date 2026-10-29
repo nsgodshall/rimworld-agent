@@ -44,8 +44,10 @@ def test_planned_once_placed_until_built_then_left_alone(tmp_path):
     house.update(ctx_for(rim, tmp_path, board))
     second = [p for c in rim.called("place_blueprint") for p in c["placements"]][len(first):]
     assert first == second and board["house_beds"] == 3
-    rim.build_blueprints()
-    house.update(ctx_for(rim, tmp_path, board))
+    assert {p["def"] for p in first} == {"Bed", "Table2x2c", "DiningChair"}  # beds come first
+    for _ in range(3):  # each stage built, then the next placed
+        rim.build_blueprints()
+        house.update(ctx_for(rim, tmp_path, board))
     assert house.memory["built"]
     calls = len(rim.called("place_blueprint"))
     house.update(ctx_for(rim, tmp_path, board))
@@ -95,8 +97,12 @@ def test_walls_are_steel_when_wood_is_short(tmp_path):
     rim = colony()
     rim.resources = [{"defName": "WoodLog", "count": 37}, {"defName": "Steel", "count": 1065}]
     FoodManager().update(ctx_for(rim, tmp_path))
-    HouseManager().update(ctx_for(rim, tmp_path))
+    house = HouseManager()
+    house.update(ctx_for(rim, tmp_path))
+    rim.build_blueprints()  # the first stage: beds, table, chairs
+    house.update(ctx_for(rim, tmp_path))
     walls = [p for c in rim.called("place_blueprint") for p in c["placements"] if p["def"] in ("Wall", "Door")]
+    assert walls
     assert {p["stuff"] for p in walls} == {"Steel"}
     assert pick(ctx_for(rim, tmp_path), 10_000) == "Steel"  # nothing has enough: the larger stock
 
@@ -105,11 +111,15 @@ def test_a_house_over_50_placements_goes_in_batches(tmp_path):
     """The live game refuses more than 50 placements per call; a 3-bedroom house is more."""
     rim = colony()
     FoodManager().update(ctx_for(rim, tmp_path))
+    house = HouseManager()
+    house.update(ctx_for(rim, tmp_path))
+    rim.build_blueprints()  # beds, table, chairs
+    rim.calls = []
     ctx = ctx_for(rim, tmp_path)
-    HouseManager().update(ctx)
+    house.update(ctx)
     calls = rim.called("place_blueprint")
-    assert len(calls) > 1 and all(len(c["placements"]) <= 50 for c in calls)
-    assert not ctx.incidents and len(rim.blueprints) == sum(len(c["placements"]) for c in calls)
+    assert len(calls) > 2 and all(len(c["placements"]) <= 50 for c in calls)
+    assert not ctx.incidents and len(rim.blueprints) == len(plan((0, 0), 3)["walls"]) + 4  # the walls and doors
 
 
 def test_no_free_ground_is_a_warning(tmp_path):

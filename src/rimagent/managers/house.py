@@ -19,8 +19,8 @@ door opened onto a fogged ancient wall, and Sparky starved inside):
     ###+######+###+###+#
     ....................     doorstep
 
-Everything is placed at once (beds are usable before the walls close) and placed again each pass until
-built: repeating a placement is alreadySatisfied. The game roofs enclosed rooms itself. Materials come
+It goes up in stages (`stages`): beds, table and chairs; then walls and doors; then recreation and lamps,
+each placed again every pass until built (repeating a placement is alreadySatisfied). The game roofs enclosed rooms itself. Materials come
 from stock (`materials.pick`). The plan is remembered: the map shows walls, not whose they are. The
 house's beds are on the board (`house_beds`), so the beds manager doesn't put any outdoors.
 """
@@ -74,18 +74,24 @@ def plan(origin: tuple[int, int], bedrooms: int) -> dict:
     }
 
 
-def placements(p: dict, walls: str, furniture: str) -> list[dict]:
+def stages(p: dict, walls: str, furniture: str) -> list[list[dict]]:
+    """The house's placements in building order. Builders take blueprints in no particular order, so a
+    stage is placed only once the one before is built: in trial 7, with everything placed at once, the
+    beds waited behind 70 walls and everyone slept on the ground ("Slept on ground", -4) for two nights."""
     def put(def_, xz, stuff=None, rotation="north"):
         return {"def": def_, "x": xz[0], "z": xz[1], "rotation": rotation, **({"stuff": stuff} if stuff else {})}
 
-    out = [put("Wall", xz, walls) for xz in p["walls"]] + [put("Door", xz, walls) for xz in p["doors"]]
-    out += [put("Bed", xz, furniture, "south") for xz in p["beds"]]
     tx, _ = p["table"]
-    out += [put("Table2x2c", p["table"], furniture)]
-    out += [put("DiningChair", xz, furniture, "east" if xz[0] < tx else "west") for xz in p["chairs"]]
-    out += [put("HorseshoesPin", p["horseshoes"], STEEL), put("ChessTable", p["chess"], furniture)]
-    out += [put("TorchLamp", xz) for xz in p["lamps"]]
-    return out
+    daily = [put("Bed", xz, furniture, "south") for xz in p["beds"]] + [put("Table2x2c", p["table"], furniture)]
+    daily += [put("DiningChair", xz, furniture, "east" if xz[0] < tx else "west") for xz in p["chairs"]]
+    shell = [put("Wall", xz, walls) for xz in p["walls"]] + [put("Door", xz, walls) for xz in p["doors"]]
+    comforts = [put("HorseshoesPin", p["horseshoes"], STEEL), put("ChessTable", p["chess"], furniture)]
+    comforts += [put("TorchLamp", xz) for xz in p["lamps"]]
+    return [daily, shell, comforts]
+
+
+def placements(p: dict, walls: str, furniture: str) -> list[dict]:
+    return [item for stage in stages(p, walls, furniture) for item in stage]
 
 
 def place(ctx: Context, items: list[dict]) -> tuple[list[dict], int]:
@@ -123,7 +129,12 @@ class HouseManager(Manager):
         self._move_in(ctx, p, colonists, beds)
         if self.memory.get("built"):
             return
-        results, applied = place(ctx, placements(p, house["walls"], house["furniture"]))
+        results, applied = [], 0
+        for stage in stages(p, house["walls"], house["furniture"]):
+            stage_results, stage_applied = place(ctx, stage)
+            results, applied = results + stage_results, applied + stage_applied
+            if not all(r.get("state") == "built" for r in stage_results):
+                break  # the next stage waits until this one stands
         rejected = [{k: r.get(k) for k in ("def", "x", "z", "reason")} for r in results if r.get("outcome") == "rejected"]
         if applied:
             ctx.log(self.name, f"Placed {applied} house blueprints at {p['outer']}.", rejected=len(rejected))
@@ -131,8 +142,8 @@ class HouseManager(Manager):
             ctx.raise_incident("houseRejected", f"{len(rejected)} house blueprints were refused at {p['outer']}.",
                                "warn", rejected=rejected[:10])
         self.memory["rejected"] = rejected
-        # Finished: every placement is already there, and built (not a blueprint or frame).
-        if results and all(r.get("outcome") == "alreadySatisfied" and r.get("state") == "built" for r in results):
+        # Finished: every stage placed, and every placement already there and built (not a blueprint or frame).
+        if len(results) == len(placements(p, house["walls"], house["furniture"])) and all(r.get("outcome") == "alreadySatisfied" and r.get("state") == "built" for r in results):
             self.memory["built"] = True
             ctx.log(self.name, f"The house at {p['outer']} is finished.")
 
