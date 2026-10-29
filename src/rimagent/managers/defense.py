@@ -135,8 +135,10 @@ class DefenseManager(Manager):
                 ctx.rim.order_pawn(pid, order="move", x=spot[0], z=spot[1])
 
     def stand_down(self, ctx: Context) -> None:
-        # Colonists drafted to tend (managers/medical.py) stay drafted until they're done.
-        drafted = [p for p in ctx.snapshot.colonists if p.get("drafted")
+        # Colonists drafted to tend (managers/medical.py) stay drafted until they're done, and the
+        # heatstruck held in a cool room (managers/heat.py) until they've cooled down.
+        cooling = set(ctx.board.get("cooling") or ())
+        drafted = [p for p in ctx.snapshot.colonists if p.get("drafted") and pawn_id(p) not in cooling
                    and (p.get("currentJob") or {}).get("defName") not in TEND_JOBS]
         if self.combat_since is None and not drafted:
             return
