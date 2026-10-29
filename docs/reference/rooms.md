@@ -49,6 +49,9 @@
 - **Beauty** (room average): floors help (wood floor beats bare soil), plants and sculptures help; **dirt,
   blood, corpses, ugly buildings hurt**. Barricades are beauty −3 each: keep them away from rooms people use.
 - **Cleanliness**: floors can be cleaned, soil can't. Cooking in a dirty room causes food poisoning.
+- **RimMCP can't lay floors**: `place_blueprint` and `check_placement` take buildings only (floor defNames are
+  refused as "not a building the player can build"). Beauty has to come from furniture, lamps and keeping
+  ugly things away.
 - **Wealth**: furniture quality and material. Wooden things are cheap; that's fine early.
 
 ## Layout templates (early, wood, temperate)
