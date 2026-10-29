@@ -99,6 +99,28 @@ def test_stalled_time_halts_as_blocked(tmp_path, monkeypatch):
     assert (tmp_path / "run" / "incidents" / "001-blocked.md").exists()
 
 
+def test_a_window_holding_the_game_paused_is_closed_by_saving_and_reloading(tmp_path, monkeypatch):
+    """Trial 9 was going well (89.1) when a window RimMCP doesn't list held the game paused at day 10."""
+    monkeypatch.setattr("rimagent.runtime.time.sleep", lambda s: None)
+    rim = FakeRim()
+    rim.run_script = [{"status": "interrupted", "endReason": "forcedPause", "tick": 0}] * 3
+    rt = runtime(rim, tmp_path, [])
+    assert rt.run(4) == "done"
+    assert rim.called("save_game") == [{"name": "rimagent-unstick", "overwrite": True}]
+    assert rim.called("load_game")[0]["discard_unsaved"] is True
+    assert not (tmp_path / "run" / "incidents").exists()
+
+
+def test_a_window_that_keeps_coming_back_still_halts(tmp_path, monkeypatch):
+    monkeypatch.setattr("rimagent.runtime.time.sleep", lambda s: None)
+    rim = FakeRim()
+    rim.run_script = [{"status": "interrupted", "endReason": "forcedPause", "tick": 0}] * 12
+    rt = runtime(rim, tmp_path, [])
+    assert rt.run(4) == "halted"
+    assert len(rim.called("load_game")) == 3
+    assert (tmp_path / "run" / "incidents" / "001-blocked.md").exists()
+
+
 def test_refused_time_control_is_blocked_not_a_crash(tmp_path, monkeypatch):
     from rimsdk import errors
 

@@ -43,6 +43,10 @@ GAP_ALERTS = {
 MAX_REPEATS = 2
 # Incidents new code can't fix (a window forcing a pause, the colony gone): these stop for a person.
 NOT_CODE_PROBLEMS = {"blocked", "gameUnloaded", "colonyLost"}
+# A window holding the game paused is closed by saving and loading again, this many times a run.
+UNSTICK_SAVE = "rimagent-unstick"
+MAX_UNSTICKS = 3
+UNSTICK_SETTLE_SECONDS = 15
 
 
 @dataclass
@@ -125,6 +129,7 @@ class Runtime:
         self.requested_chunk: float | None = None
         self.escalations = 0
         self.escalated_keys: list[str] = []
+        self.unsticks = 0
         # For watching (telemetry): who is calling the game now, and where the run is.
         self.actor = "runtime"
         self.tick: int | None = None
@@ -269,6 +274,9 @@ class Runtime:
             return self._halt(Incident("gameUnloaded", "The colony was unloaded mid-run.", tick=run.get("tick")))
         # The player paused or changed speed, or a window forces a pause (letters, the scenario intro...).
         self.stalled_runs = self.stalled_runs + 1 if run.get("tick", before) <= before else 0
+        if self.stalled_runs >= 3 and reason == "forcedPause" and self.unsticks < MAX_UNSTICKS and self._unstick():
+            self.stalled_runs = 0
+            return True
         if self.stalled_runs >= 3:
             return self._halt(Incident(
                 "blocked", f"Time won't run: {self.stalled_runs} runs in a row ended '{reason}' without progress. "
@@ -276,6 +284,28 @@ class Runtime:
                 "(it appears after a few days; RimMCP can't answer it).", tick=run.get("tick"), details={"run": run},
             ))
         time.sleep(2)
+        return True
+
+    def _unstick(self) -> bool:
+        """Save the colony and load it again: loading closes every window. A window holding the game paused
+        (trial 9: one RimMCP doesn't list, at day 10) ended runs that were going well. True if it reloaded."""
+        self.unsticks += 1
+        tick = self.tick
+        try:
+            op = self.rim.wait_operation(self.rim.save_game(name=UNSTICK_SAVE, overwrite=True, wait_seconds=30), timeout=300)
+            if op.get("state") != "succeeded":
+                raise errors.RimError(f"save {op.get('state')}: {op.get('message')}")
+            op = self.rim.wait_operation(self.rim.load_game(name=UNSTICK_SAVE, discard_unsaved=True, wait_seconds=30),
+                                         timeout=600)
+            if op.get("state") != "succeeded":
+                raise errors.RimError(f"load {op.get('state')}: {op.get('message')}")
+            self.rim.wait_until_ready()
+        except (errors.RimError, TimeoutError) as exc:
+            self.journal.write("warning", tick=tick, summary=f"Couldn't save and reload past a forced pause: {exc}")
+            return False
+        self.journal.write("unstuck", tick=tick, summary=f"Time was held paused: saved as {UNSTICK_SAVE} and loaded it "
+                           f"again, which closes game windows ({self.unsticks}/{MAX_UNSTICKS}).")
+        time.sleep(UNSTICK_SETTLE_SECONDS)  # the game refuses time control for a moment after loading
         return True
 
     # --- incidents ---------------------------------------------------------------------------

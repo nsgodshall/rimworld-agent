@@ -169,10 +169,15 @@ class FakeRim(RimClient):
     def get_game_context(self, **_: Any) -> Result:
         return Result({"data": {"programState": "Playing"}})
 
-    def load_game(self, *, name, save_first=None, overwrite=None, **_: Any) -> Result:
-        self._record("load_game", name=name, save_first=save_first)
-        self.tick = 0
+    def load_game(self, *, name, save_first=None, overwrite=None, discard_unsaved=None, **_: Any) -> Result:
+        self._record("load_game", name=name, save_first=save_first, discard_unsaved=discard_unsaved)
+        if name != "rimagent-unstick":  # a baseline starts over; the unstick save is this game
+            self.tick = 0
         return Result({"data": {"operationId": "op1", "state": "succeeded", "done": True}})
+
+    def save_game(self, *, name, overwrite=None, **_: Any) -> Result:
+        self._record("save_game", name=name, overwrite=overwrite)
+        return Result({"data": {"operationId": "op-save", "state": "succeeded", "done": True}})
 
     def get_operation(self, operation_id, **_: Any) -> Result:
         return Result({"data": {"operationId": operation_id, "state": "succeeded", "done": True}})
