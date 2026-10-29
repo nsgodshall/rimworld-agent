@@ -17,6 +17,7 @@ def grid(width: int, height: int, fill: str = ".") -> dict[tuple[int, int], str]
 FOOTPRINTS = {
     "FueledStove": ({"x": -1, "z": 0, "width": 3, "height": 1}, {"x": 0, "z": -1}),
     "Campfire": ({"x": 0, "z": 0, "width": 1, "height": 1}, {"x": 0, "z": -1}),
+    "ButcherSpot": ({"x": 0, "z": 0, "width": 1, "height": 1}, {"x": 0, "z": -1}),
     "Table2x2c": ({"x": 0, "z": 0, "width": 2, "height": 2}, None),
     "SimpleResearchBench": ({"x": -1, "z": 0, "width": 3, "height": 2}, {"x": 0, "z": -1}),
 }
@@ -196,7 +197,10 @@ class FakeRim(RimClient):
 
     def add_bill_to_workshop(self, workshop_id, *, recipe_def_name, **kw: Any) -> Result:
         self._record("add_bill_to_workshop", workshop_id=workshop_id, recipe_def_name=recipe_def_name, **kw)
-        self.bills.append({"workshop": workshop_id, "recipe": recipe_def_name})
+        # As list_production shows a bill (trimmed).
+        self.bills.append({"id": f"Bill_{recipe_def_name}_{len(self.bills)}", "recipe": {"defName": recipe_def_name},
+                           "workbench": {"ids": {"id": workshop_id}}, "state": "active",
+                           "repeatMode": kw.get("repeat_mode_def_name")})
         return Result({"changed": True, "data": {}})
 
     def check_placement(self, *, def_, x, z, width=1, height=1, rotation=None, **_: Any) -> Result:
