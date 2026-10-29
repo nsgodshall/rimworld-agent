@@ -33,6 +33,7 @@ class ManagerLoader:
     def load(self, previous: list[Manager] = ()) -> list[Manager]:
         """(Re)import every manager module and instantiate its Manager subclasses, keeping schedules."""
         last_ticks = {m.name: m.last_tick for m in previous}
+        memories = {m.name: m.memory for m in previous}
         managers: list[Manager] = []
         files = self._files()
         for module_name, path in sorted(files.items()):
@@ -46,6 +47,7 @@ class ManagerLoader:
                 if issubclass(cls, Manager) and cls is not Manager and cls.__module__ == module.__name__:
                     manager = cls()
                     manager.last_tick = last_ticks.get(manager.name)
+                    manager.memory = memories.get(manager.name, manager.memory)
                     managers.append(manager)
         managers.sort(key=lambda m: (m.priority, m.name))
         for gone in set(self._mtimes) - set(files):

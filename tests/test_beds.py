@@ -27,19 +27,21 @@ def test_a_bed_per_colonist_beside_the_stockpile(tmp_path):
 def test_pending_blueprints_are_not_placed_again(tmp_path):
     rim = FakeRim()
     FoodManager().update(ctx_for(rim, tmp_path))
-    BedsManager().update(ctx_for(rim, tmp_path))
-    BedsManager().update(ctx_for(rim, tmp_path))
+    beds = BedsManager()
+    beds.update(ctx_for(rim, tmp_path))
+    beds.update(ctx_for(rim, tmp_path))
     assert len(rim.called("place_blueprint")) == 1
 
 
 def test_half_built_beds_are_counted_once(tmp_path):
     rim = FakeRim()
     FoodManager().update(ctx_for(rim, tmp_path))
-    BedsManager().update(ctx_for(rim, tmp_path))
+    beds = BedsManager()
+    beds.update(ctx_for(rim, tmp_path))
     rim.build_blueprints(1)  # one built, two still blueprints
-    BedsManager().update(ctx_for(rim, tmp_path))
+    beds.update(ctx_for(rim, tmp_path))
     rim.build_blueprints()
-    BedsManager().update(ctx_for(rim, tmp_path))
+    beds.update(ctx_for(rim, tmp_path))
     assert len(rim.called("place_blueprint")) == 1 and len(rim.beds) == 3
 
 
@@ -78,3 +80,28 @@ def test_need_beds_alert_no_longer_halts(tmp_path):
     rim.alerts = [{"type": "Alert_NeedColonistBeds", "label": "Need colonist beds", "priority": "High"}]
     rt = Runtime(rim, tmp_path / "run", managers=[BedsManager()], tripwires=[], echo=False)
     assert rt.run(24) == "done"
+
+
+def test_other_blueprints_are_not_taken_for_beds(tmp_path):
+    """Trial 2: defense's barricade blueprints were counted as planned beds, so none were placed."""
+    rim = FakeRim()
+    FoodManager().update(ctx_for(rim, tmp_path))
+    anchor = rim.zones[0]["representativeCell"]
+    for dx in range(-2, 13):
+        rim.cells[(anchor["x"] + dx, anchor["z"] + 6)] = "x"  # a barricade line's blueprints
+    BedsManager().update(ctx_for(rim, tmp_path))
+    (call,) = rim.called("place_blueprint")
+    assert len(call["placements"]) == 3
+
+
+def test_planned_beds_are_remembered_across_a_reload(tmp_path):
+    from rimagent.loader import ManagerLoader
+
+    rim = FakeRim()
+    FoodManager().update(ctx_for(rim, tmp_path))
+    loader = ManagerLoader()
+    beds = next(m for m in loader.load() if m.name == "beds")
+    beds.update(ctx_for(rim, tmp_path))
+    reloaded = next(m for m in loader.load([beds]) if m.name == "beds")
+    reloaded.update(ctx_for(rim, tmp_path))
+    assert len(rim.called("place_blueprint")) == 1

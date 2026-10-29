@@ -61,6 +61,10 @@ class Manager:
 
     def __init__(self) -> None:
         self.last_tick: int | None = None
+        # For what the game can't tell you, such as which blueprints this manager placed (the map
+        # shows only "blueprint", not what of or whose). Survives hot reloads, not a restart, so
+        # check it against the game and cope with finding it empty.
+        self.memory: dict[str, Any] = {}
 
     def due(self, tick: int) -> bool:
         return self.last_tick is None or tick - self.last_tick >= self.every_hours * TICKS_PER_HOUR

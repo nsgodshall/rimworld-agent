@@ -34,10 +34,13 @@ class BedsManager(Manager):
             return
         view = snap.view(window)
         # Beds not built yet are blueprints or frames: list_buildings doesn't show them, and the map shows
-        # only that something is planned, not what. Near the stockpile, take them to be the beds placed
-        # last pass (each bed covers two cells), so they aren't placed again while colonists get to them.
-        planned = view.count(window, view.symbol_for("blueprint") or "x") // 2
-        missing = len(snap.colonists) - len(built) - planned
+        # only that something is planned there, not what (the barricades defense plans look the same:
+        # counting every blueprint once left a colony with no beds for two days). So count the beds this
+        # manager placed whose cells still show as planned.
+        blueprint = view.symbol_for("blueprint") or "x"
+        planned = [c for c in self.memory.get("planned", []) if view.is_(tuple(c), blueprint)]
+        self.memory["planned"] = planned
+        missing = len(snap.colonists) - len(built) - len(planned)
         if missing <= 0:
             return
 
@@ -51,8 +54,9 @@ class BedsManager(Manager):
                       for i in range(missing)]
         result = ctx.rim.place_blueprint(placements=placements, request_id=uuid.uuid4().hex).data or {}
         rejected = [r for r in result.get("results") or [] if r.get("outcome") == "rejected"]
+        self.memory["planned"] = planned + [[r["x"], r["z"]] for r in result.get("results") or [] if r.get("outcome") == "applied"]
         ctx.log(self.name, f"Placed {result.get('applied', 0)} bed blueprints at {site}.",
-                built=len(built), planned=planned, colonists=len(snap.colonists), blockers=result.get("blockers"))
+                built=len(built), planned=len(planned), colonists=len(snap.colonists), blockers=result.get("blockers"))
         if rejected:
             ctx.raise_incident("bedsRejected", f"{len(rejected)} of {missing} bed blueprints were rejected.", "warn",
                                rejected=[{k: r.get(k) for k in ("x", "z", "reason")} for r in rejected])

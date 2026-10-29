@@ -44,8 +44,12 @@ class BedsManager(Manager):
 
 Rules:
 - **Derive from game state; don't remember.** Each `update()` works out what's missing now and does
-  only that, so running it twice does no harm. Managers are re-created on reload, so instance
-  state is lost.
+  only that, so running it twice does no harm. Managers are re-created on reload, so instance state
+  is lost.
+  - *Exception:* `self.memory`, a dict that survives hot reloads but not a restart. It's for what
+    the game can't show, such as which blueprints this manager placed. The map shows every
+    blueprint the same way, so counting them all once made barricade blueprints look like beds.
+    Check what's remembered against the game, and cope with finding it empty.
 - **Change the game only through `ctx.rim`**, and never run time: no `advance`/`advance_time`/`set_game_speed`.
   The runtime owns the clock.
 - **Keep updates quick:** a handful of calls. Pass `request_id=uuid.uuid4().hex` when creating things.

@@ -17,6 +17,7 @@ def grid(width: int, height: int, fill: str = ".") -> dict[tuple[int, int], str]
 FOOTPRINTS = {
     "FueledStove": ({"x": -1, "z": 0, "width": 3, "height": 1}, {"x": 0, "z": -1}),
     "Campfire": ({"x": 0, "z": 0, "width": 1, "height": 1}, {"x": 0, "z": -1}),
+    "Table2x2c": ({"x": 0, "z": 0, "width": 2, "height": 2}, None),
 }
 
 
@@ -103,6 +104,9 @@ class FakeRim(RimClient):
 
     def pawn(self, pawn_id: str) -> dict[str, Any]:
         return next(p for p in self.colonists if p["ids"]["id"] == pawn_id)
+
+    def get_pawn(self, id, **_: Any) -> Result:
+        return Result({"data": self.pawn(id)})
 
     def list_zones(self, **_: Any) -> Result:
         return Result({"data": {"zones": self.zones}})
@@ -233,9 +237,14 @@ class FakeRim(RimClient):
             "rejectedCount": count("rejected"), "results": results, "blockers": []}})
 
     def build_blueprints(self, n: int | None = None) -> None:
-        """Colonists finish blueprints: they become beds list_buildings shows, drawn as buildings."""
+        """Colonists finish blueprints: they become buildings list_buildings shows, drawn as buildings."""
         for p in self.blueprints[:n]:
-            for c in [(p["x"], p["z"]), (p["x"], p["z"] - 1)]:
+            for c in _footprint(p["def"], p["x"], p["z"]):
                 self.cells[c] = "b"
-            self.beds.append({"id": f"Bed{len(self.beds) + 1}", "position": {"x": p["x"], "y": 0, "z": p["z"]}})
+            position = {"x": p["x"], "y": 0, "z": p["z"]}
+            if p["def"] == "Bed":
+                self.beds.append({"id": f"Bed{len(self.beds) + 1}", "position": position})
+            else:
+                n_id = f"{p['def']}{len(self.buildings) + 1}"
+                self.buildings.append({"ids": {"id": n_id}, "def": {"defName": p["def"]}, "position": position})
         self.blueprints = self.blueprints[len(self.blueprints[:n]):]
