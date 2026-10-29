@@ -41,6 +41,7 @@ WINDOW = 60          # side of the square around the base searched for a site (s
 DEPTH = 4            # interior, north to south
 BEDROOM_WIDTH = 3    # interior: 12 tiles, "rather tight" with a bed, never "cramped"
 COMMON_WIDTH = 6     # interior: a 2x2 table, four chairs, horseshoes, chess, a lamp
+MAX_PLACEMENTS = 50  # place_blueprint refuses more in one call (400 "At most 50 placements per call.")
 
 
 def plan(origin: tuple[int, int], bedrooms: int) -> dict:
@@ -87,6 +88,16 @@ def placements(p: dict, walls: str, furniture: str) -> list[dict]:
     return out
 
 
+def place(ctx: Context, items: list[dict]) -> tuple[list[dict], int]:
+    """place_blueprint in calls of at most MAX_PLACEMENTS (a 3-bedroom house is ~60): (results in order, applied)."""
+    results, applied = [], 0
+    for i in range(0, len(items), MAX_PLACEMENTS):
+        reply = ctx.rim.place_blueprint(placements=items[i:i + MAX_PLACEMENTS], request_id=uuid.uuid4().hex).data or {}
+        results += reply.get("results") or []
+        applied += reply.get("applied") or 0
+    return results, applied
+
+
 def cost(p: dict) -> tuple[int, int]:
     """(wall material, furniture material) a plan needs: wall 5, door 25; bed 45, table 50, chair 45, chess 70."""
     return 5 * len(p["walls"]) + 25 * len(p["doors"]), 45 * len(p["beds"]) + 50 + 45 * len(p["chairs"]) + 70
@@ -112,12 +123,10 @@ class HouseManager(Manager):
         self._move_in(ctx, p, colonists, beds)
         if self.memory.get("built"):
             return
-        result = ctx.rim.place_blueprint(placements=placements(p, house["walls"], house["furniture"]),
-                                         request_id=uuid.uuid4().hex).data or {}
-        results = result.get("results") or []
+        results, applied = place(ctx, placements(p, house["walls"], house["furniture"]))
         rejected = [{k: r.get(k) for k in ("def", "x", "z", "reason")} for r in results if r.get("outcome") == "rejected"]
-        if result.get("applied"):
-            ctx.log(self.name, f"Placed {result['applied']} house blueprints at {p['outer']}.", rejected=len(rejected))
+        if applied:
+            ctx.log(self.name, f"Placed {applied} house blueprints at {p['outer']}.", rejected=len(rejected))
         if rejected and rejected != self.memory.get("rejected"):
             ctx.raise_incident("houseRejected", f"{len(rejected)} house blueprints were refused at {p['outer']}.",
                                "warn", rejected=rejected[:10])

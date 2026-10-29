@@ -40,9 +40,10 @@ def test_planned_once_placed_until_built_then_left_alone(tmp_path):
     FoodManager().update(ctx_for(rim, tmp_path))
     house, board = HouseManager(), {}
     house.update(ctx_for(rim, tmp_path, board))
+    first = [p for c in rim.called("place_blueprint") for p in c["placements"]]
     house.update(ctx_for(rim, tmp_path, board))
-    first, second = rim.called("place_blueprint")[-2:]
-    assert first["placements"] == second["placements"] and board["house_beds"] == 3
+    second = [p for c in rim.called("place_blueprint") for p in c["placements"]][len(first):]
+    assert first == second and board["house_beds"] == 3
     rim.build_blueprints()
     house.update(ctx_for(rim, tmp_path, board))
     assert house.memory["built"]
@@ -95,9 +96,20 @@ def test_walls_are_steel_when_wood_is_short(tmp_path):
     rim.resources = [{"defName": "WoodLog", "count": 37}, {"defName": "Steel", "count": 1065}]
     FoodManager().update(ctx_for(rim, tmp_path))
     HouseManager().update(ctx_for(rim, tmp_path))
-    walls = [p for p in rim.called("place_blueprint")[-1]["placements"] if p["def"] in ("Wall", "Door")]
+    walls = [p for c in rim.called("place_blueprint") for p in c["placements"] if p["def"] in ("Wall", "Door")]
     assert {p["stuff"] for p in walls} == {"Steel"}
     assert pick(ctx_for(rim, tmp_path), 10_000) == "Steel"  # nothing has enough: the larger stock
+
+
+def test_a_house_over_50_placements_goes_in_batches(tmp_path):
+    """The live game refuses more than 50 placements per call; a 3-bedroom house is more."""
+    rim = colony()
+    FoodManager().update(ctx_for(rim, tmp_path))
+    ctx = ctx_for(rim, tmp_path)
+    HouseManager().update(ctx)
+    calls = rim.called("place_blueprint")
+    assert len(calls) > 1 and all(len(c["placements"]) <= 50 for c in calls)
+    assert not ctx.incidents and len(rim.blueprints) == sum(len(c["placements"]) for c in calls)
 
 
 def test_no_free_ground_is_a_warning(tmp_path):

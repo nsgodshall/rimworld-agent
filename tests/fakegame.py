@@ -310,6 +310,8 @@ class FakeRim(RimClient):
     def place_blueprint(self, *, placements, request_id=None, **_: Any) -> Result:
         """Mirrors RimMCP's reply: per placement an outcome of applied, alreadySatisfied or rejected."""
         self._record("place_blueprint", placements=placements)
+        if len(placements) > 50:
+            raise errors.BadRequest("At most 50 placements per call.", status=400)
         results = []
         for p in placements:
             footprint = _footprint(p["def"], p["x"], p["z"])
