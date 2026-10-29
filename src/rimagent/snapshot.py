@@ -63,6 +63,16 @@ class Snapshot:
         rows = self.rim.list_resources().data.get("resources") or []
         return {r["defName"]: r.get("count", 0) for r in rows if r.get("defName")}
 
+    def usable(self, def_name: str) -> int:
+        """How much of a material colonists can use now: unforbidden stacks, stored or not (find_things).
+        list_resources counts forbidden stacks too: trial 7 "had" 720 steel, all of it forbidden ruins far
+        off, and its house waited days for steel beds."""
+        cache = self.__dict__.setdefault("_usable", {})
+        if def_name not in cache:
+            data = self.rim.find_things(def_=def_name, forbidden=False, limit=1).data or {}
+            cache[def_name] = (data.get("summary") or {}).get("totalStackCount", 0)
+        return cache[def_name]
+
     @cached_property
     def hostiles(self) -> int:
         return (self.colony.get("threats") or {}).get("hostiles", 0)

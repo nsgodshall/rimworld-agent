@@ -16,16 +16,19 @@ STEEL_RESERVE = 100  # components and tools come later; keep a little
 
 
 def pick(ctx: Context, amount: int, prefer: tuple[str, ...] = (WOOD, STEEL), spent: dict[str, int] | None = None) -> str:
-    """The first of `prefer` with `amount` to spare above its reserve, else whichever there's most of.
+    """The first of `prefer` with `amount` to spare above its reserve, else wood (it can be felled).
 
-    Counts what's stored and lying about now; blueprints already placed aren't subtracted. For several
+    Counts what colonists can use now (unforbidden, stored or lying about); blueprints already placed
+    aren't subtracted. For several
     parts of one plan, pass the same `spent` dict: each pick records its amount there, and the next
     counts it as used.
     """
-    stock = ctx.snapshot.resources
+    stock = {s: ctx.snapshot.usable(s) for s in prefer}
     spent = spent if spent is not None else {}
     reserve = {WOOD: WOOD_RESERVE, STEEL: STEEL_RESERVE}
     spare = {s: stock.get(s, 0) - reserve.get(s, 0) - spent.get(s, 0) for s in prefer}
-    choice = next((s for s in prefer if spare[s] >= amount), None) or max(prefer, key=spare.get)
+    # Short of everything: wood, which the supplies manager fells more of; steel that runs out leaves
+    # blueprints waiting for good (trial 7's beds).
+    choice = next((s for s in prefer if spare[s] >= amount), None) or (WOOD if WOOD in prefer else max(prefer, key=spare.get))
     spent[choice] = spent.get(choice, 0) + amount
     return choice

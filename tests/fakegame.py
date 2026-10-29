@@ -214,7 +214,11 @@ class FakeRim(RimClient):
                                 "available": def_ not in self.unavailable, "fitsCount": len(fits),
                                 "fits": fits[:50], "rejected": rejected}})
 
-    def find_things(self, *, category=None, forbidden=None, in_storage=None, **_: Any) -> Result:
+    def find_things(self, *, category=None, forbidden=None, in_storage=None, def_=None, **_: Any) -> Result:
+        if def_ is not None:  # a material: self.resources rows, minus their "forbidden" part
+            row = next((r for r in self.resources if r.get("defName") == def_), {})
+            usable = row.get("count", 0) - row.get("forbidden", 0) if forbidden is False else row.get("count", 0)
+            return Result({"data": {"summary": {"matches": 1 if usable else 0, "totalStackCount": usable}, "things": []}})
         things = [{"id": i} for i in self.forbidden_food] if category == "Foods" and forbidden else []
         if category == "Foods" and in_storage is False:
             things = [t for t in self.loose_food if forbidden is None or t["forbidden"] == forbidden]

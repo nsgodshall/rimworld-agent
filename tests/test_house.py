@@ -104,7 +104,7 @@ def test_walls_are_steel_when_wood_is_short(tmp_path):
     walls = [p for c in rim.called("place_blueprint") for p in c["placements"] if p["def"] in ("Wall", "Door")]
     assert walls
     assert {p["stuff"] for p in walls} == {"Steel"}
-    assert pick(ctx_for(rim, tmp_path), 10_000) == "Steel"  # nothing has enough: the larger stock
+    assert pick(ctx_for(rim, tmp_path), 10_000) == "WoodLog"  # nothing has enough: wood, which can be felled
 
 
 def test_a_house_over_50_placements_goes_in_batches(tmp_path):
@@ -120,6 +120,16 @@ def test_a_house_over_50_placements_goes_in_batches(tmp_path):
     calls = rim.called("place_blueprint")
     assert len(calls) > 2 and all(len(c["placements"]) <= 50 for c in calls)
     assert not ctx.incidents and len(rim.blueprints) == len(plan((0, 0), 3)["walls"]) + 4  # the walls and doors
+
+
+def test_forbidden_steel_doesnt_count(tmp_path):
+    """Trial 7: list_resources showed 720 steel, all forbidden in far-off ruins; the steel beds never came."""
+    rim = colony()
+    rim.resources = [{"defName": "WoodLog", "count": 900}, {"defName": "Steel", "count": 1170, "forbidden": 720}]
+    FoodManager().update(ctx_for(rim, tmp_path))
+    house = HouseManager()
+    house.update(ctx_for(rim, tmp_path))
+    assert house.memory["house"]["furniture"] == "WoodLog"  # 450 steel is used up by the walls
 
 
 def test_no_free_ground_is_a_warning(tmp_path):
