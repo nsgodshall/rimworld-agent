@@ -45,7 +45,7 @@ MAX_PLACEMENTS = 50  # place_blueprint refuses more in one call (400 "At most 50
 # Comfortable is up to about 26 C; above it bedrooms give "Slept in the heat", and a heat wave brings
 # heatstroke (docs/reference/rooms.md, threats.md). In the day-7 heat wave the bedrooms were 29-30 C at
 # 20:00, their torch lamps adding to it.
-HOT = 28.0
+HOT = 26.0  # trial 10 ended with "Slept in the heat" (-4) for everyone at 28: discomfort starts at 26
 
 
 def plan(origin: tuple[int, int], bedrooms: int) -> dict:

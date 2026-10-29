@@ -44,8 +44,9 @@ class ResearchManager(Manager):
         blockers = {b.get("kind") for b in research.get("blockers") or []}
         if "noProject" in blockers:
             self.choose_project(ctx)
-        # The bench (75 wood) waits until the house's beds stand: they come first.
-        if "missingResearchBench" in blockers and ctx.board.get("house_stage", 1) >= 1:
+        # From day one, in steel (below): in trial 10 the bench waited four days on the beds and wood, and
+        # Battery got to 263 of 400 by day 14.
+        if "missingResearchBench" in blockers:
             self.ensure_bench(ctx)
 
     def choose_project(self, ctx: Context) -> None:
@@ -94,8 +95,8 @@ class ResearchManager(Manager):
         # comes back alreadySatisfied instead of planning a second bench.
         spots = sorted(window.cells(), key=lambda c: (math.hypot(c[0] - anchor[0], c[1] - anchor[1]), c[1], c[0]))
         candidates = [s for s in spots if usable(*s)][:TRIES]
-        # Steel when wood is short (trial 9's wooden bench waited days at 0 wood). Chosen once.
-        stuff = self.memory.setdefault("stuff", pick(ctx, 75, (STUFF, STEEL)))
+        # Steel if there's enough (trial 9's wooden bench waited days at 0 wood). Chosen once.
+        stuff = self.memory.setdefault("stuff", pick(ctx, 100, (STEEL, STUFF)))  # steel leaves wood for beds
         for x, z in candidates:
             result = ctx.rim.place_blueprint(
                 placements=[{"def": BENCH, "stuff": stuff, "x": x, "z": z, "rotation": ROTATION}],

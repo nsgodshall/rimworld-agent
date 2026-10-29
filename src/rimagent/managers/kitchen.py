@@ -26,6 +26,8 @@ BUTCHER_BUILD = ("ButcherSpot",)
 ROTATION = "north"
 RECIPE = "CookMealSimple"
 CORPSE_STORE = (3, 3)  # a stockpile beside the butcher spot that takes fresh animal corpses
+DUMP_SIZE = (4, 4)     # and one for rotten corpses, out of sight
+DUMP_DISTANCE = 25
 BUTCHER_RECIPE = "ButcherCorpseFlesh"  # "Butcher creature"; butchering has no count to target, so Forever
 MEALS_PER_COLONIST = 10  # the bill's target: a few days of meals in store
 WINDOW = 20  # side of the square around the base anchor (check_placement's limit)
@@ -62,6 +64,7 @@ class KitchenManager(Manager):
         butchered them, and "Observed rotting corpse" (-6) hit the colonists who passed them."""
         zone_id = self.memory.get("corpse_zone")
         if zone_id and any(z.get("id") == zone_id for z in ctx.snapshot.zones_of("stockpile")):
+            self.ensure_dump(ctx)
             return
         pos = butcher.get("position") or {}
         if "x" not in pos:
@@ -83,6 +86,33 @@ class KitchenManager(Manager):
         if rejected:
             ctx.raise_incident("corpseStoreFilter", f"The corpse stockpile's filter was partly refused.", "warn",
                                rejected=rejected)
+
+    def ensure_dump(self, ctx: Context) -> None:
+        """A low-priority stockpile for rotten corpses, out of sight of the base. Kills still rot in the
+        fresh-corpse store before they're butchered (trial 10 ended with "Observed rotting corpse", -6,
+        on two colonists); that store refuses rotten ones, so haulers carry them here."""
+        zone_id = self.memory.get("dump_zone")
+        if zone_id and any(z.get("id") == zone_id for z in ctx.snapshot.zones_of("stockpile")):
+            return
+        anchor = base_anchor(ctx)
+        if anchor is None:
+            return
+        snap = ctx.snapshot
+        width, height = snap.map_size
+        # South of the stockpile: the house is planned north of it. Clamped to the map.
+        center = (anchor[0], max(DUMP_SIZE[1], anchor[1] - DUMP_DISTANCE))
+        view = snap.view(Rect.around(*center, 20, 20).clamp(width, height))
+        site = best_site(view, center, *DUMP_SIZE, good=_chars(view, "soil", "ground too poor"), min_fill=0.9)
+        if site is None:
+            ctx.raise_incident("noCorpseDump", f"No room for a corpse dump near {center}.", "warn")
+            return
+        zone = (ctx.rim.set_zone(kind="stockpile", add=[site.to_api()], request_id=uuid.uuid4().hex).data or {}).get("zone") or {}
+        if not zone.get("id"):
+            return
+        result = ctx.rim.set_storage(zone_id=zone["id"], priority="Low", disallow_all=True, allow=["Corpses", "AllowRotten"]).data or {}
+        self.memory["dump_zone"] = zone["id"]
+        rejected = [e for e in result.get("entries") or [] if e.get("outcome") == "rejected"]
+        ctx.log(self.name, f"Made a corpse dump {zone['id']} at {site}, out of sight of the base.", rejected=rejected)
 
     def add_bill(self, ctx: Context, workbench: dict, recipe: str, mode: str) -> None:
         workbench_id = workbench["ids"]["id"]

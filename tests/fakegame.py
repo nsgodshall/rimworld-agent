@@ -296,8 +296,9 @@ class FakeRim(RimClient):
         self.zones.append(zone)
         return Result({"changed": True, "data": {"zone": zone, "created": True}})
 
-    def set_storage(self, *, zone_id=None, building_id=None, disallow_all=None, allow=None, disallow=None, **_: Any) -> Result:
-        self._record("set_storage", zone_id=zone_id, disallow_all=disallow_all, allow=allow, disallow=disallow)
+    def set_storage(self, *, zone_id=None, building_id=None, priority=None, disallow_all=None, allow=None, disallow=None,
+                    **_: Any) -> Result:
+        self._record("set_storage", zone_id=zone_id, priority=priority, disallow_all=disallow_all, allow=allow, disallow=disallow)
         # ZoneCommandService.SetStorage: one entry per name, with kind, allow and outcome.
         entries = [{"name": n, "allow": n in (allow or []), "outcome": "applied", "reason": None}
                    for n in (allow or []) + (disallow or [])]

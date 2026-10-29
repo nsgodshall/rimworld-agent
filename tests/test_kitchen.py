@@ -128,4 +128,9 @@ def test_a_stockpile_for_fresh_animal_corpses_beside_the_butcher_spot(tmp_path):
     x, z = zone["add"][0]["x"], zone["add"][0]["z"]
     assert abs(x - 55) <= 6 and abs(z - 50) <= 6
     kitchen.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
-    assert len(rim.called("set_storage")) == 1  # made once
+    fresh, dump = rim.called("set_storage")  # the second pass adds the dump for rotten ones
+    assert dump["priority"] == "Low" and dump["allow"] == ["Corpses", "AllowRotten"]
+    (_, dump_zone) = [c for c in rim.called("set_zone") if c["kind"] == "stockpile"]
+    assert abs(dump_zone["add"][0]["z"] - 50) >= 15  # out of sight of the base
+    kitchen.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    assert len(rim.called("set_storage")) == 2  # each made once
