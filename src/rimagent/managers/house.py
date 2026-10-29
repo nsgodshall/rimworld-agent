@@ -74,7 +74,7 @@ def plan(origin: tuple[int, int], bedrooms: int) -> dict:
     }
 
 
-def stages(p: dict, walls: str, furniture: str) -> list[list[dict]]:
+def stages(p: dict, walls: str, furniture: str, beds: str | None = None) -> list[list[dict]]:
     """The house's placements in building order. Builders take blueprints in no particular order, so a
     stage is placed only once the one before is built: in trial 7, with everything placed at once, the
     beds waited behind 70 walls and everyone slept on the ground ("Slept on ground", -4) for two nights."""
@@ -82,7 +82,7 @@ def stages(p: dict, walls: str, furniture: str) -> list[list[dict]]:
         return {"def": def_, "x": xz[0], "z": xz[1], "rotation": rotation, **({"stuff": stuff} if stuff else {})}
 
     tx, _ = p["table"]
-    daily = [put("Bed", xz, furniture, "south") for xz in p["beds"]] + [put("Table2x2c", p["table"], furniture)]
+    daily = [put("Bed", xz, beds or furniture, "south") for xz in p["beds"]] + [put("Table2x2c", p["table"], furniture)]
     daily += [put("DiningChair", xz, furniture, "east" if xz[0] < tx else "west") for xz in p["chairs"]]
     shell = [put("Wall", xz, walls) for xz in p["walls"]] + [put("Door", xz, walls) for xz in p["doors"]]
     comforts = [put("HorseshoesPin", p["horseshoes"], STEEL), put("ChessTable", p["chess"], furniture)]
@@ -90,8 +90,8 @@ def stages(p: dict, walls: str, furniture: str) -> list[list[dict]]:
     return [daily, shell, comforts]
 
 
-def placements(p: dict, walls: str, furniture: str) -> list[dict]:
-    return [item for stage in stages(p, walls, furniture) for item in stage]
+def placements(p: dict, walls: str, furniture: str, beds: str | None = None) -> list[dict]:
+    return [item for stage in stages(p, walls, furniture, beds) for item in stage]
 
 
 def place(ctx: Context, items: list[dict]) -> tuple[list[dict], int]:
@@ -128,9 +128,11 @@ class HouseManager(Manager):
         beds = ctx.rim.list_buildings(category="bed").data.get("buildings") or []
         self._move_in(ctx, p, colonists, beds)
         if self.memory.get("built"):
+            ctx.board["house_stage"] = 3  # finished
             return
         results, applied = [], 0
-        for stage in stages(p, house["walls"], house["furniture"]):
+        for number, stage in enumerate(stages(p, house["walls"], house["furniture"], house.get("beds"))):
+            ctx.board["house_stage"] = number  # what's being built: others wait for wood (see stages())
             stage_results, stage_applied = place(ctx, stage)
             results, applied = results + stage_results, applied + stage_applied
             if not all(r.get("state") == "built" for r in stage_results):
@@ -143,7 +145,7 @@ class HouseManager(Manager):
                                "warn", rejected=rejected[:10])
         self.memory["rejected"] = rejected
         # Finished: every stage placed, and every placement already there and built (not a blueprint or frame).
-        if len(results) == len(placements(p, house["walls"], house["furniture"])) and all(r.get("outcome") == "alreadySatisfied" and r.get("state") == "built" for r in results):
+        if len(results) == len(placements(p, house["walls"], house["furniture"], house.get("beds"))) and all(r.get("outcome") == "alreadySatisfied" and r.get("state") == "built" for r in results):
             self.memory["built"] = True
             ctx.log(self.name, f"The house at {p['outer']} is finished.")
 
@@ -166,9 +168,12 @@ class HouseManager(Manager):
         p = plan((site.x, site.z + 1), bedrooms)
         walls_need, furniture_need = cost(p)
         spent: dict[str, int] = {}
+        # Beds first and in steel if there's enough: they're wanted the first night, while wood goes
+        # everywhere early (trial 8 had 0-33 wood for two days, and no beds).
         house = {"origin": [site.x, site.z + 1], "bedrooms": bedrooms,
+                 "beds": pick(ctx, 45 * bedrooms, (STEEL, WOOD), spent),
                  "walls": pick(ctx, walls_need, (STEEL, WOOD), spent),  # steel walls leave wood for fuel
-                 "furniture": pick(ctx, furniture_need, (WOOD, STEEL), spent)}
+                 "furniture": pick(ctx, furniture_need - 45 * bedrooms, (WOOD, STEEL), spent)}
         self.memory["house"] = house
         ctx.log(self.name, f"Planned {bedrooms} bedrooms and a common room at {p['outer']}: walls of "
                            f"{house['walls']}, furniture of {house['furniture']}.", needs=[walls_need, furniture_need])

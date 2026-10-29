@@ -43,7 +43,8 @@ class ResearchManager(Manager):
         blockers = {b.get("kind") for b in research.get("blockers") or []}
         if "noProject" in blockers:
             self.choose_project(ctx)
-        if "missingResearchBench" in blockers:
+        # The bench (75 wood) waits until the house's beds stand: they come first.
+        if "missingResearchBench" in blockers and ctx.board.get("house_stage", 1) >= 1:
             self.ensure_bench(ctx)
 
     def choose_project(self, ctx: Context) -> None:

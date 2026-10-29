@@ -90,19 +90,21 @@ class SuppliesManager(Manager):
         wood = self.wood(ctx)
         if wood >= WOOD_TARGET:
             return 0
+        want = CHOP_BATCH * (2 if wood < WOOD_TARGET // 3 else 1)  # very short: twice the trees
         trees: list[tuple[int, int]] = []
         for side in SEARCH:
             view = ctx.snapshot.view(Rect.around(*anchor, side, side))
             tree = view.symbol_for("tree")
             trees = [xz for xz in view.find(tree)
                      if max(abs(xz[0] - anchor[0]), abs(xz[1] - anchor[1])) > KEEP_CLEAR] if tree else []
-            if len(trees) >= CHOP_BATCH:
+            if len(trees) >= want:
                 break
         if not trees:
             return 0
         trees.sort(key=lambda xz: (xz[0] - anchor[0]) ** 2 + (xz[1] - anchor[1]) ** 2)
-        batch = trees[:CHOP_BATCH]
-        ctx.rim.designate(kind="chopWood", rects=[Rect(x, z).to_api() for x, z in batch])
+        batch = trees[:want]
+        for i in range(0, len(batch), CHOP_BATCH):  # designate takes up to 20 rects a call
+            ctx.rim.designate(kind="chopWood", rects=[Rect(x, z).to_api() for x, z in batch[i:i + CHOP_BATCH]])
         if self.memory.get("chop") == batch:
             return len(batch)  # the same trees as last pass, still being felled: no news
         self.memory["chop"] = batch

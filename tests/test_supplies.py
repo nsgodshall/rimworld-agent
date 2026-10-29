@@ -58,7 +58,7 @@ def forest(rim, cells):
 
 def test_short_of_wood_the_nearest_trees_past_the_base_are_chopped(tmp_path):
     rim = FakeRim()  # colonists at (50, 50): the base
-    rim.resources = [{"defName": "WoodLog", "label": "Wood", "count": 40, "stacks": 1, "forbiddenStacks": 0}]
+    rim.resources = [{"defName": "WoodLog", "label": "Wood", "count": 150, "stacks": 1, "forbiddenStacks": 0}]
     near_base = [(52, 50), (50, 55)]  # cover for the defenders: kept
     out = [(50 + KEEP_CLEAR + 1 + i, 50) for i in range(25)] + [(50, 50 - KEEP_CLEAR - 1)]
     far = [(5, 5)]  # outside the first search square
@@ -102,3 +102,12 @@ def test_some_colonists_idle_is_a_warning_not_a_halt(tmp_path):
     rim.tick += IDLE_HOLD_HOURS * TICKS_PER_HOUR
     manager.update(ctx := ctx_for(rim, tmp_path))
     assert [(i.kind, i.severity) for i in ctx.incidents] == [("colonistsIdle", "warn")]
+
+
+def test_very_short_of_wood_twice_the_trees_in_calls_of_20(tmp_path):
+    rim = FakeRim()
+    rim.resources = [{"defName": "WoodLog", "label": "Wood", "count": 10, "stacks": 1, "forbiddenStacks": 0}]
+    forest(rim, [(50 + KEEP_CLEAR + 1 + i, 50 + j) for i in range(10) for j in range(5)])
+    SuppliesManager().update(ctx_for(rim, tmp_path))
+    calls = rim.called("designate")
+    assert [len(c["rects"]) for c in calls] == [20, 20]
