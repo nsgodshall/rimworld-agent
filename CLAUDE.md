@@ -21,6 +21,12 @@ handled without it next time.
   real replies.
 - `runs/<timestamp>/`: `journal.jsonl` plus `incidents/NNN-kind.{md,json,diff,session.json}`.
 
+## Game knowledge
+
+`docs/reference/` holds early-game facts distilled from the RimWorld wiki for this project: mood (every
+common thought and its value), rooms (bedroom vs barracks, impressiveness), food, threats, health, work and
+a day-by-day playbook. Read the relevant file before writing a manager that changes how the colony lives.
+
 ## Writing a manager
 
 ```python
