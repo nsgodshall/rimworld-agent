@@ -5,6 +5,12 @@ when they're awake and free. In the first raid test, starting medicine lay forbi
 colonist bled to death, and the doctor slept while another did. So this manager unforbids medicine,
 and while anyone bleeds (and no fight is on), drafts a colonist and orders a tend, again and again,
 until the bleeding stops.
+
+Low medicine (Alert_LowMedicine) counts only medicine in storage, under 2 a colonist. In run
+20261029-143226 it showed for 13h with 31 medicine lying unforbidden two cells from a near-empty
+stockpile: three days in, nobody had got round to hauling the starting goods. Medicine left outside
+also rots. So while the alert shows, loose medicine is marked for hauling and the biggest stack is
+hauled now. With none loose either, the colony really is short: that's noted, not stopped for.
 """
 
 from __future__ import annotations
@@ -16,9 +22,13 @@ from rimsdk import errors
 from ..events import Event
 from ..manager import Context, Manager
 from .defense import TEND_JOBS, engaging_threats, pawn_id
+from .pantry import rush_hauling
 
 UNFORBID_EVERY_TICKS = 2 * 2500
 TEND_CHUNK_HOURS = 0.1
+LOW_MEDICINE_ALERT = "Alert_LowMedicine"
+STORE_EVERY_TICKS = 2 * 2500      # how often loose medicine is marked and rushed while the alert shows
+SHORT_NOTE_EVERY_TICKS = 24 * 2500  # a real shortage is noted at most once a day
 
 
 class MedicalManager(Manager):
@@ -26,6 +36,7 @@ class MedicalManager(Manager):
     priority = 5  # after defense, before everything else
     every_hours = 0  # every cycle: bleeding can't wait for a schedule
     handles = ("injured",)
+    alerts = (LOW_MEDICINE_ALERT,)
 
     def __init__(self) -> None:
         super().__init__()
@@ -36,7 +47,8 @@ class MedicalManager(Manager):
         if self.unforbid_at is None or ctx.tick - self.unforbid_at >= UNFORBID_EVERY_TICKS:
             self.unforbid(ctx)
             self.unforbid_at = ctx.tick
-        medical = ctx.snapshot.colony.get("medical") or {}
+        self.store_medicine(ctx)
+        medical =ctx.snapshot.colony.get("medical") or {}
         if not self.tenders and not medical.get("bleeding"):
             return
         colonists = {pawn_id(p): p for p in ctx.rim.list_pawns(filter="colonists").data.get("pawns") or [] if not p.get("dead")}
@@ -82,6 +94,27 @@ class MedicalManager(Manager):
         if meds:
             ctx.rim.designate(kind="unforbid", thing_ids=[m["id"] for m in meds][:300])
             ctx.log(self.name, f"Unforbade {len(meds)} medicine stacks.", units=sum(m.get("count") or 0 for m in meds))
+
+    def store_medicine(self, ctx: Context) -> None:
+        """While Low medicine shows, get loose medicine into storage. The alert counts only stored medicine."""
+        alert = next((a for a in ctx.snapshot.alerts if a.get("type") == LOW_MEDICINE_ALERT), None)
+        last = self.memory.get("stored_at")
+        if alert is None or (last is not None and 0 <= ctx.tick - last < STORE_EVERY_TICKS):
+            return
+        self.memory["stored_at"] = ctx.tick
+        loose = ctx.rim.find_things(category="Medicine", forbidden=False, in_storage=False).data.get("things") or []
+        if not loose:
+            last_note = self.memory.get("short_noted_at")
+            if last_note is None or not 0 <= ctx.tick - last_note < SHORT_NOTE_EVERY_TICKS:
+                self.memory["short_noted_at"] = ctx.tick
+                ctx.raise_incident("medicineShort", "Low medicine, and no loose medicine left to store: "
+                                   "doctors will tend without it.", "warn", alert=alert)
+            return
+        ctx.rim.designate(kind="haul", thing_ids=[m["id"] for m in loose][:300])
+        rushed = [] if ctx.snapshot.hostiles else rush_hauling(
+            ctx, sorted(loose, key=lambda m: -(m.get("count") or 0))[:1])
+        ctx.log(self.name, f"Low medicine: marked {len(loose)} loose medicine stacks for hauling; "
+                f"{len(rushed)} hauled now.", units=sum(m.get("count") or 0 for m in loose), rushed=rushed)
 
     def on_event(self, ctx: Context, event: Event) -> bool:
         # An injury needs medicine and a doctor: update() sees to both on this cycle.

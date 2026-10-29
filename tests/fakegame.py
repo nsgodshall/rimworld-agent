@@ -129,11 +129,16 @@ class FakeRim(RimClient):
 
     def list_pawn_actions(self, pawn_id, *, target_id=None, **_: Any) -> Result:
         """As in game for a food stack (fixtures: list_pawn_actions on MealSurvivalPack7759; shut in, run
-        20261029-074313: a single disabled "Consume packaged survival meal: No path")."""
+        20261029-074313: a single disabled "Consume packaged survival meal: No path"), or a medicine stack
+        (run 20261029-143226, MedicineIndustrial45210)."""
         stack = next((t for t in self.loose_food + self.stored_food if t["id"] == target_id), None)
-        if stack is None:
+        medicine = next((m for m in self.medicine if m["id"] == target_id), None)
+        if stack is None and medicine is None:
             raise errors.NotFound("No such thing.", status=404)
-        if pawn_id in self.no_path:
+        if medicine is not None:
+            options = [{"id": "1", "text": "Pick up medicine..."},
+                       {"id": "2", "text": f"Prioritize hauling medicine x{medicine['count']}"}]
+        elif pawn_id in self.no_path:
             options = [{"id": "1", "text": f"Consume {stack['label'].lower()}: No path", "disabled": True}]
         else:
             options = [{"id": "1", "text": f"Consume {stack['label'].lower()}"},
@@ -245,7 +250,8 @@ class FakeRim(RimClient):
         if category == "Weapons":
             things = [w for w in self.weapons if forbidden is None or w["forbidden"] == forbidden]
         if category == "Medicine":
-            things = [m for m in self.medicine if forbidden is None or m["forbidden"] == forbidden]
+            things = [m for m in self.medicine if (forbidden is None or m["forbidden"] == forbidden)
+                      and (in_storage is None or m.get("inStorage", False) == in_storage)]
         if category is None:
             things = [g for g in self.goods if forbidden is None or g["forbidden"] == forbidden]
         return Result({"data": {"things": things}})

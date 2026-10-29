@@ -16,6 +16,44 @@ def test_forbidden_medicine_is_unforbidden_and_injuries_are_handled(tmp_path):
     assert rim.called("designate") == [{"kind": "unforbid", "thing_ids": ["Med1"]}]
 
 
+LOW_MEDICINE = {"type": "Alert_LowMedicine", "label": "Low medicine", "priority": "High"}
+
+
+def loose_medicine(n, x, z, count):
+    # As find_things shows a stack outside storage (run 20261029-143226).
+    return {"id": f"MedicineIndustrial{n}", "def": "MedicineIndustrial", "label": "Medicine",
+            "x": x, "z": z, "count": count, "forbidden": False, "inStorage": False}
+
+
+def test_low_medicine_gets_loose_medicine_hauled(tmp_path):
+    """Incident 001 of run 20261029-143226: Low medicine for 13h, 31 medicine lying by the stockpile."""
+    assert "Alert_LowMedicine" in MedicalManager.alerts
+    rim = FakeRim()
+    rim.alerts = [LOW_MEDICINE]
+    rim.medicine = [loose_medicine(7760, 124, 138, 5), loose_medicine(45210, 125, 137, 25),
+                    {**loose_medicine(1, 120, 140, 3), "inStorage": True}]
+    manager = MedicalManager()
+    manager.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    assert {"kind": "haul", "thing_ids": ["MedicineIndustrial7760", "MedicineIndustrial45210"]} in rim.called("designate")
+    # The biggest stack is hauled now, by one colonist.
+    assert [(o["target_id"], o["option"]) for o in rim.called("choose_pawn_action")] == [("MedicineIndustrial45210", "2")]
+
+    # The next cycle, an hour on, leaves the colonists to it.
+    rim.tick += 2500
+    manager.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    assert len(rim.called("choose_pawn_action")) == 1
+
+
+def test_low_medicine_with_none_to_store_is_noted_not_stopped_for(tmp_path):
+    rim = FakeRim()
+    rim.alerts = [LOW_MEDICINE]
+    rim.medicine = []
+    ctx = Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False))
+    MedicalManager().update(ctx)
+    assert [(i.kind, i.severity) for i in ctx.incidents] == [("medicineShort", "warn")]
+    assert not rim.called("choose_pawn_action")
+
+
 def test_a_bleeding_colonist_gets_a_drafted_tender_until_the_tending_is_done(tmp_path):
     rim = FakeRim()
     rim.colonists[0]["downed"] = True

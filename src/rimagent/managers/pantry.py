@@ -124,34 +124,9 @@ class PantryManager(Manager):
         if not low or snap.hostiles:
             ctx.log(self.name, f"Marked {len(loose)} food stacks for hauling.", foodDays=days)
             return
-        rushed = self.rush(ctx, loose[:RUSH_STACKS])
+        rushed = rush_hauling(ctx, loose[:RUSH_STACKS])
         ctx.log(self.name, f"Marked {len(loose)} food stacks for hauling; {len(rushed)} hauled now.",
                 foodDays=days, rushed=rushed)
-
-    def rush(self, ctx: Context, stacks: list[dict]) -> list[str]:
-        """Each stack gets the nearest awake, free colonist's right-click "Prioritize hauling"."""
-        positions = {p["ids"]["id"]: p.get("position") for p in ctx.snapshot.colonists if p.get("ids")}
-        free = [p["id"] for p in ctx.rim.list_work(detail="normal").data.get("pawns") or []
-                if p.get("role") == "colonist" and not p.get("drafted") and not p.get("downed")
-                and (p.get("currentJob") or {}).get("defName") not in RESTING_JOBS and positions.get(p["id"])]
-        rushed = []
-        for stack in stacks:
-            free.sort(key=lambda pid: math.hypot(positions[pid]["x"] - stack["x"], positions[pid]["z"] - stack["z"]))
-            for pawn_id in free:
-                try:
-                    menu = ctx.rim.list_pawn_actions(pawn_id, target_id=stack["id"]).data or {}
-                    option = next((o for o in menu.get("options") or []
-                                   if o.get("text", "").startswith(RUSH_OPTION) and not o.get("disabled")), None)
-                    if option is None:
-                        continue
-                    ctx.rim.choose_pawn_action(pawn_id, target_id=stack["id"], revision=menu["revision"],
-                                               option=option["id"], request_id=uuid.uuid4().hex)
-                except (errors.BadRequest, errors.Conflict, errors.NotFound):
-                    continue  # the stack or the menu changed under us: next pass tries again
-                rushed.append(f"{pawn_id}: {option['text']}")
-                free.remove(pawn_id)
-                break
-        return rushed
 
     # --- hunting -----------------------------------------------------------------------------
 
@@ -214,3 +189,29 @@ class PantryManager(Manager):
         if applied:
             ctx.log(self.name, f"Food is short ({days:.1f} days): marked {applied} wild berry bushes for harvest.",
                     foodDays=days)
+
+
+def rush_hauling(ctx: Context, stacks: list[dict]) -> list[str]:
+    """Each stack gets the nearest awake, free colonist's right-click "Prioritize hauling"."""
+    positions = {p["ids"]["id"]: p.get("position") for p in ctx.snapshot.colonists if p.get("ids")}
+    free = [p["id"] for p in ctx.rim.list_work(detail="normal").data.get("pawns") or []
+            if p.get("role") == "colonist" and not p.get("drafted") and not p.get("downed")
+            and (p.get("currentJob") or {}).get("defName") not in RESTING_JOBS and positions.get(p["id"])]
+    rushed = []
+    for stack in stacks:
+        free.sort(key=lambda pid: math.hypot(positions[pid]["x"] - stack["x"], positions[pid]["z"] - stack["z"]))
+        for pawn_id in free:
+            try:
+                menu = ctx.rim.list_pawn_actions(pawn_id, target_id=stack["id"]).data or {}
+                option = next((o for o in menu.get("options") or []
+                               if o.get("text", "").startswith(RUSH_OPTION) and not o.get("disabled")), None)
+                if option is None:
+                    continue
+                ctx.rim.choose_pawn_action(pawn_id, target_id=stack["id"], revision=menu["revision"],
+                                           option=option["id"], request_id=uuid.uuid4().hex)
+            except (errors.BadRequest, errors.Conflict, errors.NotFound):
+                continue  # the stack or the menu changed under us: next pass tries again
+            rushed.append(f"{pawn_id}: {option['text']}")
+            free.remove(pawn_id)
+            break
+    return rushed
