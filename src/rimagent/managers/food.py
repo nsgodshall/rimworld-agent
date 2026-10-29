@@ -10,7 +10,7 @@ from rimsdk.mapview import MapView, Rect
 from ..events import Event
 from ..manager import Context, Manager
 
-GROW_CELLS_PER_COLONIST = 36  # rice, cooked as simple meals, with some slack for blight and winter
+GROW_CELLS_PER_COLONIST = 45  # rice, cooked as simple meals, with slack for blight, winter and a gourmand (36 ran short)
 CROP = "Plant_Rice"
 STOCKPILE_SIZE = (6, 6)
 SEARCH_RADIUS = 30  # cells around the colonists to look for zone sites

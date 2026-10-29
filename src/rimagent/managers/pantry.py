@@ -39,13 +39,13 @@ STARVING_ALERT = "Alert_StarvationColonists"
 LOW_FOOD_ALERT = "Alert_LowFood"  # also rushes hauling, whatever the days left
 EAT_OPTION = "Consume"        # list_pawn_actions on food: "Consume packaged survival meal", or "...: No path"
 TRAPPED_HALT_HOURS = 24       # a starving colonist with no path to food this long needs a person
-HUNT_BELOW_DAYS = 5.0         # hunt while stored food is under this
+HUNT_BELOW_DAYS = 8.0         # hunt while stored food is under this: from day one, as the rations (~7 days) outlast the first harvest by little
 HUNT_AT_ONCE = 2              # animals marked for hunting at any one time
 # Game that seldom fights back and doesn't bring its herd: no boomalopes, boars, muffalo or predators.
 GAME = ("Deer", "Elk", "Caribou", "Ibex", "Gazelle", "Alpaca", "Dromedary", "Emu", "Ostrich", "Capybara",
         "Turkey", "Duck", "Goose", "Hare", "Snowhare", "Squirrel", "Chinchilla", "Iguana",
         "Raccoon", "Rat", "Marmot", "GuineaPig", "Tortoise")
-FORAGE_BELOW_DAYS = HUNT_BELOW_DAYS  # ripe wild berries near the base are picked while stored food is under this
+FORAGE_BELOW_DAYS = 5.0       # ripe wild berries near the base are picked while stored food is under this
 FORAGE_PLANT = "Plant_Berry"
 FORAGE_RADIUS = 60            # cells around the base: four 60x60 rects, designate's largest
 DESIGNATE_MAX_CELLS = 3600    # designate rejects a call whose rects cover more cells than this, all told
