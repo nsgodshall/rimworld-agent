@@ -9,6 +9,8 @@ from ..manager import Context, Manager
 # opens caskets or breaks ancient walls, so leaving the place alone is the whole response.
 PASSIVE_WARNINGS = {
     "Ancient danger": "Ancient shrine nearby; leaving it sealed (no mining, deconstructing or opening caskets there).",
+    # Answered by the house manager, from room temperatures rather than the letter (house.HOT).
+    "Heat wave": "The house manager puts a passive cooler in every room while any is over 28 C.",
 }
 
 

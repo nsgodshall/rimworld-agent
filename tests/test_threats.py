@@ -17,5 +17,10 @@ def test_ancient_danger_is_noted_and_play_continues(tmp_path):
     assert "Ancient danger" in (tmp_path / "run" / "journal.jsonl").read_text()
 
 
+def test_a_heat_wave_is_left_to_the_house_and_play_continues(tmp_path):
+    assert run(tmp_path, [{"kind": "threatLetter", "tick": 395002, "detail": "Heat wave"}]) == "done"
+    assert not (tmp_path / "run" / "incidents").exists()
+
+
 def test_other_threat_letters_still_halt(tmp_path):
     assert run(tmp_path, [{"kind": "threatLetter", "tick": 300, "detail": "Raid"}]) == "halted"

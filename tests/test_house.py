@@ -31,7 +31,7 @@ def test_every_bedroom_is_closed_with_its_own_door_and_bed():
         assert {(bx, bz), (bx, bz - 1)} <= set(room.cells())  # both cells of a south-facing bed
     cx, cz = p["chess"]
     furniture = [p["table"], (p["table"][0] + 1, p["table"][1]), *p["chairs"], p["horseshoes"], p["chess"], *p["lamps"],
-                 *p["end_tables"], *p["pots"], (cx, cz - 1), (cx, cz + 1)]
+                 *p["end_tables"], *p["pots"], *p["coolers"], (cx, cz - 1), (cx, cz + 1)]
     assert len(set(furniture)) == len(furniture) and not set(furniture) & solid
     door_inside = [(x, z + 1) for x, z in p["doors"]]
     assert not set(door_inside) & set(furniture + p["beds"])  # nothing blocks a doorway
@@ -54,6 +54,23 @@ def test_planned_once_placed_until_built_then_left_alone(tmp_path):
     calls = len(rim.called("place_blueprint"))
     house.update(ctx_for(rim, tmp_path, board))
     assert len(rim.called("place_blueprint")) == calls
+
+
+def test_hot_rooms_get_a_passive_cooler_each(tmp_path):
+    rim = colony()
+    FoodManager().update(ctx_for(rim, tmp_path))
+    house = HouseManager()
+    rim.rooms = [{"role": "Bedroom", "temperatureC": 25.0, "usesOutdoorTemperature": False},
+                 {"role": "None", "temperatureC": 35.0, "usesOutdoorTemperature": True}]  # outdoors doesn't count
+    house.update(ctx_for(rim, tmp_path))
+    placed = lambda: [p for c in rim.called("place_blueprint") for p in c["placements"] if p["def"] == "PassiveCooler"]
+    assert placed() == []
+    rim.rooms[0]["temperatureC"] = 30.4  # day-7 heat wave
+    house.update(ctx_for(rim, tmp_path))
+    p = plan(tuple(house.memory["house"]["origin"]), 3)
+    assert {(c["x"], c["z"]) for c in placed()} == set(p["coolers"]) and len(placed()) == 4
+    rooms = [set(r.cells()) for r in [p["common"], *p["bedrooms"]]]
+    assert all(any(xz in cells for xz in p["coolers"]) for cells in rooms)  # one in every room
 
 
 def test_the_doorstep_row_is_free_ground(tmp_path):

@@ -69,6 +69,8 @@ class FakeRim(RimClient):
         self.medicine: list[dict[str, Any]] = []    # as find_things shows them
         self.goods: list[dict[str, Any]] = []       # find_things without a category: items near the base
         self.resources: list[dict[str, Any]] = []   # as list_resources shows them
+        self.rooms: list[dict[str, Any]] = []       # get_environment rooms.items: role, temperatureC, usesOutdoorTemperature
+        self.conditions: list[dict[str, Any]] = []  # get_environment conditions: defName, label, ticksLeft
         self.medical: dict[str, Any] = {"downed": 0, "bleeding": 0, "examples": []}
         self.projects: list[dict[str, Any]] = [     # as get_research shows them; "available" is the fake's own
             {"defName": "A", "label": "A", "baseCost": 300, "finished": True},
@@ -199,6 +201,10 @@ class FakeRim(RimClient):
     def list_buildings(self, *, category=None, **_: Any) -> Result:
         beds = [{"ids": {"id": b["id"]}, "def": {"defName": "Bed"}, **b} for b in self.beds]
         return Result({"data": {"buildings": beds if category == "bed" else beds + self.buildings}})
+
+    def get_environment(self, **_: Any) -> Result:
+        """Shaped like the live reply (heat wave, tick 395002): rooms under rooms.items."""
+        return Result({"data": {"conditions": self.conditions, "rooms": {"truncated": False, "items": self.rooms}}})
 
     def list_production(self, **_: Any) -> Result:
         return Result({"data": {"bills": self.bills}})

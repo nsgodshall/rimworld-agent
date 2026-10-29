@@ -42,6 +42,10 @@ DEPTH = 4            # interior, north to south
 BEDROOM_WIDTH = 3    # interior: 12 tiles, "rather tight" with a bed, never "cramped"
 COMMON_WIDTH = 6     # interior: a 2x2 table, four chairs, horseshoes, chess, a lamp
 MAX_PLACEMENTS = 50  # place_blueprint refuses more in one call (400 "At most 50 placements per call.")
+# Comfortable is up to about 26 C; above it bedrooms give "Slept in the heat", and a heat wave brings
+# heatstroke (docs/reference/rooms.md, threats.md). In the day-7 heat wave the bedrooms were 29-30 C at
+# 20:00, their torch lamps adding to it.
+HOT = 28.0
 
 
 def plan(origin: tuple[int, int], bedrooms: int) -> dict:
@@ -74,6 +78,9 @@ def plan(origin: tuple[int, int], bedrooms: int) -> dict:
         # Beauty and wealth for impressiveness: every bedroom was "awful" (-2) with a bed and a lamp alone.
         "end_tables": [(r.x + 2, ctop - 1) for r in rooms],
         "pots": [(r.x + 2, r.z + 1) for r in rooms] + [(c, cz), (c, ctop)],
+        # Placed only while a room is hot (see HOT): a corner beside the doorway in each bedroom, the top row
+        # of the common room left of the horseshoes.
+        "coolers": [(r.x, r.z) for r in rooms] + [(c + 1, ctop)],
     }
 
 
@@ -134,6 +141,7 @@ class HouseManager(Manager):
         ctx.board["house_dining"] = True
         beds = ctx.rim.list_buildings(category="bed").data.get("buildings") or []
         self._move_in(ctx, p, colonists, beds)
+        self._cool(ctx, p)
         if self.memory.get("built"):
             ctx.board["house_stage"] = 3  # finished
             return
@@ -185,6 +193,25 @@ class HouseManager(Manager):
         ctx.log(self.name, f"Planned {bedrooms} bedrooms and a common room at {p['outer']}: walls of "
                            f"{house['walls']}, furniture of {house['furniture']}.", needs=[walls_need, furniture_need])
         return house
+
+    def _cool(self, ctx: Context, p: dict) -> None:
+        """A passive cooler (50 wood, wood fuel, no power) in every room once an enclosed room is over HOT.
+        Placed again every pass while hot (alreadySatisfied once there); never taken down: it only cools
+        above about 15 C, so it does no harm in the cold."""
+        rooms = (ctx.rim.get_environment().data.get("rooms") or {}).get("items") or []
+        hot = [r for r in rooms if not r.get("usesOutdoorTemperature") and (r.get("temperatureC") or 0) > HOT]
+        if not hot:
+            return
+        items = [{"def": "PassiveCooler", "x": x, "z": z, "rotation": "north"} for x, z in p["coolers"]]
+        results, applied = place(ctx, items)
+        if applied:
+            ctx.log(self.name, f"Placed {applied} passive coolers: {len(hot)} rooms over {HOT:.0f} C.",
+                    hottest=round(max(r["temperatureC"] for r in hot), 1))
+        rejected = [{k: r.get(k) for k in ("x", "z", "reason")} for r in results if r.get("outcome") == "rejected"]
+        if rejected and rejected != self.memory.get("coolers_rejected"):
+            ctx.raise_incident("coolerRejected", f"{len(rejected)} passive coolers were refused in the house.",
+                               "warn", rejected=rejected)
+        self.memory["coolers_rejected"] = rejected
 
     def _move_in(self, ctx: Context, p: dict, colonists: list[dict], beds: list[dict]) -> None:
         """Each colonist owns the bed in their own bedroom; once all have one, beds outside come down."""
