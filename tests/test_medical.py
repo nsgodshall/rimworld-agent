@@ -74,3 +74,17 @@ def test_a_bleeding_colonist_gets_a_drafted_tender_until_the_tending_is_done(tmp
     manager.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
     assert rim.called("set_pawn_drafted")[-1] == {"pawn_id": "HumanB", "drafted": False}
     assert manager.tenders == {}
+
+
+def test_a_colonist_left_untended_gets_a_drafted_tender(tmp_path):
+    """Trial 13: Miyazaki lay 12 hours with untended bruises and cracks, not bleeding."""
+    rim = FakeRim()
+    rim.alerts = [{"type": "Alert_ColonistNeedsTend", "label": "Medical treatment needed", "priority": "High",
+                   "culprits": [{"id": "HumanB", "label": "B"}], "culpritCount": 1}]
+    manager = MedicalManager()
+    manager.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    assert [c for c in rim.called("order_pawn") if c["order"] == "tend"] == []  # doctors get two hours first
+    rim.tick += 3 * 2500
+    manager.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    tends = [c for c in rim.called("order_pawn") if c["order"] == "tend"]
+    assert [(c["pawn_id"], c["target_id"]) for c in tends] == [("HumanA", "HumanB")]

@@ -27,6 +27,8 @@ from .pantry import rush_hauling
 UNFORBID_EVERY_TICKS = 2 * 2500
 TEND_CHUNK_HOURS = 0.1
 LOW_MEDICINE_ALERT = "Alert_LowMedicine"
+NEEDS_TEND_ALERT = "Alert_ColonistNeedsTend"
+NEEDS_TEND_HOLD_HOURS = 2  # doctors get this long to tend on their own before someone is drafted to
 STORE_EVERY_TICKS = 2 * 2500      # how often loose medicine is marked and rushed while the alert shows
 SHORT_NOTE_EVERY_TICKS = 24 * 2500  # a real shortage is noted at most once a day
 
@@ -36,7 +38,7 @@ class MedicalManager(Manager):
     priority = 5  # after defense, before everything else
     every_hours = 0  # every cycle: bleeding can't wait for a schedule
     handles = ("injured",)
-    alerts = (LOW_MEDICINE_ALERT,)
+    alerts = (LOW_MEDICINE_ALERT, NEEDS_TEND_ALERT)
 
     def __init__(self) -> None:
         super().__init__()
@@ -48,22 +50,26 @@ class MedicalManager(Manager):
             self.unforbid(ctx)
             self.unforbid_at = ctx.tick
         self.store_medicine(ctx)
-        medical =ctx.snapshot.colony.get("medical") or {}
-        if not self.tenders and not medical.get("bleeding"):
+        medical = ctx.snapshot.colony.get("medical") or {}
+        untended = self.untended(ctx)
+        if not self.tenders and not medical.get("bleeding") and not untended:
             return
         colonists = {pawn_id(p): p for p in ctx.rim.list_pawns(filter="colonists").data.get("pawns") or [] if not p.get("dead")}
         self.finish(ctx, colonists)
-        if not medical.get("bleeding") or engaging_threats(ctx):
-            return  # nobody bleeding, or a fight to finish first (defense's job)
-        ctx.request_chunk(TEND_CHUNK_HOURS)
+        if not (medical.get("bleeding") or untended) or engaging_threats(ctx):
+            return  # nobody to tend, or a fight to finish first (defense's job)
+        if medical.get("bleeding"):
+            ctx.request_chunk(TEND_CHUNK_HOURS)
         if any(job_of(p) in TEND_JOBS for p in colonists.values()):
             return  # someone is already tending
         patients = [e["id"] for e in medical.get("examples") or [] if e.get("id") in colonists]
+        patients += [pid for pid in untended if pid in colonists and pid not in patients]
         helpers = [p for p in colonists.values()
                    if not p.get("downed") and not p.get("drafted") and pawn_id(p) not in patients]
         if not patients or not helpers:
             if patients:
-                ctx.raise_incident("noTender", f"{len(patients)} colonists bleeding and nobody free to tend them.")
+                ctx.raise_incident("noTender", f"{len(patients)} colonists need tending and nobody is free to.",
+                                   "halt" if medical.get("bleeding") else "warn")
             return
         helper, patient = helpers[0], colonists[patients[0]]
         try:
@@ -79,6 +85,18 @@ class MedicalManager(Manager):
         else:
             ctx.rim.set_pawn_drafted(pawn_id(helper), drafted=False)
             ctx.log(self.name, f"{helper['name']} can't tend {patient['name']}: {result.get('reason')}")
+
+    def untended(self, ctx: Context) -> list[str]:
+        """Colonists the game says need treatment (Alert_ColonistNeedsTend) for NEEDS_TEND_HOLD_HOURS: doctors
+        usually see to them, but in trial 13 Miyazaki lay 12 hours in bed with untended bruises and cracks."""
+        alert = next((a for a in ctx.snapshot.alerts if a.get("type") == NEEDS_TEND_ALERT), None)
+        if alert is None:
+            self.memory.pop("needs_tend_since", None)
+            return []
+        since = self.memory.setdefault("needs_tend_since", ctx.tick)
+        if ctx.tick - since < NEEDS_TEND_HOLD_HOURS * 2500:
+            return []
+        return [c["id"] for c in alert.get("culprits") or [] if c.get("id")]
 
     def finish(self, ctx: Context, colonists: dict[str, dict[str, Any]]) -> None:
         """Undraft tenders whose tending is over, so they go back to work (or to bed)."""
