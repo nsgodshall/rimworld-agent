@@ -86,6 +86,34 @@ def test_short_food_marks_the_nearest_safe_game_for_hunting(tmp_path):
     assert rim.called("designate_animal")[-1] == {"pawn_id": "Hare5", "action": "hunt"}
 
 
+def test_short_food_picks_ripe_wild_berries_near_the_base(tmp_path):
+    """Run 20261029-114409: the safe game was all shot and every corpse rotted; stored food sat at 0."""
+    rim = colony(food_days=0.0)
+    near = {(60, 40), (61, 40), (5, 5), (99, 99)}  # spread over the reach's several rects
+    rim.berries = near | {(200, 200)}  # the far bush is outside the 60-cell reach
+    pantry = PantryManager()
+    pantry.update(ctx_for(rim, tmp_path))
+    calls = [c for c in rim.called("designate") if c["kind"] == "harvest"]
+    # Same run, later: four 60x60 rects in one call came back "more than 3600 cells". The limit is per call.
+    assert len(calls) > 1
+    for call in calls:
+        assert call["def_name"] == "Plant_Berry" and len(call["rects"]) <= 20
+        assert all(r["x"] >= 0 and r["z"] >= 0 and r["width"] <= 60 and r["height"] <= 60 for r in call["rects"])
+        assert sum(r["width"] * r["height"] for r in call["rects"]) <= 3600
+    assert rim.harvesting == near
+
+    # Asking again is harmless: already marked.
+    pantry.update(ctx_for(rim, tmp_path))
+    assert rim.harvesting == near
+
+
+def test_no_foraging_with_food_in_store(tmp_path):
+    rim = colony(food_days=8.0)
+    rim.berries = {(60, 40)}
+    PantryManager().update(ctx_for(rim, tmp_path))
+    assert not [c for c in rim.called("designate") if c["kind"] == "harvest"]
+
+
 def test_no_hunting_with_food_in_store(tmp_path):
     rim = colony(food_days=8.0)
     rim.animals = [animal("Alpaca", 1, 55, 55)]

@@ -10,6 +10,11 @@ A starving colonist (Alert_StarvationColonists) is told to eat the nearest food.
 is trapped: in the same run Sparky was shut in the house, whose door opened onto an ancient wall. The
 house manager moves such a door; if a colonist is still trapped a day later, the run stops for help.
 
+Hunting runs out. In run 20261029-114409 every safe animal on the map was shot by day 4; with no butcher
+spot all 27 corpses rotted, and from then on nothing more was marked while stored food sat at 0. So while
+food is short, ripe wild berries near the base are marked for harvest too (they keep, and need no butcher
+or cook), and a few more small animals count as game.
+
 Low food (Alert_LowFood: stored human food under 4 nutrition per colonist) is this manager's too: it is
 what the hauling and hunting below answer, and while it shows, loose food is hauled now rather than when
 someone gets round to it. In the same run the alert showed for 14h at 3 days stored, with 62 rice
@@ -38,7 +43,12 @@ HUNT_BELOW_DAYS = 5.0         # hunt while stored food is under this
 HUNT_AT_ONCE = 2              # animals marked for hunting at any one time
 # Game that seldom fights back and doesn't bring its herd: no boomalopes, boars, muffalo or predators.
 GAME = ("Deer", "Elk", "Caribou", "Ibex", "Gazelle", "Alpaca", "Dromedary", "Emu", "Ostrich", "Capybara",
-        "Turkey", "Duck", "Goose", "Hare", "Snowhare", "Squirrel", "Chinchilla", "Iguana")
+        "Turkey", "Duck", "Goose", "Hare", "Snowhare", "Squirrel", "Chinchilla", "Iguana",
+        "Raccoon", "Rat", "Marmot", "GuineaPig", "Tortoise")
+FORAGE_BELOW_DAYS = HUNT_BELOW_DAYS  # ripe wild berries near the base are picked while stored food is under this
+FORAGE_PLANT = "Plant_Berry"
+FORAGE_RADIUS = 60            # cells around the base: four 60x60 rects, designate's largest
+DESIGNATE_MAX_CELLS = 3600    # designate rejects a call whose rects cover more cells than this, all told
 
 
 class PantryManager(Manager):
@@ -54,6 +64,7 @@ class PantryManager(Manager):
             return
         self.store_food(ctx)
         self.hunt(ctx)
+        self.forage(ctx)
 
     # --- starving colonists -------------------------------------------------------------------
 
@@ -170,3 +181,36 @@ class PantryManager(Manager):
         if added:
             ctx.log(self.name, f"Food is short ({days:.1f} days): marked {', '.join(added)} for hunting.",
                     hunting=marked)
+
+    # --- foraging ----------------------------------------------------------------------------
+
+    def forage(self, ctx: Context) -> None:
+        snap = ctx.snapshot
+        days = snap.food_days
+        if days is None or days >= FORAGE_BELOW_DAYS:
+            return
+        # Only ripe plants take the order, and repeats come back alreadySatisfied: safe to ask every pass.
+        width, height = snap.map_size
+        bx, bz = (round(c) for c in snap.base_center)
+        x0, z0 = max(0, bx - FORAGE_RADIUS), max(0, bz - FORAGE_RADIUS)
+        x1, z1 = min(width, bx + FORAGE_RADIUS), min(height, bz + FORAGE_RADIUS)
+        rects = [{"x": x, "z": z, "width": min(FORAGE_RADIUS, x1 - x), "height": min(FORAGE_RADIUS, z1 - z)}
+                 for x in range(x0, x1, FORAGE_RADIUS) for z in range(z0, z1, FORAGE_RADIUS)]
+        # The cell limit is per call, not per rect (run 20261029-114409 stopped on four rects in one call).
+        batches: list[list[dict]] = []
+        for rect in rects:
+            cells = rect["width"] * rect["height"]
+            if not batches or sum(r["width"] * r["height"] for r in batches[-1]) + cells > DESIGNATE_MAX_CELLS:
+                batches.append([])
+            batches[-1].append(rect)
+        applied = 0
+        for batch in batches:
+            try:
+                result = ctx.rim.designate(kind="harvest", rects=batch, def_name=FORAGE_PLANT).data or {}
+            except errors.BadRequest as exc:
+                ctx.log(self.name, f"Couldn't mark wild berries for harvest: {exc}", rects=batch)
+                continue
+            applied += result.get("applied") or 0
+        if applied:
+            ctx.log(self.name, f"Food is short ({days:.1f} days): marked {applied} wild berry bushes for harvest.",
+                    foodDays=days)

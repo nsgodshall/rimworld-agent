@@ -10,6 +10,10 @@
   1  firefighting, being a patient and bed rest, for everyone; doctoring for the best doctor
   2  research for the best researcher; work a colonist has a passion for (passion work also lifts mood)
   3  everything else they can do
+- While stored food is short, food work comes first: cooking (which butchers too), hunting and growing at 1,
+  hauling (which stores the harvest and fuels the stove) at 2. In run 20261029-114409 stored food sat at 0
+  for a day with rice ripe in the field, a butcher spot and a stove waiting for fuel, while all three
+  colonists felled trees.
 - Two evening hours are recreation (`schedule`).
 """
 
@@ -21,6 +25,8 @@ from ..manager import Context, Manager
 
 WORKERS = ("colonist", "slave")
 EMERGENCY = ("Firefighter", "Patient", "PatientBedRest")
+FOOD_SHORT_DAYS = 2.0  # stored food under this many days puts food work first
+FOOD_WORK = {"Cooking": 1, "Hunting": 1, "Growing": 1, "Hauling": 2}
 JOY_HOURS = (20, 22)  # evening, before the default 22:00 bedtime
 # Work type -> the skill it uses (for passions and for choosing the doctor and researcher).
 SKILL = {"Doctor": "Medicine", "Research": "Intellectual", "Cooking": "Cooking", "Construction": "Construction",
@@ -33,7 +39,7 @@ def skills_of(pawn: dict) -> dict[str, dict]:
     return {s["defName"]: s for s in pawn.get("skills") or [] if s.get("defName")}
 
 
-def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]]) -> dict[tuple[str, str], int]:
+def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]], food_short: bool = False) -> dict[tuple[str, str], int]:
     """(pawn id, work type) -> priority, for every work type each pawn can do."""
     capable = {p["id"]: [w["defName"] for w in p.get("work") or [] if not w.get("disabled")] for p in pawns}
 
@@ -52,13 +58,15 @@ def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]]) -> dict[tuple[
                 out[(pid, work_type)] = 2
             else:
                 out[(pid, work_type)] = 3
+            if food_short and work_type in FOOD_WORK:
+                out[(pid, work_type)] = min(out[(pid, work_type)], FOOD_WORK[work_type])
     return out
 
 
 class WorkManager(Manager):
     name = "work"
     priority = 3  # early: work settings shape what everything placed later gets done
-    every_hours = 12  # catches colonists who join later
+    every_hours = 2  # food work goes first soon after the stores run short; also catches colonists who join
 
     def update(self, ctx: Context) -> None:
         pawns = [p for p in ctx.rim.list_work(detail="normal").data.get("pawns") or [] if p.get("role") in WORKERS]
@@ -66,7 +74,9 @@ class WorkManager(Manager):
         current = {(p["id"], w["defName"]): w.get("priority", 0) for p in pawns for w in p.get("work") or []}
         names = {p["id"]: p.get("name") for p in pawns}
         changed: dict[str, list[str]] = {}
-        for (pid, work_type), priority in sorted(wanted(pawns, skills).items()):
+        days = ctx.snapshot.food_days
+        food_short = days is not None and days < FOOD_SHORT_DAYS
+        for (pid, work_type), priority in sorted(wanted(pawns, skills, food_short).items()):
             if current.get((pid, work_type)) == priority:
                 continue
             try:

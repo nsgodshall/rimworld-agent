@@ -53,6 +53,8 @@ class FakeRim(RimClient):
         self.no_path: set[str] = set()              # pawns that can't reach any food (shut in)
         self.animals: list[dict[str, Any]] = []     # wild animals, as list_pawns filter=wildAnimals shows them
         self.hunting: set[str] = set()              # animals designated for hunting
+        self.berries: set[tuple[int, int]] = set()  # ripe wild berry bushes (Plant_Berry) by cell
+        self.harvesting: set[tuple[int, int]] = set()  # plants designated for harvest
         self.food = {"eatenPerDay": 5.6, "daysLeft": 5.0}
         self.run_script: list[dict[str, Any]] = []  # runs to return, in order; then plain completed runs
         self.history: list[dict[str, Any]] = []
@@ -239,8 +241,19 @@ class FakeRim(RimClient):
 
     # --- changes -----------------------------------------------------------------------------
 
-    def designate(self, *, kind, thing_ids=None, rects=None, **_: Any) -> Result:
-        self._record("designate", kind=kind, thing_ids=thing_ids, rects=rects)
+    def designate(self, *, kind, thing_ids=None, rects=None, def_name=None, **_: Any) -> Result:
+        self._record("designate", kind=kind, thing_ids=thing_ids, rects=rects, def_name=def_name)
+        if sum(r.get("width", 1) * r.get("height", 1) for r in rects or []) > 3600:
+            raise errors.BadRequest("The rectangles cover more than 3600 cells; split the change into smaller calls.",
+                                    status=400)
+        if kind == "harvest" and def_name == "Plant_Berry":
+            # As in game: each ripe plant in the rects is applied once, then alreadySatisfied.
+            cells = {c for c in self.berries for r in rects or []
+                     if r["x"] <= c[0] < r["x"] + r.get("width", 1) and r["z"] <= c[1] < r["z"] + r.get("height", 1)}
+            new = cells - self.harvesting
+            self.harvesting |= new
+            return Result({"changed": bool(new), "data": {"applied": len(new), "alreadySatisfied": len(cells) - len(new),
+                                                          "rejectedCount": 0}})
         if kind == "unforbid":
             self.forbidden_food = [t for t in self.forbidden_food if t not in (thing_ids or [])]
             for g in self.goods:

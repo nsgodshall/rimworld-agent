@@ -56,6 +56,23 @@ def test_passions_come_second(tmp_path):
     assert a["Growing"] == a["PlantCutting"] == 2 and a["Cooking"] == 3
 
 
+def test_short_food_puts_food_work_first_and_plenty_puts_it_back(tmp_path):
+    """Run 20261029-114409: 0 days stored, rice ripe and a butcher spot waiting, everyone felling trees."""
+    rim = FakeRim()
+    skilled(rim, "HumanA", Intellectual=9, Cooking=(2, "Major"))
+    rim.food = {"eatenPerDay": 4.8, "daysLeft": 0.0}
+    manager = WorkManager()
+    manager.update(ctx_for(rim, tmp_path))
+    a = priorities(rim, "HumanA")
+    assert a["Cooking"] == a["Hunting"] == a["Growing"] == 1 and a["Hauling"] == 2
+    assert a["Research"] == 2 and a["Construction"] == 3 and a["Firefighter"] == 1
+
+    rim.food = {"eatenPerDay": 4.8, "daysLeft": 6.0}
+    manager.update(ctx_for(rim, tmp_path))
+    a = priorities(rim, "HumanA")
+    assert a["Cooking"] == 2 and a["Hunting"] == a["Growing"] == a["Hauling"] == 3
+
+
 def test_settled_priorities_are_not_set_again(tmp_path):
     rim = FakeRim()
     manager = WorkManager()
