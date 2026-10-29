@@ -211,3 +211,18 @@ def test_need_defenses_alert_no_longer_halts(tmp_path):
     rt = Runtime(rim, tmp_path / "run", managers=[DefenseManager()], tripwires=[], echo=False)
     assert rt.run(24) == "done"
     assert rim.called("place_blueprint")
+
+
+def test_a_predator_hunting_a_colonist_is_fought(tmp_path):
+    """Trial 7: "Timber wolf hunting Miyazaki" was an unhandled threat letter; roaming predators aren't fought."""
+    rim = colony()
+    wolf = {"ids": {"id": "Wolf1"}, "kind": "pawn", "threatKind": "animal", "position": {"x": 60, "y": 0, "z": 55},
+            "downed": False, "combat": {"equipment": [], "currentJob": {"defName": "PredatorHunt", "report": "hunting."}}}
+    rim.threats = [wolf]
+    manager = DefenseManager()
+    assert manager.on_event(ctx_for(rim, tmp_path), Event("threatLetter", 1, "run", "Timber wolf hunting Miyazaki")) is True
+    assert all(p["drafted"] for p in rim.colonists)
+    wolf["combat"]["currentJob"] = {"defName": "Wander"}
+    rim.calls = []
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    assert not [c for c in rim.called("set_pawn_drafted") if c["drafted"]]  # a wandering wolf is left alone

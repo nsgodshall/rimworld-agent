@@ -93,6 +93,9 @@ class DefenseManager(Manager):
         # Raiders arrive at the map edge, out of reach: this manager has them once they're visible
         # anywhere, and fights when they come near. A threat letter with no hostiles on the map
         # (a quest's warning, a coming siege...) isn't something this code understands.
+        # "<Predator> hunting <colonist>": fought above while it hunts; gone or given up, nothing to do.
+        if event.kind == "threatLetter" and " hunting " in (event.detail or ""):
+            return True
         return event.kind == "hostiles" or bool(engaging_threats(ctx, radius=None))
 
     # --- fighting ----------------------------------------------------------------------------
@@ -214,20 +217,28 @@ class DefenseManager(Manager):
 
 def engaging_threats(ctx: Context, radius: int | None = ENGAGE_RADIUS) -> list[dict[str, Any]]:
     """Live hostile pawns within `radius` cells of the base (None: anywhere): raiders, mechanoids,
-    insects, manhunters. Not predators that merely roam (threatKind "animal"), fires, or the downed."""
+    insects, manhunters, and predators on the hunt (job PredatorHunt: in trial 7 a timber wolf went after
+    Miyazaki). Not predators that merely roam, fires, or the downed."""
     if not ctx.snapshot.colony.get("threats", {}).get("total"):
         return []
     anchor = base_anchor(ctx)
     if anchor is None:
         return []
     near = []
-    for t in ctx.rim.list_threats().data.get("threats") or []:
-        if t.get("kind") != "pawn" or t.get("downed") or t.get("threatKind") == "animal":
+    for t in ctx.rim.list_threats(detail="normal").data.get("threats") or []:
+        if t.get("kind") != "pawn" or t.get("downed"):
+            continue
+        if t.get("threatKind") == "animal" and not hunting(t):
             continue
         pos = t.get("position") or {}
         if radius is None or ("x" in pos and max(abs(pos["x"] - anchor[0]), abs(pos["z"] - anchor[1])) <= radius):
             near.append(t)
     return near
+
+
+def hunting(threat: dict[str, Any]) -> bool:
+    """A predator stalking someone (list_threats detail=normal: combat.currentJob)."""
+    return ((threat.get("combat") or {}).get("currentJob") or {}).get("defName") == "PredatorHunt"
 
 
 def positions(view: MapView, anchor: tuple[int, int], enemy: tuple[float, float], shooters: int, melee: int) -> list[tuple[int, int]]:
