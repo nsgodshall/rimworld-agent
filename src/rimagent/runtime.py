@@ -370,9 +370,19 @@ class Runtime:
     # --- plumbing ----------------------------------------------------------------------------
 
     def _reload_if_changed(self, tick: int) -> None:
-        if self.loader is not None and self.loader.changed():
-            self.managers = self.loader.load(self.managers)
-            self.journal.write("reload", tick=tick, managers=[m.name for m in self.managers])
+        if self.loader is None or not self.loader.changed():
+            return
+        try:
+            managers = self.loader.load(self.managers)
+        except Exception as exc:  # a broken manager file keeps the old managers running, and is reported once
+            if not getattr(self, "_reload_failed", False):
+                self.journal.write("warning", tick=tick, summary=f"Reloading managers failed, keeping the old ones: "
+                                   f"{type(exc).__name__}: {exc}")
+            self._reload_failed = True
+            return
+        self._reload_failed = False
+        self.managers = managers
+        self.journal.write("reload", tick=tick, managers=[m.name for m in self.managers])
 
     def _skip_old_history(self) -> None:
         self.history_cursor = self.rim.get_events().data["history"].get("cursor")

@@ -194,3 +194,32 @@ def test_loader_hot_reloads_changed_managers(tmp_path, monkeypatch):
 def test_loader_orders_managers_by_priority():
     names = [m.name for m in ManagerLoader().load()]
     assert names.index("defense") < names.index("food") < names.index("beds")
+
+
+def test_a_reload_sees_new_names_in_the_modules_a_manager_imports(tmp_path, monkeypatch):
+    """Trial 12 crashed: house.py was reloaded before materials.py, and imported a name only the new one had."""
+    import os
+    import sys
+    import time as _time
+
+    from rimagent.loader import ManagerLoader
+
+    pkg = tmp_path / "trialpkg"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("")
+    (pkg / "zhelper.py").write_text("OLD = 1\n")
+    (pkg / "alpha.py").write_text(
+        "from rimagent.manager import Manager\nfrom .zhelper import OLD\n\nclass Alpha(Manager):\n    name = 'alpha'\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    loader = ManagerLoader("trialpkg")
+    assert [m.name for m in loader.load()] == ["alpha"]
+    later = _time.time() + 5
+    (pkg / "zhelper.py").write_text("OLD = 1\nNEW = 2\n")
+    (pkg / "alpha.py").write_text(
+        "from rimagent.manager import Manager\nfrom .zhelper import NEW\n\nclass Alpha(Manager):\n    name = 'alpha2'\n")
+    for f in ("zhelper.py", "alpha.py"):
+        os.utime(pkg / f, (later, later))
+    assert loader.changed()
+    assert [m.name for m in loader.load()] == ["alpha2"]
+    for name in [m for m in sys.modules if m.startswith("trialpkg")]:
+        del sys.modules[name]

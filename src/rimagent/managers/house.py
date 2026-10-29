@@ -35,7 +35,7 @@ from rimsdk.mapview import Rect
 from ..manager import Context, Manager
 from .beds import base_anchor
 from .food import _chars, best_site
-from .materials import STEEL, WOOD, pick
+from .materials import SILVER, STEEL, WOOD, pick
 
 WINDOW = 60          # side of the square around the base searched for a site (scan stitches views)
 DEPTH = 4            # interior, north to south
@@ -84,7 +84,7 @@ def plan(origin: tuple[int, int], bedrooms: int) -> dict:
     }
 
 
-def stages(p: dict, walls: str, furniture: str, beds: str | None = None) -> list[list[dict]]:
+def stages(p: dict, walls: str, furniture: str, beds: str | None = None, metal: str = STEEL) -> list[list[dict]]:
     """The house's placements in building order. Builders take blueprints in no particular order, so a
     stage is placed only once the one before is built: in trial 7, with everything placed at once, the
     beds waited behind 70 walls and everyone slept on the ground ("Slept on ground", -4) for two nights."""
@@ -97,15 +97,15 @@ def stages(p: dict, walls: str, furniture: str, beds: str | None = None) -> list
     shell = [put("Wall", xz, walls) for xz in p["walls"]] + [put("Door", xz, walls) for xz in p["doors"]]
     cx, cz = p["chess"]
     # Chess needs a seat beside it ("Chess table needs chairs" in trial 8): one south, one north, facing it.
-    comforts = [put("HorseshoesPin", p["horseshoes"], STEEL), put("ChessTable", p["chess"], furniture),
+    comforts = [put("HorseshoesPin", p["horseshoes"], metal), put("ChessTable", p["chess"], furniture),
                 put("DiningChair", (cx, cz - 1), furniture, "north"), put("DiningChair", (cx, cz + 1), furniture, "south")]
     comforts += [put("TorchLamp", xz) for xz in p["lamps"]]
-    comforts += [put("EndTable", xz, furniture) for xz in p["end_tables"]] + [put("PlantPot", xz, STEEL) for xz in p["pots"]]
+    comforts += [put("EndTable", xz, furniture) for xz in p["end_tables"]] + [put("PlantPot", xz, furniture) for xz in p["pots"]]
     return [daily, shell, comforts]
 
 
-def placements(p: dict, walls: str, furniture: str, beds: str | None = None) -> list[dict]:
-    return [item for stage in stages(p, walls, furniture, beds) for item in stage]
+def placements(p: dict, walls: str, furniture: str, beds: str | None = None, metal: str = STEEL) -> list[dict]:
+    return [item for stage in stages(p, walls, furniture, beds, metal) for item in stage]
 
 
 def place(ctx: Context, items: list[dict]) -> tuple[list[dict], int]:
@@ -146,7 +146,12 @@ class HouseManager(Manager):
             ctx.board["house_stage"] = 3  # finished
             return
         results, applied = [], 0
-        for number, stage in enumerate(stages(p, house["walls"], house["furniture"], house.get("beds"))):
+        # The horseshoes pin takes metal only: steel, or silver once the steel is gone (trial 12's last stage
+        # waited at 0 steel). Chosen when the last stage is first placed, then kept.
+        if ctx.board.get("house_stage", 0) >= 2 and "metal" not in house:
+            house["metal"] = pick(ctx, 10, (STEEL, SILVER))
+        metal = house.get("metal", STEEL)
+        for number, stage in enumerate(stages(p, house["walls"], house["furniture"], house.get("beds"), metal)):
             ctx.board["house_stage"] = number  # what's being built: others wait for wood (see stages())
             stage_results, stage_applied = place(ctx, stage)
             results, applied = results + stage_results, applied + stage_applied
@@ -160,7 +165,7 @@ class HouseManager(Manager):
                                "warn", rejected=rejected[:10])
         self.memory["rejected"] = rejected
         # Finished: every stage placed, and every placement already there and built (not a blueprint or frame).
-        if len(results) == len(placements(p, house["walls"], house["furniture"], house.get("beds"))) and all(r.get("outcome") == "alreadySatisfied" and r.get("state") == "built" for r in results):
+        if len(results) == len(placements(p, house["walls"], house["furniture"], house.get("beds"), metal)) and all(r.get("outcome") == "alreadySatisfied" and r.get("state") == "built" for r in results):
             self.memory["built"] = True
             ctx.log(self.name, f"The house at {p['outer']} is finished.")
 

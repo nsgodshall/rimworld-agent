@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import inspect
 import pkgutil
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -36,11 +37,15 @@ class ManagerLoader:
         memories = {m.name: m.memory for m in previous}
         managers: list[Manager] = []
         files = self._files()
+        if any(m in self._modules and f.stat().st_mtime != self._mtimes.get(m) for m, f in files.items()):
+            # Import every manager module afresh, not just the changed ones in name order: in trial 12 house.py
+            # was reloaded before the materials.py it imports, saw the old one, and the reload failed.
+            for module_name in list(sys.modules):
+                if module_name.startswith(self.package + "."):
+                    del sys.modules[module_name]
+            self._modules.clear()
         for module_name, path in sorted(files.items()):
-            if module_name in self._modules and path.stat().st_mtime != self._mtimes.get(module_name):
-                module = importlib.reload(self._modules[module_name])
-            else:
-                module = self._modules.get(module_name) or importlib.import_module(module_name)
+            module = self._modules.get(module_name) or importlib.import_module(module_name)
             self._modules[module_name] = module
             self._mtimes[module_name] = path.stat().st_mtime
             for _, cls in inspect.getmembers(module, inspect.isclass):

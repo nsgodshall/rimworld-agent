@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from ..manager import Context
 
-WOOD, STEEL = "WoodLog", "Steel"
+WOOD, STEEL, SILVER = "WoodLog", "Steel", "Silver"
 # Wood kept back for what only wood does early: campfire and torch fuel, the butcher table, the research bench.
 WOOD_RESERVE = 150
 STEEL_RESERVE = 100  # components and tools come later; keep a little
