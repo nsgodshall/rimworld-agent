@@ -115,5 +115,9 @@ uv run pytest -q
 
 Arguments to `inspect` use the tool's wire (camelCase) names, with JSON values.
 
+Evaluations start from the save `rimagent-landed-named`: `rimagent-landed` with the faction and
+settlement already named. Unnamed, RimWorld asks for names around day 4, in a window that holds the
+game paused, and RimMCP can't answer it.
+
 The game may be unfocused with Run in background off. Calls then wait for focus (up to 10
 minutes) instead of failing.
