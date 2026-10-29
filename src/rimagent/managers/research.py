@@ -18,6 +18,7 @@ from rimsdk.mapview import Rect
 
 from ..manager import Context, Manager
 from .beds import base_anchor
+from .materials import STEEL, pick
 from .food import _chars
 
 BENCHES = ("SimpleResearchBench", "HiTechResearchBench")
@@ -93,9 +94,11 @@ class ResearchManager(Manager):
         # comes back alreadySatisfied instead of planning a second bench.
         spots = sorted(window.cells(), key=lambda c: (math.hypot(c[0] - anchor[0], c[1] - anchor[1]), c[1], c[0]))
         candidates = [s for s in spots if usable(*s)][:TRIES]
+        # Steel when wood is short (trial 9's wooden bench waited days at 0 wood). Chosen once.
+        stuff = self.memory.setdefault("stuff", pick(ctx, 75, (STUFF, STEEL)))
         for x, z in candidates:
             result = ctx.rim.place_blueprint(
-                placements=[{"def": BENCH, "stuff": STUFF, "x": x, "z": z, "rotation": ROTATION}],
+                placements=[{"def": BENCH, "stuff": stuff, "x": x, "z": z, "rotation": ROTATION}],
                 request_id=uuid.uuid4().hex).data or {}
             (placed,) = result.get("results") or [{}]
             outcome = placed.get("outcome")

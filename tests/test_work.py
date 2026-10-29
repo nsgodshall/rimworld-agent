@@ -26,6 +26,7 @@ def priorities(rim, pawn):
 def test_work_switched_off_is_turned_on_and_incapable_work_left_alone(tmp_path):
     """Trial 4: Sparky had only construction on (he can't haul or clean) and stood idle."""
     rim = FakeRim()
+    rim.resources = [{"defName": "WoodLog", "count": 400}]
     for w in ("Growing", "PlantCutting", "Mining"):
         switch(rim, "HumanC", w, active=False, priority=0)
     switch(rim, "HumanC", "Hauling", disabled=True, active=False, priority=0)
@@ -107,3 +108,14 @@ def test_two_evening_hours_of_recreation_once(tmp_path):
     assert len(rim.called("set_pawn_assignment")) == 3
     assert all(rim.schedules[p][20] == rim.schedules[p][21] == "Joy" and rim.schedules[p][19] == "Anything"
                for p in ("HumanA", "HumanB", "HumanC"))
+
+
+def test_with_no_wood_everyone_fells_trees(tmp_path):
+    """Trial 9: walls and the research bench waited at 0 wood while one colonist chopped."""
+    rim = FakeRim()
+    rim.resources = [{"defName": "WoodLog", "count": 10}]
+    WorkManager().update(ctx_for(rim, tmp_path))
+    assert all(priorities(rim, p)["PlantCutting"] == 2 for p in ("HumanA", "HumanB", "HumanC"))
+    rim.resources = [{"defName": "WoodLog", "count": 400}]
+    WorkManager().update(ctx_for(rim, tmp_path))
+    assert all(priorities(rim, p)["PlantCutting"] == 3 for p in ("HumanA", "HumanB", "HumanC"))

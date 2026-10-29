@@ -14,6 +14,7 @@
   hauling (which stores the harvest and fuels the stove) at 2. In run 20261029-114409 stored food sat at 0
   for a day with rice ripe in the field, a butcher spot and a stove waiting for fuel, while all three
   colonists felled trees.
+- While usable wood is under 50, felling trees (plant cutting) goes to 2 for everyone.
 - Two evening hours are recreation (`schedule`).
 """
 
@@ -27,6 +28,10 @@ WORKERS = ("colonist", "slave")
 EMERGENCY = ("Firefighter", "Patient", "PatientBedRest")
 FOOD_SHORT_DAYS = 2.0  # stored food under this many days puts food work first
 FOOD_WORK = {"Cooking": 1, "Hunting": 1, "Growing": 1, "Hauling": 2}
+# With no wood, every build waits: in trial 9 the house's walls and the research bench stood as blueprints at
+# 0 wood while one colonist felled trees. Under this much usable wood, felling goes to 2 for everyone.
+WOOD_SHORT = 50
+WOOD_WORK = {"PlantCutting": 2}
 JOY_HOURS = (20, 22)  # evening, before the default 22:00 bedtime
 # Work type -> the skill it uses (for passions and for choosing the doctor and researcher).
 SKILL = {"Doctor": "Medicine", "Research": "Intellectual", "Cooking": "Cooking", "Construction": "Construction",
@@ -39,7 +44,8 @@ def skills_of(pawn: dict) -> dict[str, dict]:
     return {s["defName"]: s for s in pawn.get("skills") or [] if s.get("defName")}
 
 
-def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]], food_short: bool = False) -> dict[tuple[str, str], int]:
+def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]], food_short: bool = False,
+           wood_short: bool = False) -> dict[tuple[str, str], int]:
     """(pawn id, work type) -> priority, for every work type each pawn can do."""
     capable = {p["id"]: [w["defName"] for w in p.get("work") or [] if not w.get("disabled")] for p in pawns}
 
@@ -60,6 +66,8 @@ def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]], food_short: bo
                 out[(pid, work_type)] = 3
             if food_short and work_type in FOOD_WORK:
                 out[(pid, work_type)] = min(out[(pid, work_type)], FOOD_WORK[work_type])
+            if wood_short and work_type in WOOD_WORK:
+                out[(pid, work_type)] = min(out[(pid, work_type)], WOOD_WORK[work_type])
     return out
 
 
@@ -76,7 +84,8 @@ class WorkManager(Manager):
         changed: dict[str, list[str]] = {}
         days = ctx.snapshot.food_days
         food_short = days is not None and days < FOOD_SHORT_DAYS
-        for (pid, work_type), priority in sorted(wanted(pawns, skills, food_short).items()):
+        wood_short = ctx.snapshot.usable("WoodLog") < WOOD_SHORT
+        for (pid, work_type), priority in sorted(wanted(pawns, skills, food_short, wood_short).items()):
             if current.get((pid, work_type)) == priority:
                 continue
             try:
