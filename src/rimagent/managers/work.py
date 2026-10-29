@@ -10,6 +10,7 @@
   1  firefighting, being a patient and bed rest, for everyone; doctoring for the best doctor
   2  research for the best researcher; work a colonist has a passion for (passion work also lifts mood)
   3  everything else they can do
+- Two evening hours are recreation (`schedule`).
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from ..manager import Context, Manager
 
 WORKERS = ("colonist", "slave")
 EMERGENCY = ("Firefighter", "Patient", "PatientBedRest")
+JOY_HOURS = (20, 22)  # evening, before the default 22:00 bedtime
 # Work type -> the skill it uses (for passions and for choosing the doctor and researcher).
 SKILL = {"Doctor": "Medicine", "Research": "Intellectual", "Cooking": "Cooking", "Construction": "Construction",
          "Growing": "Plants", "PlantCutting": "Plants", "Mining": "Mining", "Hunting": "Shooting",
@@ -76,3 +78,20 @@ class WorkManager(Manager):
             changed.setdefault(pid, []).append(f"{work_type} {priority}")
         for pid, items in changed.items():
             ctx.log(self.name, f"{names[pid]}: {', '.join(items)}.", pawn=pid)
+        self.schedule(ctx, pawns)
+
+    def schedule(self, ctx: Context, pawns: list[dict]) -> None:
+        """Two evening hours for recreation. With work always on offer, recreation slid to "unfulfilled"
+        (-5) and below; it's worth -20 to +10 (docs/reference/mood.md), and the house has horseshoes and chess."""
+        start, end = JOY_HOURS
+        for p in pawns:
+            hours = {h.get("hour"): h.get("assignment") for h in (p.get("schedule") or {}).get("hours") or []}
+            if all(hours.get(h) == "Joy" for h in range(start, end)):
+                continue
+            try:
+                ctx.rim.set_pawn_assignment(p["id"], "schedule", assignments=[
+                    {"startHour": start, "endHour": end, "assignmentDefName": "Joy"}])
+            except (errors.BadRequest, errors.Conflict) as exc:
+                ctx.raise_incident("scheduleRefused", f"{p.get('name')}: {exc.message}", "warn", pawn=p["id"])
+                continue
+            ctx.log(self.name, f"{p.get('name')} has recreation from {start}:00 to {end}:00.", pawn=p["id"])

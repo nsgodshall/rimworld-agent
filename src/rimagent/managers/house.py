@@ -85,7 +85,10 @@ def stages(p: dict, walls: str, furniture: str, beds: str | None = None) -> list
     daily = [put("Bed", xz, beds or furniture, "south") for xz in p["beds"]] + [put("Table2x2c", p["table"], furniture)]
     daily += [put("DiningChair", xz, furniture, "east" if xz[0] < tx else "west") for xz in p["chairs"]]
     shell = [put("Wall", xz, walls) for xz in p["walls"]] + [put("Door", xz, walls) for xz in p["doors"]]
-    comforts = [put("HorseshoesPin", p["horseshoes"], STEEL), put("ChessTable", p["chess"], furniture)]
+    cx, cz = p["chess"]
+    # Chess needs a seat beside it ("Chess table needs chairs" in trial 8): one south, one north, facing it.
+    comforts = [put("HorseshoesPin", p["horseshoes"], STEEL), put("ChessTable", p["chess"], furniture),
+                put("DiningChair", (cx, cz - 1), furniture, "north"), put("DiningChair", (cx, cz + 1), furniture, "south")]
     comforts += [put("TorchLamp", xz) for xz in p["lamps"]]
     return [daily, shell, comforts]
 

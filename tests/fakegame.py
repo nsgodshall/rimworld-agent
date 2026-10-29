@@ -74,7 +74,8 @@ class FakeRim(RimClient):
         ]
         self.research_project: str | None = None
         self.built: list[dict[str, Any]] = []      # placements built by build_blueprints
-        self.owners: dict[str, str] = {}            # bed id -> owner pawn id (the game's, not shown by any read)
+        self.owners: dict[str, str] = {}
+        self.schedules: dict[str, dict[int, str]] = {}  # pawn id -> hour -> TimeAssignmentDef            # bed id -> owner pawn id (the game's, not shown by any read)
         # list_work detail=normal's work entries, by pawn id (fixtures/live/list_work_normal.json);
         # each colonist starts with every work type on.
         self.work: dict[str, list[dict[str, Any]]] = {
@@ -283,7 +284,9 @@ class FakeRim(RimClient):
 
     def list_work(self, **_: Any) -> Result:
         pawns = [{"id": p["ids"]["id"], "name": p["name"], "role": "colonist", "drafted": p["drafted"],
-                  "downed": p["downed"], "currentJob": p.get("currentJob"), "work": self.work[p["ids"]["id"]]}
+                  "downed": p["downed"], "currentJob": p.get("currentJob"), "work": self.work[p["ids"]["id"]],
+                  "schedule": {"hours": [{"hour": h, "assignment": a} for h, a in
+                                         sorted(self.schedules.get(p["ids"]["id"], {h: "Anything" for h in range(24)}).items())]}}
                  for p in self.colonists]
         return Result({"data": {"manualPriorities": False, "pawns": pawns}})
 
@@ -295,6 +298,15 @@ class FakeRim(RimClient):
         previous, entry["priority"], entry["active"] = entry["priority"], priority, priority > 0
         return Result({"changed": previous != priority, "data": {"previousPriority": previous, "priority": priority,
                                                                  "manualPrioritiesChanged": False}})
+
+    def set_pawn_assignment(self, pawn_id, assignment_kind, *, assignments=None, **_: Any) -> Result:
+        """Schedule only, as PawnAssignmentCommandService does it: the given hours change, the rest stay."""
+        self._record("set_pawn_assignment", pawn_id=pawn_id, assignment_kind=assignment_kind, assignments=assignments)
+        hours = self.schedules.setdefault(pawn_id, {h: "Anything" for h in range(24)})
+        for a in assignments or []:
+            for h in range(a["startHour"], a["endHour"]):
+                hours[h] = a["assignmentDefName"]
+        return Result({"changed": True, "data": {}})
 
     def assign_owner(self, building_id, *, pawn_id, action=None, **_: Any) -> Result:
         """Mirrors RimMCP's reply (OwnerCommandService): owners after, and who lost the bed."""

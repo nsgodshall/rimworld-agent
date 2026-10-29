@@ -80,3 +80,13 @@ def test_a_refusal_is_a_warning(tmp_path):
     ctx = ctx_for(rim, tmp_path)
     WorkManager().update(ctx)
     assert [(i.kind, i.severity) for i in ctx.incidents] == [("workRefused", "warn")]
+
+
+def test_two_evening_hours_of_recreation_once(tmp_path):
+    rim = FakeRim()
+    manager = WorkManager()
+    manager.update(ctx_for(rim, tmp_path))
+    manager.update(ctx_for(rim, tmp_path))
+    assert len(rim.called("set_pawn_assignment")) == 3
+    assert all(rim.schedules[p][20] == rim.schedules[p][21] == "Joy" and rim.schedules[p][19] == "Anything"
+               for p in ("HumanA", "HumanB", "HumanC"))
