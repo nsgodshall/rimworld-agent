@@ -29,7 +29,8 @@ def _footprint(def_: str, x: int, z: int) -> list[tuple[int, int]]:
     return [(x + fp["x"] + i, z + fp["z"] + j) for i in range(fp["width"]) for j in range(fp["height"])]
 
 
-WORK_TYPES = ("Research", "Cleaning", "Hauling", "Crafting", "Art", "PlantCutting", "Mining", "Growing",
+WORK_TYPES = ("Firefighter", "Patient", "PatientBedRest", "Research", "Cleaning", "Hauling", "Crafting", "Art",
+              "PlantCutting", "Mining", "Growing",
               "Construction", "Hunting", "Cooking", "Doctor")
 
 
