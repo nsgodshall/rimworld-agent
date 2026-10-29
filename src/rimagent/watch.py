@@ -69,16 +69,17 @@ def command_line(entry: dict[str, Any]) -> Text:
     if result.get("error"):
         style, verdict = "red", result["error"]
     elif result.get("rejected") or result.get("rejectedCount"):
-        style, verdict = "yellow", short_json({k: v for k, v in result.items() if k != "changed"}, 60)
+        style, verdict = "yellow", short_json({k: v for k, v in result.items() if k != "changed"}, 44)
     elif result.get("changed"):
-        style, verdict = "green", short_json({k: v for k, v in result.items() if k != "changed"}, 60) or "changed"
+        style, verdict = "green", short_json({k: v for k, v in result.items() if k != "changed"}, 44) or "changed"
     else:
-        style, verdict = "grey62", "no change " + short_json({k: v for k, v in result.items() if k != "changed"}, 50)
+        style, verdict = "grey62", "no change " + short_json({k: v for k, v in result.items() if k != "changed"}, 34)
     args = {k: v for k, v in (entry.get("args") or {}).items() if k not in ("requestId",)}
+    # The verdict before the arguments: arguments run long, and the log doesn't wrap.
     return cat(Text(f"{entry.get('tick') or '':>7} ", style="grey50"),
-               Text(f"{str(entry.get('actor'))[:16]:<16} ", style="cyan"),
-               Text(f"{entry.get('tool'):<22} ", style="bold"),
-               short_json(args, 70) + " ", Text("→ " + verdict, style=style))
+               Text(f"{str(entry.get('actor'))[:12]:<12} ", style="cyan"),
+               Text(f"{entry.get('tool'):<21} ", style="bold"),
+               Text(f"{verdict[:44]:<44} ", style=style), Text(short_json(args, 160), style="grey70"))
 
 
 def journal_line(entry: dict[str, Any]) -> Text:
