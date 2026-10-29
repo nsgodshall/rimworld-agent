@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from rimsdk import Result, RimClient
+from rimsdk import Result, RimClient, errors
 
 from .conftest import FakeTransport
 
@@ -27,6 +27,10 @@ def _footprint(def_: str, x: int, z: int) -> list[tuple[int, int]]:
         return [(x, z), (x, z - 1)]  # facing south
     fp, _ = FOOTPRINTS.get(def_, ({"x": 0, "z": 0, "width": 1, "height": 1}, None))
     return [(x + fp["x"] + i, z + fp["z"] + j) for i in range(fp["width"]) for j in range(fp["height"])]
+
+
+WORK_TYPES = ("Research", "Cleaning", "Hauling", "Crafting", "Art", "PlantCutting", "Mining", "Growing",
+              "Construction", "Hunting", "Cooking", "Doctor")
 
 
 class FakeRim(RimClient):
@@ -62,6 +66,13 @@ class FakeRim(RimClient):
             {"defName": "B", "label": "B", "baseCost": 500, "finished": False},
         ]
         self.research_project: str | None = None
+        # list_work detail=normal's work entries, by pawn id (fixtures/live/list_work_normal.json);
+        # each colonist starts with every work type on.
+        self.work: dict[str, list[dict[str, Any]]] = {
+            p["ids"]["id"]: [{"defName": w, "label": w, "naturalPriority": n, "disabled": False, "active": True, "priority": 3}
+                             for n, w in enumerate(WORK_TYPES)]
+            for p in self.colonists
+        }
         self.calls: list[tuple[str, dict[str, Any]]] = []
 
     def _record(self, tool: str, /, **args: Any) -> None:
@@ -225,6 +236,20 @@ class FakeRim(RimClient):
         self._record("set_pawn_drafted", pawn_id=pawn_id, drafted=drafted)
         self.pawn(pawn_id)["drafted"] = drafted
         return Result({"changed": True, "data": {}})
+
+    def list_work(self, **_: Any) -> Result:
+        pawns = [{"id": p["ids"]["id"], "name": p["name"], "role": "colonist", "drafted": p["drafted"],
+                  "downed": p["downed"], "work": self.work[p["ids"]["id"]]} for p in self.colonists]
+        return Result({"data": {"manualPriorities": False, "pawns": pawns}})
+
+    def set_pawn_work_priority(self, pawn_id, work_type_def_name, *, priority, **_: Any) -> Result:
+        self._record("set_pawn_work_priority", pawn_id=pawn_id, work_type_def_name=work_type_def_name, priority=priority)
+        entry = next(w for w in self.work[pawn_id] if w["defName"] == work_type_def_name)
+        if entry["disabled"]:
+            raise errors.Conflict("Pawn cannot do this work type.", status=409)
+        previous, entry["priority"], entry["active"] = entry["priority"], priority, priority > 0
+        return Result({"changed": previous != priority, "data": {"previousPriority": previous, "priority": priority,
+                                                                 "manualPrioritiesChanged": False}})
 
     def order_pawn(self, pawn_id, *, order, target_id=None, x=None, z=None, queue=None, **_: Any) -> Result:
         self._record("order_pawn", pawn_id=pawn_id, order=order, target_id=target_id, x=x, z=z)
