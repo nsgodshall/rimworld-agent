@@ -246,7 +246,8 @@ class Runtime:
         if self.stalled_runs >= 3:
             return self._halt(Incident(
                 "blocked", f"Time won't run: {self.stalled_runs} runs in a row ended '{reason}' without progress. "
-                "Probably a window in game forces a pause.", tick=run.get("tick"), details={"run": run},
+                "Probably a window in game forces a pause, such as the one asking to name the settlement "
+                "(it appears after a few days; RimMCP can't answer it).", tick=run.get("tick"), details={"run": run},
             ))
         time.sleep(2)
         return True
