@@ -72,7 +72,8 @@ class MoodManager(Manager):
         return False
 
     def update(self, ctx: Context) -> None:
-        self.ensure_dining(ctx)
+        if not ctx.board.get("house_dining"):  # the house's common room has the table and chairs
+            self.ensure_dining(ctx)
         self.report_risks(ctx)
 
     def ensure_dining(self, ctx: Context) -> None:

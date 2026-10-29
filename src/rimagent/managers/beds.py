@@ -30,7 +30,8 @@ class BedsManager(Manager):
         window = Rect.around(*anchor, WINDOW, WINDOW).clamp(*snap.map_size)
 
         built = ctx.rim.list_buildings(category="bed").data.get("buildings") or []
-        if len(built) >= len(snap.colonists):
+        # The house manager plans a bedroom and bed for each colonist; this only fills the gap.
+        if len(built) >= len(snap.colonists) or ctx.board.get("house_beds", 0) >= len(snap.colonists):
             return
         view = snap.view(window)
         # Beds not built yet are blueprints or frames: list_buildings doesn't show them, and the map shows

@@ -26,6 +26,7 @@ from ..manager import Context, Manager
 from rimsdk.mapview import MapView, Rect
 
 from .beds import base_anchor
+from .materials import STEEL, pick
 
 ENGAGE_RADIUS = None      # hostiles this many cells from the base trigger the defense; None: anywhere
 COMBAT_CHUNK_HOURS = 0.1  # time runs while fighting: 250 ticks, about 4 seconds at Normal speed
@@ -197,10 +198,12 @@ class DefenseManager(Manager):
             if line is None:
                 ctx.log(self.name, f"No room for barricades on side {side} of the base.")
                 continue
-            placements += [{"def": BARRICADE, "stuff": BARRICADE_STUFF, "x": x, "z": z}
-                           for x, z in line if (x, z) not in built]
+            placements += [{"def": BARRICADE, "x": x, "z": z} for x, z in line if (x, z) not in built]
         if not placements:
             return
+        # Steel when wood is short (trial 6 ran out of wood). Chosen once, so repeats are alreadySatisfied.
+        stuff = self.memory.setdefault("barricade_stuff", pick(ctx, 5 * len(placements), (BARRICADE_STUFF, STEEL)))
+        placements = [{**p, "stuff": stuff} for p in placements]
         result = ctx.rim.place_blueprint(placements=placements, request_id=uuid.uuid4().hex).data or {}
         if result.get("applied"):
             rejected = [{k: r.get(k) for k in ("x", "z", "reason")}

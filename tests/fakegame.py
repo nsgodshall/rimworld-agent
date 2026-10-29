@@ -71,6 +71,7 @@ class FakeRim(RimClient):
             {"defName": "B", "label": "B", "baseCost": 500, "finished": False},
         ]
         self.research_project: str | None = None
+        self.built: list[dict[str, Any]] = []      # placements built by build_blueprints
         self.owners: dict[str, str] = {}            # bed id -> owner pawn id (the game's, not shown by any read)
         # list_work detail=normal's work entries, by pawn id (fixtures/live/list_work_normal.json);
         # each colonist starts with every work type on.
@@ -315,6 +316,8 @@ class FakeRim(RimClient):
             same = (p["def"], p["x"], p["z"], p.get("rotation"), p.get("stuff"))
             if any((b["def"], b["x"], b["z"], b.get("rotation"), b.get("stuff")) == same for b in self.blueprints):
                 results.append({**p, "outcome": "alreadySatisfied", "state": "blueprint", "reason": None})
+            elif any((b["def"], b["x"], b["z"]) == same[:3] for b in self.built):  # BuildService: Existing(cell)
+                results.append({**p, "outcome": "alreadySatisfied", "state": "built", "reason": None})
             elif all(self.cells.get(c) in (".", "_") for c in footprint):
                 for c in footprint:
                     self.cells[c] = "x"  # a blueprint, on the map view
@@ -330,6 +333,7 @@ class FakeRim(RimClient):
     def build_blueprints(self, n: int | None = None) -> None:
         """Colonists finish blueprints: they become buildings list_buildings shows, drawn as buildings."""
         for p in self.blueprints[:n]:
+            self.built.append(p)
             for c in _footprint(p["def"], p["x"], p["z"]):
                 self.cells[c] = "b"
             position = {"x": p["x"], "y": 0, "z": p["z"]}

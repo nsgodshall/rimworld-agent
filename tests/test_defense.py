@@ -20,6 +20,7 @@ def colony():
     rim.zones = [{"id": "zone:0:0", "kind": "stockpile", "cellCount": 36, "representativeCell": {"x": 50, "y": 0, "z": 50}}]
     for p in rim.colonists:
         p["gear"]["equipment"] = [{"def": {"defName": "Gun_Revolver"}}]
+    rim.resources = [{"defName": "WoodLog", "count": 400}, {"defName": "Steel", "count": 400}]
     return rim
 
 

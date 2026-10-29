@@ -58,6 +58,12 @@ class Snapshot:
         return self.rim.get_events().data.get("alerts") or []
 
     @cached_property
+    def resources(self) -> dict[str, int]:
+        """Stock counts by defName (list_resources): what there is to build with."""
+        rows = self.rim.list_resources().data.get("resources") or []
+        return {r["defName"]: r.get("count", 0) for r in rows if r.get("defName")}
+
+    @cached_property
     def hostiles(self) -> int:
         return (self.colony.get("threats") or {}).get("hostiles", 0)
 

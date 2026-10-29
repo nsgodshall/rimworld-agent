@@ -1,18 +1,28 @@
-"""House: a walled bedroom with a bed per colonist, so nobody sleeps outside.
+"""House: a bedroom for each colonist and a common room to eat and play in, in one row of rooms.
 
-The beds manager puts beds down outdoors on day one, which is quick, but every colonist then wakes
-to "Slept outside" (-4) and "Slept in the cold" (-4). This plans one room near the base: wooden
-walls, a door in the south wall, beds along the north wall. The game roofs an enclosed room by
-itself. Once the indoor beds are built, each colonist is given one and the outdoor beds come down.
+Where colonists sleep and eat is most of their mood early on (docs/reference/mood.md, rooms.md):
+- Sleeping outdoors, or in an unfinished room, is "Slept outside" (-4).
+- A shared bedroom is a barracks, -3 to -7 each every night: trial 6's one 3-bed house gave
+  "Awful barracks" (-7). The same room for one is a bedroom, -2 to +2. So each colonist gets a 3x4 room.
+- Eating without a table is -3; eating or playing in a decent room is +2 each.
+- "Slept in the cold" (-4): a torch lamp heats a small room to 23 C without power.
+- Recreation runs from -20 to +10: horseshoes and chess are two kinds, buildable without research.
 
-The room's place is remembered (`self.memory`): the map shows walls, not whose they are. After a
-restart the memory is empty and a second house would be planned, so a run keeps one runtime.
+Layout, north at the top; doors in the south wall open onto a doorstep row kept clear (in trial 6 a
+door opened onto a fogged ancient wall, and Sparky starved inside):
 
-The door needs open ground outside it. In run 20261029-074313 the house went up against an ancient
-structure's wall (fogged when the site was picked), its door opened onto that wall, and Sparky,
-inside when the last wall went up, starved 8 cells from 22 stored meals ("No path"). A site now
-keeps a clear row south of the house, and a door that opens onto a wall or rock is moved to a side
-that's open: the wall there is taken down, then a door goes in its place.
+    #####################
+    #c..H.#B.L#B.L#B.L#      c chair  T table  H horseshoes pin  K chess table
+    #cTTcK#b..#b..#b..#      B/b bed (head, foot)  L torch lamp
+    #cTTc.#...#...#...#
+    #....L#...#...#...#
+    ###+######+###+###+#
+    ....................     doorstep
+
+Everything is placed at once (beds are usable before the walls close) and placed again each pass until
+built: repeating a placement is alreadySatisfied. The game roofs enclosed rooms itself. Materials come
+from stock (`materials.pick`). The plan is remembered: the map shows walls, not whose they are. The
+house's beds are on the board (`house_beds`), so the beds manager doesn't put any outdoors.
 """
 
 from __future__ import annotations
@@ -23,146 +33,153 @@ from rimsdk import errors
 from rimsdk.mapview import Rect
 
 from ..manager import Context, Manager
-from .beds import BED, STUFF, base_anchor
+from .beds import base_anchor
 from .food import _chars, best_site
+from .materials import STEEL, WOOD, pick
 
-WALL, DOOR = "Wall", "Door"
-WINDOW = 40         # side of the square around the base searched for a site
-INTERIOR_DEPTH = 4  # north to south: a bed (2 cells) and room to walk past it
-# What a doorway can't open onto (get_map_view legend meanings).
-BLOCKING = ("wall", "natural rock", "unexplored", "water", "deep water")
-
-
-def doors(outer: Rect) -> list[tuple[tuple[int, int], tuple[int, int]]]:
-    """(door, the cell outside it) at the middle of each side: south first, north (behind the beds) last."""
-    top, right = outer.z + outer.height - 1, outer.x + outer.width - 1
-    mid_x, mid_z = outer.x + outer.width // 2, outer.z + outer.height // 2
-    return [((mid_x, outer.z), (mid_x, outer.z - 1)), ((right, mid_z), (right + 1, mid_z)),
-            ((outer.x, mid_z), (outer.x - 1, mid_z)), ((mid_x, top), (mid_x, top + 1))]
+WINDOW = 60          # side of the square around the base searched for a site (scan stitches views)
+DEPTH = 4            # interior, north to south
+BEDROOM_WIDTH = 3    # interior: 12 tiles, "rather tight" with a bed, never "cramped"
+COMMON_WIDTH = 6     # interior: a 2x2 table, four chairs, horseshoes, chess, a lamp
 
 
-def layout(outer: Rect, beds: int, door: tuple[int, int] | None = None) -> list[dict]:
-    """Walls round `outer`, a door (mid-south unless given), and `beds` south-facing beds along the north wall."""
-    door = door or doors(outer)[0][0]
-    top, right = outer.z + outer.height - 1, outer.x + outer.width - 1
-    walls = [(x, z) for x, z in outer.cells() if x in (outer.x, right) or z in (outer.z, top)]
-    placements = [{"def": DOOR if c == door else WALL, "stuff": STUFF, "x": c[0], "z": c[1], "rotation": "north"}
-                  for c in walls]
-    # A south-facing bed at (x, z) covers (x, z) and (x, z - 1); a free column either side.
-    placements += [{"def": BED, "stuff": STUFF, "x": outer.x + 2 + i, "z": top - 1, "rotation": "south"}
-                   for i in range(beds)]
-    return placements
+def plan(origin: tuple[int, int], bedrooms: int) -> dict:
+    """Cells of every part of a house whose south-west outer corner is `origin`."""
+    x0, z0 = origin
+    width = COMMON_WIDTH + 2 + bedrooms * (BEDROOM_WIDTH + 1)
+    top = z0 + DEPTH + 1
+    walls = {(x, z) for x in range(x0, x0 + width) for z in (z0, top)}
+    walls |= {(x, z) for z in range(z0, top + 1) for x in (x0, x0 + COMMON_WIDTH + 1)}
+    common = Rect(x0 + 1, z0 + 1, COMMON_WIDTH, DEPTH)
+    rooms = []
+    for i in range(bedrooms):
+        left = x0 + COMMON_WIDTH + 2 + i * (BEDROOM_WIDTH + 1)
+        rooms.append(Rect(left, z0 + 1, BEDROOM_WIDTH, DEPTH))
+        walls |= {(left + BEDROOM_WIDTH, z) for z in range(z0, top + 1)}
+    doors = [(common.x + 2, z0)] + [(r.x + 1, z0) for r in rooms]
+    c, cz, ctop = common.x, common.z, common.z + DEPTH - 1
+    return {
+        "outer": Rect(x0, z0, width, DEPTH + 2),
+        "walls": sorted(walls - set(doors)),
+        "doors": doors,
+        "common": common,
+        "bedrooms": rooms,
+        "beds": [(r.x, ctop) for r in rooms],  # south-facing: covers (x, top) and (x, top - 1)
+        "lamps": [(r.x + 2, ctop) for r in rooms] + [(c + 5, cz)],
+        "table": (c + 1, cz + 1),               # Table2x2c by its south-west cell
+        "chairs": [(c, cz + 1), (c, cz + 2), (c + 3, cz + 1), (c + 3, cz + 2)],
+        "horseshoes": (c + 3, ctop),
+        "chess": (c + 5, cz + 2),
+    }
 
 
-def interior(outer: Rect) -> Rect:
-    return Rect(outer.x + 1, outer.z + 1, outer.width - 2, outer.height - 2)
+def placements(p: dict, walls: str, furniture: str) -> list[dict]:
+    def put(def_, xz, stuff=None, rotation="north"):
+        return {"def": def_, "x": xz[0], "z": xz[1], "rotation": rotation, **({"stuff": stuff} if stuff else {})}
+
+    out = [put("Wall", xz, walls) for xz in p["walls"]] + [put("Door", xz, walls) for xz in p["doors"]]
+    out += [put("Bed", xz, furniture, "south") for xz in p["beds"]]
+    tx, _ = p["table"]
+    out += [put("Table2x2c", p["table"], furniture)]
+    out += [put("DiningChair", xz, furniture, "east" if xz[0] < tx else "west") for xz in p["chairs"]]
+    out += [put("HorseshoesPin", p["horseshoes"], STEEL), put("ChessTable", p["chess"], furniture)]
+    out += [put("TorchLamp", xz) for xz in p["lamps"]]
+    return out
+
+
+def cost(p: dict) -> tuple[int, int]:
+    """(wall material, furniture material) a plan needs: wall 5, door 25; bed 45, table 50, chair 45, chess 70."""
+    return 5 * len(p["walls"]) + 25 * len(p["doors"]), 45 * len(p["beds"]) + 50 + 45 * len(p["chairs"]) + 70
 
 
 class HouseManager(Manager):
     name = "house"
-    priority = 22  # after beds (day-one beds outdoors), before the kitchen and dining set take the space
-    every_hours = 6
+    priority = 8  # first pick of open ground, before the fields (food, 10) and beds (20), which defers to it
+    every_hours = 3
+    alerts = ("Alert_NeedJoySources",)  # horseshoes and chess: two kinds of recreation
 
     def update(self, ctx: Context) -> None:
-        snap = ctx.snapshot
-        colonists = snap.colonists
+        colonists = ctx.snapshot.colonists
         if not colonists:
             return
-        house = self.memory.get("house")
+        house = self.memory.get("house") or self._plan(ctx, len(colonists))
         if house is None:
-            house = self._plan(ctx, len(colonists))
-            if house is None:
-                return
-        outer = Rect(*house["outer"])
-        door = self._check_door(ctx, outer, house)
-        if door is None:
             return
-        self._move_in(ctx, outer, colonists)
-        if house.get("door"):
-            self._put_door(ctx, tuple(house["door"]))
-        # Repeating the same placements is safe (alreadySatisfied), and puts back any that were refused
-        # or destroyed. Only while the house isn't finished: a pass is a handful of calls.
-        if not self.memory.get("built"):
-            result = ctx.rim.place_blueprint(placements=layout(outer, house["beds"], door),
-                                             request_id=uuid.uuid4().hex).data or {}
-            rejected = [r for r in result.get("results") or [] if r.get("outcome") == "rejected"]
-            if result.get("applied"):
-                ctx.log(self.name, f"Placed {result['applied']} house blueprints at {outer}.")
-            if rejected:
-                ctx.raise_incident("houseRejected", f"{len(rejected)} house blueprints were refused at {outer}.", "warn",
-                                   rejected=[{k: r.get(k) for k in ("def", "x", "z", "reason")} for r in rejected][:10])
+        p = plan(tuple(house["origin"]), house["bedrooms"])
+        ctx.board["house_beds"] = house["bedrooms"]
+        ctx.board["house_dining"] = True
+        beds = ctx.rim.list_buildings(category="bed").data.get("buildings") or []
+        self._move_in(ctx, p, colonists, beds)
+        if self.memory.get("built"):
+            return
+        result = ctx.rim.place_blueprint(placements=placements(p, house["walls"], house["furniture"]),
+                                         request_id=uuid.uuid4().hex).data or {}
+        results = result.get("results") or []
+        rejected = [{k: r.get(k) for k in ("def", "x", "z", "reason")} for r in results if r.get("outcome") == "rejected"]
+        if result.get("applied"):
+            ctx.log(self.name, f"Placed {result['applied']} house blueprints at {p['outer']}.", rejected=len(rejected))
+        if rejected and rejected != self.memory.get("rejected"):
+            ctx.raise_incident("houseRejected", f"{len(rejected)} house blueprints were refused at {p['outer']}.",
+                               "warn", rejected=rejected[:10])
+        self.memory["rejected"] = rejected
+        # Finished: every placement is already there, and built (not a blueprint or frame).
+        if results and all(r.get("outcome") == "alreadySatisfied" and r.get("state") == "built" for r in results):
+            self.memory["built"] = True
+            ctx.log(self.name, f"The house at {p['outer']} is finished.")
 
-    def _plan(self, ctx: Context, beds: int) -> dict | None:
+    def _plan(self, ctx: Context, bedrooms: int) -> dict | None:
         snap = ctx.snapshot
         anchor = base_anchor(ctx)
         if anchor is None:
             return None
-        outer_w, outer_h = beds + 4, INTERIOR_DEPTH + 2  # walls, a free column each side of the beds
+        size = plan((0, 0), bedrooms)["outer"]
+        width, height = size.width, size.height + 1  # and the doorstep row
         view = snap.view(Rect.around(*anchor, WINDOW, WINDOW))
-        # Plain free ground only: no fields, zones, trees, items, buildings or blueprints. One row more
-        # than the house, south of it: the doorstep stays clear.
-        site = best_site(view, anchor, outer_w, outer_h + 1, good=_chars(view, "soil", "ground too poor"), min_fill=1.0)
+        # Free ground: no fields, zones, items, buildings, blueprints, rock or fog. Builders cut trees in
+        # the way, so trees are allowed, but open ground scores higher.
+        plain = _chars(view, "soil", "ground too poor")
+        site = best_site(view, anchor, width, height, good=plain + (view.symbol_for("tree") or "t"), bonus=plain,
+                         min_fill=1.0)
         if site is None:
-            ctx.raise_incident("noHouseSite", f"No free {outer_w}x{outer_h} ground for a house near {anchor}.", "warn")
+            ctx.raise_incident("noHouseSite", f"No free {width}x{height} ground for a house near {anchor}.", "warn")
             return None
-        self.memory["house"] = {"outer": [site.x, site.z + 1, outer_w, outer_h], "beds": beds}
-        return self.memory["house"]
+        p = plan((site.x, site.z + 1), bedrooms)
+        walls_need, furniture_need = cost(p)
+        spent: dict[str, int] = {}
+        house = {"origin": [site.x, site.z + 1], "bedrooms": bedrooms,
+                 "walls": pick(ctx, walls_need, (STEEL, WOOD), spent),  # steel walls leave wood for fuel
+                 "furniture": pick(ctx, furniture_need, (WOOD, STEEL), spent)}
+        self.memory["house"] = house
+        ctx.log(self.name, f"Planned {bedrooms} bedrooms and a common room at {p['outer']}: walls of "
+                           f"{house['walls']}, furniture of {house['furniture']}.", needs=[walls_need, furniture_need])
+        return house
 
-    def _check_door(self, ctx: Context, outer: Rect, house: dict) -> tuple[int, int] | None:
-        """The house's door, moved to another side if what's outside it blocks the way."""
-        door = tuple(house.get("door") or doors(outer)[0][0])
-        view = ctx.snapshot.view(Rect(outer.x - 1, outer.z - 1, outer.width + 2, outer.height + 2))
-        blocking = "".join(view.symbol_for(m) or "" for m in BLOCKING)
-        outside = dict(doors(outer)).get(door)
-        if outside is None or not view.is_(outside, blocking):
-            return door
-        moved = next((d for d, out in doors(outer) if d != door and view[out] is not None and not view.is_(out, blocking)), None)
-        if moved is None:
-            ctx.raise_incident("houseSealed", f"Every side of the house at {outer} opens onto a wall or rock.", "halt",
-                               door=door)
-            return None
-        house["door"] = list(moved)
-        ctx.log(self.name, f"The door at {door} opens onto {view.legend.get(view[outside], view[outside])}: "
-                           f"moving it to {moved}.", outer=str(outer))
-        return moved
+    def _move_in(self, ctx: Context, p: dict, colonists: list[dict], beds: list[dict]) -> None:
+        """Each colonist owns the bed in their own bedroom; once all have one, beds outside come down."""
+        rooms = [set(r.cells()) for r in p["bedrooms"]]
 
-    def _put_door(self, ctx: Context, door: tuple[int, int]) -> None:
-        """A moved door: the wall standing there comes down first, then the door blueprint goes in."""
-        walls = [b for page in ctx.rim.pages(ctx.rim.list_buildings, category=WALL, limit=200)
-                 for b in page.data.get("buildings") or []
-                 if (b.get("def") or {}).get("defName") == WALL and (b["position"]["x"], b["position"]["z"]) == door]
-        if walls:
-            ctx.rim.designate(kind="deconstruct", thing_ids=[w["ids"]["id"] for w in walls])
-            ctx.log(self.name, f"Taking down the wall at {door} for the door.")
+        def room_of(bed: dict) -> int | None:
+            xz = (bed["position"]["x"], bed["position"]["z"])
+            return next((i for i, cells in enumerate(rooms) if xz in cells), None)
+
+        indoor = {room_of(b): b for b in beds if room_of(b) is not None}
+        if not indoor:
             return
-        result = ctx.rim.place_blueprint(placements=[{"def": DOOR, "stuff": STUFF, "x": door[0], "z": door[1],
-                                                      "rotation": "north"}], request_id=uuid.uuid4().hex).data or {}
-        if result.get("applied"):
-            ctx.log(self.name, f"Placed a door blueprint at {door}.")
-        for r in result.get("results") or []:
-            if r.get("outcome") == "rejected":
-                ctx.raise_incident("doorRejected", f"The house's door at {door} was refused: {r.get('reason')}", "warn")
-
-    def _move_in(self, ctx: Context, outer: Rect, colonists: list[dict]) -> None:
-        inside = interior(outer)
-        beds = ctx.rim.list_buildings(category="bed").data.get("buildings") or []
-        indoor = sorted((b for b in beds if (b["position"]["x"], b["position"]["z"]) in set(inside.cells())),
-                        key=lambda b: b["position"]["x"])
-        if len(indoor) < len(colonists):
-            return  # not built yet: keep sleeping where they do
-        self.memory["built"] = True
-        # Nothing shows who owns which bed, so give each colonist theirs; assigning again is alreadySatisfied.
-        pairs = {c["ids"]["id"]: b["ids"]["id"] for c, b in zip(sorted(colonists, key=lambda c: c["ids"]["id"]), indoor)}
-        if self.memory.get("assigned") != pairs:
-            for pawn_id, bed_id in pairs.items():
-                try:
-                    ctx.rim.assign_owner(bed_id, pawn_id=pawn_id)
-                except errors.Conflict as exc:
-                    ctx.raise_incident("bedRefused", f"{pawn_id} can't have bed {bed_id}: {exc.message}", "warn")
-                    return
-            self.memory["assigned"] = pairs
-            ctx.log(self.name, f"{len(pairs)} colonists moved into the house at {outer}.")
-        outdoor = [b["ids"]["id"] for b in beds if b not in indoor]
-        if outdoor:
-            ctx.rim.designate(kind="deconstruct", thing_ids=outdoor)
-            ctx.log(self.name, f"Taking down {len(outdoor)} beds outside the house.")
+        assigned = self.memory.setdefault("assigned", {})
+        for i, colonist in enumerate(sorted(colonists, key=lambda c: c["ids"]["id"])):
+            pawn_id, bed = colonist["ids"]["id"], indoor.get(i)
+            if bed is None or assigned.get(pawn_id) == bed["ids"]["id"]:
+                continue
+            try:
+                ctx.rim.assign_owner(bed["ids"]["id"], pawn_id=pawn_id)
+            except errors.Conflict as exc:
+                ctx.raise_incident("bedRefused", f"{pawn_id} can't have bed {bed['ids']['id']}: {exc.message}", "warn")
+                continue
+            assigned[pawn_id] = bed["ids"]["id"]
+            ctx.log(self.name, f"{colonist.get('name')} has their own bedroom now.", bed=bed["ids"]["id"])
+        if len(indoor) >= len(colonists):
+            outdoor = sorted(b["ids"]["id"] for b in beds if room_of(b) is None)
+            if outdoor and outdoor != self.memory.get("deconstructing"):
+                ctx.rim.designate(kind="deconstruct", thing_ids=outdoor)
+                ctx.log(self.name, f"Taking down {len(outdoor)} beds outside the house.")
+            self.memory["deconstructing"] = outdoor

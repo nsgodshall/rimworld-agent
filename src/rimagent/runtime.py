@@ -135,6 +135,7 @@ class Runtime:
         self.last_snap: Snapshot | None = None
         self.pawn_details: dict[str, dict[str, Any]] = {}
         self.seen: dict[str, Any] = {}  # the latest colony, colonists and alerts any cycle read
+        self.board: dict[str, Any] = {}  # Context.board: managers' notes to each other
         self.command_log = CommandLog(self)
         rim.call_hooks.append(self.command_log)
 
@@ -167,7 +168,7 @@ class Runtime:
 
     def cycle(self, snap: Snapshot) -> bool:
         """React to pending events, run due managers, check tripwires. False means stop."""
-        ctx = Context(self.rim, snap, self.journal)
+        ctx = Context(self.rim, snap, self.journal, board=self.board)
         self._reload_if_changed(snap.tick)
         events, self.pending = self.pending + self._history_events(), []
         for event in events:

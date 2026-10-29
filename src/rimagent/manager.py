@@ -27,6 +27,9 @@ class Context:
     incidents: list[Incident] = field(default_factory=list)
     # The shortest time run any manager asked for this cycle (None: the runtime's usual chunk).
     chunk_hours: float | None = None
+    # Notes managers leave each other, kept by the runtime across cycles and reloads (not restarts), e.g.
+    # the house manager's "house_beds": beds it has planned, so the beds manager needn't place any.
+    board: dict[str, Any] = field(default_factory=dict)
 
     def request_chunk(self, hours: float) -> None:
         """Ask for the next time run to be at most `hours` long, e.g. 0.1 while a fight is on."""
