@@ -16,13 +16,14 @@ def test_score_productive_run():
     s = score(start, end, samples, days=3)
     assert s["parts"] == {"survival": 1.0, "food": 1.0, "production": 1.0, "mood": 0.6, "shelter": 1.0,
                           "progress": 1.0, "busy": 1.0, "completion": 1.0}
-    assert s["total"] == 100 - 10 * 0.4 and s["version"] == 2
+    assert s["total"] == 100 - 25 * 0.4 and s["version"] == 3
 
 
 def test_rations_and_idleness_no_longer_score_well():
     """The run score v1 gave 95.7: alive, fed from starting rations, beds, and everyone idle."""
     start = {"tick": 0, "colonists": 3, "researchFinished": 10, "buildings": 0}
-    end = {"tick": 2 * TICKS_PER_DAY, "colonists": 3, "beds": 3, "ownFood": 0.5, "researchFinished": 10, "buildings": 3}
+    end = {"tick": 2 * TICKS_PER_DAY, "colonists": 3, "beds": 3, "ownFood": 0.5, "researchFinished": 10, "buildings": 3,
+           "sleptOutside": 3}  # its beds were in the open
     samples = [{**sample(t * TICKS_PER_DAY // 4, mood=0.72), "idle": 3 if t > 4 else 0} for t in range(9)]
     s = score(start, end, samples, days=2)
     assert s["parts"]["production"] < 0.05 and s["parts"]["progress"] == 0.1 and s["parts"]["busy"] == 0.556
@@ -37,8 +38,17 @@ def test_score_penalises_deaths_hunger_and_stopping_early():
     s = score(start, end, samples, days=3)
     assert s["parts"]["survival"] == round(2 / 3, 3)
     assert s["parts"]["food"] == 0.5
-    assert s["parts"]["shelter"] == 0.5
+    assert s["parts"]["shelter"] == 0.75  # a bed for half of them; nobody known to sleep outside
     assert s["parts"]["completion"] == 0.5
+
+
+def test_mood_weighs_heavily_and_sleeping_outside_costs_shelter():
+    start = {"tick": 0, "colonists": 3}
+    end = {"tick": 3 * TICKS_PER_DAY, "colonists": 3, "beds": 3, "sleptOutside": 3}
+    happy = score(start, end, [sample(0, mood=0.9)], days=3)
+    glum = score(start, end, [sample(0, mood=0.3)], days=3)
+    assert happy["total"] - glum["total"] == 15.0  # 0.6 of mood's 25
+    assert happy["parts"]["shelter"] == 0.5  # beds, but everyone slept outside
 
 
 def test_sampler_keeps_one_sample_per_six_hours():

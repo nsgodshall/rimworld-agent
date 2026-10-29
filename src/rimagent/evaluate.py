@@ -29,14 +29,16 @@ SAMPLE_EVERY_HOURS = 6
 
 # Score weights (sum 100). Each part is a fraction 0..1. Version 2 added production, progress and
 # busy, after version 1 gave 95.7 to a colony living on its starting rations with nothing to do.
-SCORE_VERSION = 2
+# Version 3 weighs mood far more (how the colonists feel is most of how a colony is doing) and
+# counts shelter as sleeping indoors, not just having a bed.
+SCORE_VERSION = 3
 WEIGHTS = {
-    "survival": 30,    # colonists alive at the end
+    "survival": 25,    # colonists alive at the end
+    "mood": 25,        # average mood
     "food": 15,        # samples after day one with FOOD_OK_DAYS of stored food
-    "production": 15,  # food the colony made: OWN_FOOD_PER_COLONIST nutrition each, not counting rations
-    "mood": 10,        # average mood
-    "shelter": 10,     # beds per colonist
-    "progress": 10,    # research finished and buildings built during the run
+    "production": 10,  # food the colony made: OWN_FOOD_PER_COLONIST nutrition each, not counting rations
+    "shelter": 10,     # half beds per colonist, half colonists who didn't last sleep outside
+    "progress": 5,     # research finished and buildings built during the run
     "busy": 5,         # colonist-samples not idle
     "completion": 5,   # planned days actually played
 }
@@ -106,9 +108,15 @@ def final_metrics(rim: RimClient, snap: Snapshot) -> dict[str, Any]:
     fields = snap.zones_of("growing")
     # Anything with nutrition: meals (FoodMeals), but also raw crops (PlantFoodRaw) and meat (MeatRaw).
     food = [r for r in rim.list_resources().data.get("resources") or [] if (r.get("estimatedNutrition") or 0) > 0]
+    # "Slept outside" is the game's own verdict on where a colonist last slept.
+    outside = sum(
+        any(t.get("defName") == "SleptOutside" for t in (rim.get_pawn(c["ids"]["id"], detail="full").data.get("mood") or {}).get("thoughts") or [])
+        for c in snap.colonists
+    )
     return {
         "tick": snap.tick,
         "colonists": len(snap.colonists),
+        "sleptOutside": outside,
         "ownFood": round(sum(r.get("estimatedNutrition") or 0 for r in food if r.get("defName") not in STARTER_FOOD), 1),
         "beds": len(beds),
         "buildings": buildings,
@@ -137,7 +145,8 @@ def score(start: dict[str, Any], end: dict[str, Any], samples: list[dict[str, An
         "food": sum(d >= FOOD_OK_DAYS for d in food) / len(food) if food else 1.0,
         "production": min(1.0, end.get("ownFood", 0) / (OWN_FOOD_PER_COLONIST * end["colonists"])) if end["colonists"] else 0.0,
         "mood": sum(moods) / len(moods) if moods else 0.0,
-        "shelter": min(1.0, end["beds"] / end["colonists"]) if end["colonists"] else 0.0,
+        "shelter": (0.5 * min(1.0, end["beds"] / end["colonists"])
+                    + 0.5 * (1 - min(1.0, end.get("sleptOutside", 0) / end["colonists"]))) if end["colonists"] else 0.0,
         "progress": 0.5 * min(1.0, max(0, research) / RESEARCH_TARGET) + 0.5 * min(1.0, max(0, built) / BUILDINGS_TARGET),
         "busy": 1 - min(1.0, sum(s.get("idle", 0) for s in samples) / colonist_samples) if colonist_samples else 0.0,
         "completion": min(1.0, played / days) if days else 0.0,
@@ -208,20 +217,28 @@ def run_eval(rim: RimClient, cfg: EvalConfig, run_dir: Path, escalator: Escalato
 
 
 def compare(runs: Path) -> str:
+    """Every evaluation, rescored with the current score version where it kept its samples."""
+    short = {"survival": "surv", "production": "prod", "completion": "compl"}
     rows = []
     for path in sorted(runs.glob("*/eval.json")):
         r = json.loads(path.read_text(encoding="utf-8"))
-        p, a = r["score"]["parts"], r["autonomy"]
+        stored, a = r["score"], r["autonomy"]
+        rescored = score(r["start"], r["end"], r["samples"], r["days"]) if {"start", "end", "samples"} <= set(r) else None
+        # Runs before v3 didn't record who slept outside: their shelter counts beds only.
+        guess = "*" if rescored and "sleptOutside" not in r["end"] else ""
+        current = rescored or stored
+        p = current["parts"]
         part = lambda k: f"{p[k]:.2f}" if k in p else "-"
         rows.append([
             path.parent.name, r["label"] or "-", f"{r['code']['commit']}{'+' if r['code']['dirty'] else ''}",
-            f"{r['score']['daysPlayed']}/{r['days']}", r["endReason"],
-            f"{r['score']['total']} (v{r['score'].get('version', 1)})", *(part(k) for k in WEIGHTS),
-            str(a["escalations"]), f"${a['costUsd']:.2f}", ",".join(r["managers"]),
+            f"{stored['daysPlayed']}/{r['days']}", r["endReason"],
+            f"{current['total']}{guess} (v{current.get('version', 1)})", f"{stored['total']} (v{stored.get('version', 1)})",
+            *(part(k) for k in WEIGHTS), str(a["escalations"]), f"${a['costUsd']:.2f}", ",".join(r["managers"]),
         ])
-    head = ["run", "label", "code", "days", "end", "score", "surv", "food", "prod", "mood", "shelter", "progress",
-            "busy", "compl", "esc", "est. API $", "managers"]
+    head = ["run", "label", "code", "days", "end", "score", "as scored", *(short.get(k, k) for k in WEIGHTS),
+            "esc", "est. API $", "managers"]
     if not rows:
         return "No evaluations yet: uv run python -m rimagent eval --save <name> --days N"
     widths = [max(len(str(x)) for x in col) for col in zip(head, *rows)]
-    return "\n".join("  ".join(str(c).ljust(w) for c, w in zip(row, widths)) for row in [head, *rows])
+    table = "\n".join("  ".join(str(c).ljust(w) for c, w in zip(row, widths)) for row in [head, *rows])
+    return table + "\n* shelter from beds alone: the run didn't record who slept outside."

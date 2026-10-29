@@ -66,6 +66,7 @@ class FakeRim(RimClient):
             {"defName": "B", "label": "B", "baseCost": 500, "finished": False},
         ]
         self.research_project: str | None = None
+        self.owners: dict[str, str] = {}            # bed id -> owner pawn id (the game's, not shown by any read)
         # list_work detail=normal's work entries, by pawn id (fixtures/live/list_work_normal.json);
         # each colonist starts with every work type on.
         self.work: dict[str, list[dict[str, Any]]] = {
@@ -166,7 +167,7 @@ class FakeRim(RimClient):
 
     def list_buildings(self, *, category=None, **_: Any) -> Result:
         beds = [{"ids": {"id": b["id"]}, "def": {"defName": "Bed"}, **b} for b in self.beds]
-        return Result({"data": {"buildings": self.beds if category == "bed" else beds + self.buildings}})
+        return Result({"data": {"buildings": beds if category == "bed" else beds + self.buildings}})
 
     def list_production(self, **_: Any) -> Result:
         return Result({"data": {"bills": self.bills}})
@@ -250,6 +251,18 @@ class FakeRim(RimClient):
         previous, entry["priority"], entry["active"] = entry["priority"], priority, priority > 0
         return Result({"changed": previous != priority, "data": {"previousPriority": previous, "priority": priority,
                                                                  "manualPrioritiesChanged": False}})
+
+    def assign_owner(self, building_id, *, pawn_id, action=None, **_: Any) -> Result:
+        """Mirrors RimMCP's reply (OwnerCommandService): owners after, and who lost the bed."""
+        self._record("assign_owner", building_id=building_id, pawn_id=pawn_id)
+        before = self.owners.get(building_id)
+        for bed, owner in list(self.owners.items()):
+            if owner == pawn_id:
+                del self.owners[bed]  # a pawn owns one bed: assigning moves them
+        self.owners[building_id] = pawn_id
+        return Result({"changed": before != pawn_id, "data": {
+            "owners": [{"id": pawn_id}], "slots": 1, "unassigned": [{"id": before}] if before not in (None, pawn_id) else None,
+            "alreadySatisfied": "already assigned" if before == pawn_id else None}})
 
     def order_pawn(self, pawn_id, *, order, target_id=None, x=None, z=None, queue=None, **_: Any) -> Result:
         self._record("order_pawn", pawn_id=pawn_id, order=order, target_id=target_id, x=x, z=z)
