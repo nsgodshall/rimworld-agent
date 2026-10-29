@@ -4,6 +4,7 @@
     uv run python -m rimagent run --hours 24 --escalate claude  # play; Claude Code fixes the code on incidents
     uv run python -m rimagent run --dry-run                     # one cycle against the live game, changing nothing
     uv run python -m rimagent inspect --tools                   # read the live game (see inspect --help)
+    uv run python -m rimagent watch                             # a live view of the newest run (TUI)
 """
 
 from __future__ import annotations
@@ -49,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--model")
     ev.add_argument("--focus-wait", type=float, default=600.0)
     sub.add_parser("evals", help="compare every evaluation so far")
+    watch = sub.add_parser("watch", help="live view of a run: the runtime's picture of the game, and its commands")
+    watch.add_argument("run_dir", nargs="?", help="a runs/<dir> (default: follow the newest)")
     inspect = sub.add_parser("inspect", help="read-only access to the live game", add_help=False)
     inspect.add_argument("rest", nargs=argparse.REMAINDER)
     raw = sys.argv[1:] if argv is None else argv
@@ -57,6 +60,10 @@ def main(argv: list[str] | None = None) -> int:
 
         return inspect_main(raw[1:], focus_wait=600.0)
     args = parser.parse_args(raw)
+    if args.command == "watch":
+        from .watch import main as watch_main
+
+        return watch_main([args.run_dir] if args.run_dir else [])
     if args.command == "evals":
         from .evaluate import compare
 

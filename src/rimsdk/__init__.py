@@ -9,8 +9,8 @@
 
 from . import errors
 from ._generated import MANIFEST_VERSION
-from .client import ManifestDrift, RimClient
+from .client import CallRecord, ManifestDrift, RimClient
 from .result import Result
 from .transport import NO_RETRY, RetryPolicy
 
-__all__ = ["MANIFEST_VERSION", "NO_RETRY", "ManifestDrift", "Result", "RetryPolicy", "RimClient", "errors"]
+__all__ = ["MANIFEST_VERSION", "NO_RETRY", "CallRecord", "ManifestDrift", "Result", "RetryPolicy", "RimClient", "errors"]

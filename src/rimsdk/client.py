@@ -33,6 +33,18 @@ class ManifestDrift:
         return bool(self.added or self.removed or self.changed)
 
 
+@dataclass
+class CallRecord:
+    """One tool call, for RimClient.call_hooks: wire-named args, and the result or the error."""
+
+    tool: str
+    read_only: bool
+    args: dict[str, Any]
+    result: Result | None = None
+    error: str | None = None
+    ms: float = 0.0
+
+
 class RimClient(GeneratedTools):
     """Typed access to every RimMCP tool, e.g. `rim.get_colony_status()` or `rim.list_pawns(kind=...)`.
 
@@ -44,6 +56,8 @@ class RimClient(GeneratedTools):
         self.transport = transport
         self.manifest = manifest or Manifest.bundled()
         self.read_only = read_only
+        # Called after every tool call, with what was called and how it went (e.g. to log commands).
+        self.call_hooks: list[Callable[[CallRecord], None]] = []
 
     @classmethod
     def connect(
@@ -85,7 +99,21 @@ class RimClient(GeneratedTools):
         if self.read_only and not spec.read_only:
             raise errors.ReadOnlyViolation(f"{name} changes the game, and this client is read-only.")
         method, path, body = build_request(spec, args)
-        return Result(self.transport.request(method, path, body))
+        if not self.call_hooks:
+            return Result(self.transport.request(method, path, body))
+        started = time.monotonic()
+        record = CallRecord(name, spec.read_only, {k: v for k, v in args.items() if v is not None})
+        try:
+            result = Result(self.transport.request(method, path, body))
+            record.result = result
+            return result
+        except errors.RimError as exc:
+            record.error = f"{type(exc).__name__}: {exc.message}"
+            raise
+        finally:
+            record.ms = round((time.monotonic() - started) * 1000, 1)
+            for hook in self.call_hooks:
+                hook(record)
 
     def call(self, name: str, **args: Any) -> Result:
         """Call a tool by its MCP name with its wire (camelCase) argument names."""

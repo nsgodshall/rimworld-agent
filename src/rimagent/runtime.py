@@ -16,6 +16,7 @@ from .journal import Journal
 from .loader import ManagerLoader
 from .manager import TICKS_PER_HOUR, Context, Manager
 from .snapshot import Snapshot
+from .telemetry import CommandLog, publish
 
 # Severity of an event no manager handles. Anything not listed is only journaled.
 UNHANDLED: dict[str, Severity] = {
@@ -124,6 +125,18 @@ class Runtime:
         self.requested_chunk: float | None = None
         self.escalations = 0
         self.escalated_keys: list[str] = []
+        # For watching (telemetry): who is calling the game now, and where the run is.
+        self.actor = "runtime"
+        self.tick: int | None = None
+        self.cycles = 0
+        self.start_tick: int | None = None
+        self.target_tick: int | None = None
+        self.last_run: dict[str, Any] | None = None
+        self.last_snap: Snapshot | None = None
+        self.pawn_details: dict[str, dict[str, Any]] = {}
+        self.seen: dict[str, Any] = {}  # the latest colony, colonists and alerts any cycle read
+        self.command_log = CommandLog(self)
+        rim.call_hooks.append(self.command_log)
 
     # --- the loop --------------------------------------------------------------------------
 
@@ -131,14 +144,18 @@ class Runtime:
         """Play for `hours` of game time. Returns why it stopped: done, halted, or an error kind."""
         start = self.rim.get_advance().data["time"]["tick"]
         target = start + hours * TICKS_PER_HOUR
+        self.start_tick, self.target_tick, self.tick = start, round(target), start
         self.journal.write("start", tick=start, hours=hours, managers=[m.name for m in self.managers])
         self._skip_old_history()
         cycles = 0
         while True:
             cycles += 1
+            self.cycles += 1
             snap = Snapshot(self.rim)
+            self.tick, self.last_snap = snap.tick, snap
             if not self.cycle(snap):
                 return self._stop("halted", snap.tick)
+            publish(self, "cycle", snap)
             if snap.tick >= target or (max_cycles is not None and cycles >= max_cycles):
                 return self._stop("done", snap.tick)
             if self.pending:
@@ -157,6 +174,7 @@ class Runtime:
             self.dispatch(ctx, event)
         for manager in self.managers:
             if manager.due(snap.tick):
+                self.actor = manager.name
                 try:
                     manager.update(ctx)
                 except errors.NotProcessing:
@@ -164,6 +182,7 @@ class Runtime:
                 except Exception as exc:  # a manager bug is an incident, not a crash
                     ctx.incidents.append(Incident.from_exception(f"{manager.name}.update", exc, snap.tick))
                 manager.last_tick = snap.tick
+        self.actor = "runtime"
         for wire in self.tripwires:
             incident = wire.evaluate(snap)
             if incident:
@@ -180,11 +199,13 @@ class Runtime:
         handled = False
         for manager in self.managers:
             if event.kind in manager.handles:
+                self.actor = f"{manager.name}:{event.kind}"
                 try:
                     handled = manager.on_event(ctx, event) is not False or handled
                 except Exception as exc:
                     ctx.incidents.append(Incident.from_exception(f"{manager.name}.on_event({event.kind})", exc, ctx.tick))
                     handled = True
+        self.actor = "runtime"
         handled = self.bus.publish(event) or handled
         severity = UNHANDLED.get(event.kind)
         if not handled and severity:
@@ -224,6 +245,7 @@ class Runtime:
     def advance(self, hours: float) -> bool:
         """Run game time; queue what happened as events. False when the game can't be run."""
         before = self.rim.get_advance().data["time"]["tick"]
+        publish(self, "advancing", self.last_snap)
         try:
             run = self.rim.advance(max(hours, 0.01), speed=self.speed)
         except errors.Conflict as exc:
@@ -234,6 +256,9 @@ class Runtime:
             hours=run.get("hoursElapsed"), events=len(run.get("events") or []),
         )
         self.pending.extend(Event.from_run(e) for e in run.get("events") or [])
+        self.tick = run.get("tick") or self.tick
+        self.last_run = {"hours": round(hours, 2), **{k: run.get(k) for k in ("status", "endReason", "hoursElapsed", "tick")},
+                         "events": [Event.from_run(e).describe() for e in run.get("events") or []][:5]}
         if run.get("status") != "interrupted":
             self.stalled_runs = 0
             return True
@@ -284,7 +309,12 @@ class Runtime:
         self.escalations += 1
         self.escalated_keys.append(incident.key)
         self.journal.write("escalation", tick=incident.tick, summary=f"Escalating {incident.key} ({self.escalations}/{self.max_escalations})...")
-        resolution = self.escalator.escalate(incident, report)
+        publish(self, "escalating", snap)
+        self.actor = "escalation"
+        try:
+            resolution = self.escalator.escalate(incident, report)
+        finally:
+            self.actor = "runtime"
         self.journal.write("escalation", tick=incident.tick, resume=resolution.resume, summary=resolution.summary, **resolution.details)
         if resolution.resume:
             self._reload_if_changed(incident.tick or 0)
@@ -303,6 +333,7 @@ class Runtime:
 
     def _stop(self, why: str, tick: int) -> str:
         self.journal.write("stop", tick=tick, reason=why)
+        publish(self, why, self.last_snap)
         return why
 
     # --- plumbing ----------------------------------------------------------------------------
