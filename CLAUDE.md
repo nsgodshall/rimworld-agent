@@ -86,6 +86,9 @@ Rules:
   half-built things show on `get_map_view` as "blueprint or unfinished building", without saying
   what they are. `place_blueprint` is safe to repeat at the exact same spot, rotation and
   material: that placement comes back `alreadySatisfied`.
+  - **A different material where a building stands is a replacement**: the game tears it down to rebuild
+    it. In trial 17 the house switched its wall material, every built wall got a steel blueprint, the
+    walls came down and the roof killed a colonist. Never re-place a standing building in another material.
 
 ## The SDK, briefly
 

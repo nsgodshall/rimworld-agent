@@ -173,7 +173,52 @@ def test_a_stage_stalled_on_a_spent_material_switches_to_the_other(tmp_path):
     house.update(ctx_for(rim, tmp_path, board))  # ...a day later the beds switch
     cancelled = [c for c in rim.called("designate") if c["kind"] == "cancel"]
     assert cancelled and all(i.startswith("Blueprint_Bed") for i in cancelled[0]["thing_ids"])
-    assert house.memory["house"]["beds"] == "WoodLog"
+    overrides = house.memory["house"]["overrides"]
+    assert {k for k in overrides if k.startswith("Bed@")} and {v for k, v in overrides.items() if k.startswith("Bed@")} == {"WoodLog"}
     house.update(ctx_for(rim, tmp_path, board))
     beds = [p for p in rim.called("place_blueprint")[-1]["placements"] if p["def"] == "Bed"]
     assert {b["stuff"] for b in beds} == {"WoodLog"} and sum(b["def"] == "Bed" for b in rim.blueprints) == 3
+
+
+def test_building_the_house_never_replaces_what_stands(tmp_path):
+    """Trial 17: after a material switch every built wall got a steel blueprint; they came down and the roof fell."""
+    rim = colony()
+    FoodManager().update(ctx_for(rim, tmp_path))
+    house, board = HouseManager(), {}
+    for _ in range(4):
+        house.update(ctx_for(rim, tmp_path, board))
+        rim.build_blueprints()
+    assert house.memory.get("built") and rim.replaced == []
+
+
+def test_a_material_switch_leaves_built_walls_alone(tmp_path):
+    rim = colony()
+    rim.resources = [{"defName": "WoodLog", "count": 1000}, {"defName": "Steel", "count": 1000}]
+    FoodManager().update(ctx_for(rim, tmp_path))
+    house, board = HouseManager(), {}
+    house.update(ctx_for(rim, tmp_path, board))
+    rim.build_blueprints()                      # beds, table, chairs
+    house.update(ctx_for(rim, tmp_path, board))  # walls placed
+    walls_stuff = house.memory["house"]["walls"]
+    rim.build_blueprints(40)                    # most walls built, the rest wait
+    other = "WoodLog" if walls_stuff == "Steel" else "Steel"
+    rim.resources = [{"defName": walls_stuff, "count": 0}, {"defName": other, "count": 1000}]
+    for _ in range(3):
+        rim.tick += 25 * 2500
+        house.update(ctx_for(rim, tmp_path, board))
+    assert rim.replaced == []
+    waiting = [b for b in rim.blueprints if b["def"] in ("Wall", "Door")]
+    assert waiting and {b["stuff"] for b in waiting} == {other}
+
+
+def test_what_stands_keeps_its_material_whatever_the_plan_says(tmp_path):
+    rim = colony()
+    FoodManager().update(ctx_for(rim, tmp_path))
+    house, board = HouseManager(), {}
+    house.update(ctx_for(rim, tmp_path, board))
+    rim.build_blueprints()
+    house.update(ctx_for(rim, tmp_path, board))
+    rim.build_blueprints()
+    house.memory["house"]["walls"] = "Steel" if house.memory["house"]["walls"] == "WoodLog" else "WoodLog"  # say, a bug
+    house.update(ctx_for(rim, tmp_path, board))
+    assert rim.replaced == []

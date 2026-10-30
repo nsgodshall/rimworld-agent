@@ -43,7 +43,6 @@ BEDROOM_WIDTH = 3    # interior: 12 tiles, "rather tight" with a bed, never "cra
 COMMON_WIDTH = 6     # interior: a 2x2 table, four chairs, horseshoes, chess, a lamp
 STALL_HOURS = 24     # a stage waiting this long on a material that's run out switches to the other
 STALL_SHORT = 20     # "run out": less than this much usable
-MATERIAL_KEY = {"Bed": "beds", "Wall": "walls", "Door": "walls", "HorseshoesPin": "metal"}  # else furniture
 COST = {"Wall": 5, "Door": 25, "Bed": 45, "Table2x2c": 50, "DiningChair": 45, "ChessTable": 70, "HorseshoesPin": 10}
 MAX_PLACEMENTS = 50  # place_blueprint refuses more in one call (400 "At most 50 placements per call.")
 # Comfortable is up to about 26 C; above it bedrooms give "Slept in the heat", and a heat wave brings
@@ -112,6 +111,13 @@ def placements(p: dict, walls: str, furniture: str, beds: str | None = None, met
     return [item for stage in stages(p, walls, furniture, beds, metal) for item in stage]
 
 
+def standing_materials(ctx: Context) -> dict[tuple[str, int, int], str]:
+    """(def, x, z) -> material of every finished building (list_buildings: def, position, stuff)."""
+    return {(b["def"]["defName"], b["position"]["x"], b["position"]["z"]): (b.get("stuff") or {}).get("defName")
+            for page in ctx.rim.pages(ctx.rim.list_buildings, limit=200) for b in page.data.get("buildings") or []
+            if b.get("def") and b.get("position") and (b.get("stuff") or {}).get("defName")}
+
+
 def place(ctx: Context, items: list[dict]) -> tuple[list[dict], int]:
     """place_blueprint in calls of at most MAX_PLACEMENTS (a 3-bedroom house is ~60): (results in order, applied)."""
     results, applied = [], 0
@@ -155,8 +161,15 @@ class HouseManager(Manager):
         if ctx.board.get("house_stage", 0) >= 2 and "metal" not in house:
             house["metal"] = pick(ctx, 10, (STEEL, SILVER))
         metal = house.get("metal", STEEL)
+        overrides = house.get("overrides") or {}
+        standing = standing_materials(ctx)
         for number, stage in enumerate(stages(p, house["walls"], house["furniture"], house.get("beds"), metal)):
             ctx.board["house_stage"] = number  # what's being built: others wait for wood (see stages())
+            stage = [{**item, "stuff": overrides[f"{item['def']}@{item['x']},{item['z']}"]}
+                     if f"{item['def']}@{item['x']},{item['z']}" in overrides else item for item in stage]
+            # Whatever stands is kept as it is: another material there would be a replacement (see _unstall).
+            stage = [{**item, "stuff": standing[(item["def"], item["x"], item["z"])]}
+                     if standing.get((item["def"], item["x"], item["z"])) and item.get("stuff") else item for item in stage]
             stage_results, stage_applied = place(ctx, stage)
             results, applied = results + stage_results, applied + stage_applied
             if not all(r.get("state") == "built" for r in stage_results):
@@ -185,19 +198,28 @@ class HouseManager(Manager):
             return
         waiting = [r for r in results if r.get("state") == "blueprint" and r.get("stuff") and r.get("id")]
         switched = []
-        for key in {MATERIAL_KEY.get(r.get("def"), "furniture") for r in waiting}:
-            stuff = house.get(key) or house["furniture"]
+        for stuff in sorted({r["stuff"] for r in waiting}):
             alt = {STEEL: WOOD, WOOD: STEEL, SILVER: STEEL}.get(stuff)
-            items = [r for r in waiting if MATERIAL_KEY.get(r.get("def"), "furniture") == key and r.get("stuff") == stuff]
+            items = [r for r in waiting if r["stuff"] == stuff]
             need = sum(COST.get(r.get("def"), 30) for r in items)
             # The other material must cover half of what's waiting: in trial 16 the walls went to steel with
             # little steel about, waited a day more, and went back to wood.
-            if alt is None or not items or ctx.snapshot.usable(stuff) >= STALL_SHORT or ctx.snapshot.usable(alt) < need / 2:
+            if alt is None or ctx.snapshot.usable(stuff) >= STALL_SHORT or ctx.snapshot.usable(alt) < need / 2:
                 continue
-            ids = [r["id"] for r in items]
-            ctx.rim.designate(kind="cancel", thing_ids=ids[:300])
-            house[key] = alt
-            switched.append(f"{len(ids)} {key} from {stuff} to {alt}")
+            if stuff == SILVER or alt == SILVER:
+                items = [r for r in items if r.get("def") == "HorseshoesPin"]  # silver is only for the pin
+            elif any(r.get("def") == "HorseshoesPin" for r in items):
+                items = [r for r in items if r.get("def") != "HorseshoesPin"]  # metal only: never wood
+            if not items:
+                continue
+            ctx.rim.designate(kind="cancel", thing_ids=[r["id"] for r in items][:300])
+            # Only the cancelled cells change material. Placing a different material where a wall stands is a
+            # replacement: the game tears the wall down to rebuild it. Trial 17 switched the whole "walls" key,
+            # every built wooden wall got a steel blueprint, the walls came down, and the roof killed Miyazaki.
+            overrides = house.setdefault("overrides", {})
+            for r in items:
+                overrides[f"{r['def']}@{r['x']},{r['z']}"] = alt
+            switched.append(f"{len(items)} blueprints from {stuff} to {alt}")
         if switched:
             self.memory["stage_since"][str(number)] = ctx.tick
             ctx.log(self.name, f"Stage {number} waited {(ctx.tick - since) / 2500:.0f}h for material: switched "

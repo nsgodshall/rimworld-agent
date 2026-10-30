@@ -78,6 +78,7 @@ class FakeRim(RimClient):
         ]
         self.research_project: str | None = None
         self.built: list[dict[str, Any]] = []      # placements built by build_blueprints
+        self.replaced: list[dict[str, Any]] = []   # placements of another material over a building: torn down
         self.owners: dict[str, str] = {}
         self.schedules: dict[str, dict[int, str]] = {}  # pawn id -> hour -> TimeAssignmentDef            # bed id -> owner pawn id (the game's, not shown by any read)
         # list_work detail=normal's work entries, by pawn id (fixtures/live/list_work_normal.json);
@@ -380,13 +381,25 @@ class FakeRim(RimClient):
         for p in placements:
             footprint = _footprint(p["def"], p["x"], p["z"])
             same = (p["def"], p["x"], p["z"], p.get("rotation"), p.get("stuff"))
-            # BuildService: Existing(cell) matches what's there by def and cell, whatever its material.
-            existing = next((b for b in self.blueprints if (b["def"], b["x"], b["z"]) == same[:3]), None)
+            # BuildPlacement.Existing: the same def at the cell with the same rotation AND material. Anything else
+            # goes to the game's build tool: over a building of another material that's a replacement, which
+            # tears the building down (trial 17: steel walls over wooden ones, and the roof fell).
+            existing = next((b for b in self.blueprints if (b["def"], b["x"], b["z"], b.get("rotation"), b.get("stuff")) == same), None)
+            built = next((b for b in self.built if (b["def"], b["x"], b["z"]) == same[:3]), None)
             if existing is not None:
                 results.append({**p, "outcome": "alreadySatisfied", "state": "blueprint",
                                 "reason": None, "id": existing["_id"]})
-            elif any((b["def"], b["x"], b["z"]) == same[:3] for b in self.built):  # BuildService: Existing(cell)
+            elif built is not None and (built.get("rotation"), built.get("stuff")) == same[3:]:
                 results.append({**p, "outcome": "alreadySatisfied", "state": "built", "reason": None})
+            elif built is not None:
+                self.replaced.append({**p, "was": built.get("stuff")})
+                results.append({**p, "outcome": "applied", "state": "blueprint", "reason": None, "id": f"Blueprint_replace{len(self.replaced)}"})
+            elif any((b["def"], b["x"], b["z"]) == same[:3] for b in self.blueprints):
+                old = next(b for b in self.blueprints if (b["def"], b["x"], b["z"]) == same[:3])
+                self.blueprints.remove(old)  # the build tool puts the new blueprint in its place
+                bp = {**p, "_id": f"Blueprint_{p['def']}{len(self.blueprints) + len(self.built) + 1}"}
+                self.blueprints.append(bp)
+                results.append({**p, "outcome": "applied", "state": "blueprint", "reason": None, "id": bp["_id"]})
             elif all(self.cells.get(c) in (".", "_") for c in footprint):
                 for c in footprint:
                     self.cells[c] = "x"  # a blueprint, on the map view
@@ -407,9 +420,10 @@ class FakeRim(RimClient):
             for c in _footprint(p["def"], p["x"], p["z"]):
                 self.cells[c] = "b"
             position = {"x": p["x"], "y": 0, "z": p["z"]}
+            stuff = {"defName": p["stuff"]} if p.get("stuff") else None
             if p["def"] == "Bed":
-                self.beds.append({"id": f"Bed{len(self.beds) + 1}", "position": position})
+                self.beds.append({"id": f"Bed{len(self.beds) + 1}", "position": position, "stuff": stuff})
             else:
                 n_id = f"{p['def']}{len(self.buildings) + 1}"
-                self.buildings.append({"ids": {"id": n_id}, "def": {"defName": p["def"]}, "position": position})
+                self.buildings.append({"ids": {"id": n_id}, "def": {"defName": p["def"]}, "position": position, "stuff": stuff})
         self.blueprints = self.blueprints[len(self.blueprints[:n]):]
