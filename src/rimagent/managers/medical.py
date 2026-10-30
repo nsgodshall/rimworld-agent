@@ -28,6 +28,7 @@ UNFORBID_EVERY_TICKS = 2 * 2500
 TEND_CHUNK_HOURS = 0.1
 LOW_MEDICINE_ALERT = "Alert_LowMedicine"
 NEEDS_TEND_ALERT = "Alert_ColonistNeedsTend"
+RETEND_AFTER_HOURS = 4  # a patient found tended already (or untendable) is skipped this long
 NEEDS_TEND_HOLD_HOURS = 2  # doctors get this long to tend on their own before someone is drafted to
 STORE_EVERY_TICKS = 2 * 2500      # how often loose medicine is marked and rushed while the alert shows
 SHORT_NOTE_EVERY_TICKS = 24 * 2500  # a real shortage is noted at most once a day
@@ -64,6 +65,11 @@ class MedicalManager(Manager):
             return  # someone is already tending
         patients = [e["id"] for e in medical.get("examples") or [] if e.get("id") in colonists]
         patients += [pid for pid in untended if pid in colonists and pid not in patients]
+        # Skip whoever was found tended already, or couldn't be tended, a little while ago. In trial 22 a tend
+        # order came back alreadySatisfied every cycle; each time the helper was drafted again, never ate, and
+        # the colonist who did need help (downed, starving) died.
+        resting = self.memory.setdefault("tended_until", {})
+        patients = [pid for pid in patients if resting.get(pid, 0) <= ctx.tick]
         helpers = [p for p in colonists.values()
                    if not p.get("downed") and not p.get("drafted") and pawn_id(p) not in patients]
         if not patients or not helpers:
@@ -84,7 +90,9 @@ class MedicalManager(Manager):
             ctx.log(self.name, f"{helper['name']} tends {patient['name']}.")
         else:
             ctx.rim.set_pawn_drafted(pawn_id(helper), drafted=False)
-            ctx.log(self.name, f"{helper['name']} can't tend {patient['name']}: {result.get('reason')}")
+            resting[pawn_id(patient)] = ctx.tick + RETEND_AFTER_HOURS * 2500
+            ctx.log(self.name, f"{helper['name']} didn't tend {patient['name']} ({result.get('outcome')}: "
+                               f"{result.get('reason')}); not again for {RETEND_AFTER_HOURS}h.")
 
     def untended(self, ctx: Context) -> list[str]:
         """Colonists the game says need treatment (Alert_ColonistNeedsTend) for NEEDS_TEND_HOLD_HOURS: doctors

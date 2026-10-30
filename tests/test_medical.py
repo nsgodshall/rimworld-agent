@@ -88,3 +88,27 @@ def test_a_colonist_left_untended_gets_a_drafted_tender(tmp_path):
     manager.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
     tends = [c for c in rim.called("order_pawn") if c["order"] == "tend"]
     assert [(c["pawn_id"], c["target_id"]) for c in tends] == [("HumanA", "HumanB")]
+
+
+def test_a_patient_found_tended_is_not_retried_every_cycle(tmp_path):
+    """Trial 22: tend came back alreadySatisfied each cycle; the helper was drafted again and again, never ate,
+    and the colonist who did need help died."""
+    from rimsdk import Result
+
+    rim = FakeRim()
+    rim.medical = {"downed": 0, "bleeding": 2, "examples": [{"id": "HumanB"}, {"id": "HumanC"}]}
+    real = rim.order_pawn
+
+    def order(pawn_id, *, order, target_id=None, **kw):
+        if order == "tend" and target_id == "HumanB":
+            rim._record("order_pawn", pawn_id=pawn_id, order=order, target_id=target_id)
+            return Result({"changed": False, "data": {"order": order, "outcome": "alreadySatisfied", "reason": None}})
+        return real(pawn_id, order=order, target_id=target_id, **kw)
+
+    rim.order_pawn = order
+    manager = MedicalManager()
+    manager.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    rim.tick += 250
+    manager.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    targets = [c["target_id"] for c in rim.called("order_pawn") if c["order"] == "tend"]
+    assert targets == ["HumanB", "HumanC"]
