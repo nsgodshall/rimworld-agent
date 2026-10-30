@@ -33,7 +33,8 @@ def test_work_switched_off_is_turned_on_and_incapable_work_left_alone(tmp_path):
     WorkManager().update(ctx_for(rim, tmp_path))
     c = priorities(rim, "HumanC")
     assert c["Growing"] == c["PlantCutting"] == c["Mining"] == 3 and c["Hauling"] == 0
-    assert not [x for x in rim.called("set_pawn_work_priority") if x["work_type_def_name"] == "Hauling"]
+    assert not [x for x in rim.called("set_pawn_work_priority")
+                if x["work_type_def_name"] == "Hauling" and x["pawn_id"] == "HumanC"]  # incapable: left alone
 
 
 def test_the_best_researcher_researches_first_and_emergencies_come_before_everything(tmp_path):
@@ -71,7 +72,7 @@ def test_short_food_puts_food_work_first_and_plenty_puts_it_back(tmp_path):
     rim.food = {"eatenPerDay": 4.8, "daysLeft": 6.0}
     manager.update(ctx_for(rim, tmp_path))
     a = priorities(rim, "HumanA")
-    assert a["Cooking"] == 2 and a["Hunting"] == a["Growing"] == a["Hauling"] == 3
+    assert a["Cooking"] == 2 and a["Hunting"] == a["Growing"] == 3 and a["Hauling"] == 2  # hauling is always 2
 
 
 def test_settled_priorities_are_not_set_again(tmp_path):

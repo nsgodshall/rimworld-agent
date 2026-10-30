@@ -32,6 +32,9 @@ FOOD_WORK = {"Cooking": 1, "Hunting": 1, "Growing": 1, "Hauling": 2}
 # 0 wood while one colonist felled trees. Under this much usable wood, felling goes to 2 for everyone.
 WOOD_SHORT = 50
 WOOD_WORK = {"PlantCutting": 2}
+# Hauling at 2: at 3, the last thing anyone did, food lay unstored (the food score counts stored food) and
+# corpses and stone chunks piled up by the house (trial 21: beauty 0-0.06, "Hideous environment").
+TIDY_WORK = ("Hauling",)
 JOY_HOURS = (19, 22)  # evening, before the default 22:00 bedtime. Two hours left recreation at 0.62-0.69, just short of "satisfied" (0.7, +5)
 # Work type -> the skill it uses (for passions and for choosing the doctor and researcher).
 SKILL = {"Doctor": "Medicine", "Research": "Intellectual", "Cooking": "Cooking", "Construction": "Construction",
@@ -60,7 +63,7 @@ def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]], food_short: bo
             passion = skills[pid].get(SKILL.get(work_type, ""), {}).get("passion") not in (None, "None")
             if work_type in EMERGENCY or (work_type == "Doctor" and ("Doctor", pid) in leads):
                 out[(pid, work_type)] = 1
-            elif (work_type == "Research" and ("Research", pid) in leads) or passion:
+            elif (work_type == "Research" and ("Research", pid) in leads) or passion or work_type in TIDY_WORK:
                 out[(pid, work_type)] = 2
             else:
                 out[(pid, work_type)] = 3
