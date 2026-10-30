@@ -85,15 +85,35 @@ class MedicalManager(Manager):
         # Helpers who aren't hurt come first, but a patient still on their feet can tend another. In run
         # 20261029-234707 all three colonists came out of a raid needing tending, Sparky downed, and nobody was
         # counted free: the runtime stopped while the two walking wounded ate berries.
+        # Only colonists who can doctor. In run 20261030-111454 Sam ("Will never do doctoring") was the only one
+        # free: each tend order was refused, the patient was skipped for it, and the runtime stopped while Freeman
+        # was tending.
+        doctors = can_doctor(ctx)
         helpers = sorted((p for p in colonists.values() if not p.get("downed") and not p.get("drafted")
-                          and p not in tending),
+                          and p not in tending and pawn_id(p) in doctors),
                          key=lambda p: pawn_id(p) in patients)
         pair = next(((h, colonists[pid]) for pid in patients for h in helpers if pawn_id(h) != pid), None)
+        if pair is None and tending:
+            ctx.log(self.name, "Nobody else free who can doctor: leaving it to "
+                               f"{', '.join(p['name'] for p in tending)}.")
+            return
         if pair is None:
             if not patients and medical.get("bleeding") and self.memory.get("quiet_noted") != ctx.tick // 2500:
                 self.memory["quiet_noted"] = ctx.tick // 2500
                 ctx.log(self.name, "Someone is bleeding but no patient is listed to tend.", medical=medical,
                         waiting=self.memory.get("tended_until"))
+            standing = [p for p in colonists.values() if not p.get("downed")]
+            if patients and not any(pawn_id(p) in doctors for p in standing):
+                # Nobody on their feet can doctor at all: no order or person can get a tend done, and stopping only
+                # stops the rest (rescue to bed, food). In run 20261030-111454 Freeman went down after tending
+                # Midori, leaving Sam ("Will never do doctoring"): the runtime stopped while she carried Midori in.
+                # Then Sam went down too, nobody standing at all: the same, and the runtime stopped a third time.
+                if self.memory.get("no_doctor_noted") != ctx.tick // 2500:
+                    self.memory["no_doctor_noted"] = ctx.tick // 2500
+                    ctx.raise_incident("noDoctor", f"{len(patients)} colonists need tending and nobody on their feet "
+                                       f"can doctor ({', '.join(p['name'] for p in standing) or 'nobody standing'}).", "warn",
+                                       patients=patients)
+                return
             if patients:
                 ctx.raise_incident("noTender", f"{len(patients)} colonists need tending and nobody is free to.",
                                    "halt" if medical.get("bleeding") else "warn")
@@ -171,6 +191,12 @@ class MedicalManager(Manager):
         if pid:
             self.memory.setdefault("tended_until", {}).pop(pid, None)
         return True
+
+
+def can_doctor(ctx: Context) -> set[str]:
+    """Ids of colonists whose Doctor work isn't disabled (list_work), whatever its priority."""
+    return {p["id"] for p in ctx.rim.list_work(detail="normal").data.get("pawns") or []
+            if any(w.get("defName") == "Doctor" and not w.get("disabled") for w in p.get("work") or [])}
 
 
 def job_of(pawn: dict[str, Any]) -> str | None:

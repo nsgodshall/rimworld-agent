@@ -44,7 +44,9 @@
 
 - **Hunting**: mark animals with `designate`... (hunting is a designation kind in game; verify RimMCP support).
   Never hunt **boomalopes/boomrats** (explode, start fires), **predators** or **animals in herds** (they can
-  revenge as a group). Deer, hares, squirrels are safe. Meat rots fast: butcher at a `TableButcher`, then cook.
+  revenge as a group). Never hunt **ostriches, emus or cassowaries**: their revenge chance on harm
+  (`manhunterOnDamageChance` in the race defs) is 1.0, so every hunt is a fight; caribou, geese, muffalo and
+  boomalopes are 0.1 a hit. Deer, hares, squirrels are safe. Meat rots fast: butcher at a `TableButcher`, then cook.
 - **Foraging**: berry bushes (`Plant_Berry`, wild) can be harvested with `designate kind=harvest`.
 - **Starting rations**: survival meals (`MealSurvivalPack`) never spoil; keep them for emergencies and caravans.
 

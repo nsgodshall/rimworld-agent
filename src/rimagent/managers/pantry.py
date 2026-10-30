@@ -44,8 +44,11 @@ HUNT_BELOW_DAYS = 8.0         # hunt while stored food is under this: from day o
 HUNT_AT_ONCE = 2              # animals marked for hunting at any one time
 MAX_UNBUTCHERED = 3           # no new hunting while this many corpses wait
 # Game that seldom fights back and doesn't bring its herd: no boomalopes, boars, muffalo or predators.
-GAME = ("Deer", "Elk", "Caribou", "Ibex", "Gazelle", "Alpaca", "Dromedary", "Emu", "Ostrich", "Capybara",
-        "Turkey", "Duck", "Goose", "Hare", "Snowhare", "Squirrel", "Chinchilla", "Iguana",
+# Not ostriches, emus or cassowaries either: their manhunterOnDamageChance is 1.0 (the game's race defs), so
+# every hunt is a fight. Start desert1: an ostrich hunted on day one mauled all three colonists. Caribou and
+# geese are 0.1 a hit, and caribou come in herds.
+GAME = ("Deer", "Elk", "Ibex", "Gazelle", "Alpaca", "Dromedary", "Capybara",
+        "Turkey", "Duck", "Hare", "Snowhare", "Squirrel", "Chinchilla", "Iguana",
         "Raccoon", "Rat", "Marmot", "GuineaPig", "Tortoise")
 FORAGE_BELOW_DAYS = 5.0       # ripe wild berries near the base are picked while stored food is under this
 FORAGE_PLANT = "Plant_Berry"

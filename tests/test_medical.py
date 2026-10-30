@@ -108,14 +108,58 @@ def test_when_everyone_is_hurt_a_walking_patient_tends_the_downed(tmp_path):
     assert tends == [("HumanA", "HumanC")]
 
 
-def test_a_lone_downed_colonist_still_stops_the_runtime(tmp_path):
+def test_a_lone_downed_colonist_is_a_warning_not_a_stop(tmp_path):
+    """Nobody standing can tend, and no person can either: stopping only ends the trial early. Incident 003 of run
+    20261030-111454 halted start desert1 at day 0.96 with both survivors downed."""
     rim = FakeRim()
     rim.colonists = rim.colonists[:1]
     rim.colonists[0]["downed"] = True
     rim.medical = {"downed": 1, "bleeding": 1, "examples": [{"id": "HumanA", "name": "A", "downed": True}]}
     ctx = Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False))
     MedicalManager().update(ctx)
-    assert [(i.kind, i.severity) for i in ctx.incidents] == [("noTender", "halt")]
+    assert [(i.kind, i.severity) for i in ctx.incidents] == [("noDoctor", "warn")]
+
+
+def test_only_colonists_who_can_doctor_are_sent_and_a_tender_at_work_is_left_to_it(tmp_path):
+    """Incident 001 of run 20261030-111454: Freeman tended downed Midori for hours, Sam (Doctor disabled) was the
+    only one free, her tend orders were refused, and the runtime stopped with Freeman still tending."""
+    rim = FakeRim()
+    rim.colonists[0]["downed"] = True
+    rim.colonists[1]["drafted"] = True
+    rim.colonists[1]["currentJob"] = {"defName": "TendPatient", "report": "tending to A."}
+    for w in rim.work["HumanC"]:
+        if w["defName"] == "Doctor":
+            w.update(disabled=True, active=False, priority=0)
+    rim.medical = {"downed": 1, "bleeding": 3, "examples": [{"id": "HumanA", "downed": True},
+                                                            {"id": "HumanC"}, {"id": "HumanB"}]}
+    manager = MedicalManager()
+    manager.memory["tending_since"] = rim.tick - 2 * 2500
+    ctx = Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False))
+    manager.update(ctx)
+    assert ctx.incidents == []
+    assert not rim.called("order_pawn")
+    assert not rim.called("set_pawn_drafted")
+
+
+def test_nobody_standing_who_can_doctor_is_a_warning_not_a_stop(tmp_path):
+    """Incident 002 of run 20261030-111454: Freeman went down after tending Midori, and Sam, the only one standing,
+    can't doctor. Nothing can get a tend done, so it's noted once an hour and play goes on (Sam rescues them)."""
+    rim = FakeRim()
+    rim.colonists[0]["downed"] = True
+    rim.colonists[1]["downed"] = True
+    for w in rim.work["HumanC"]:
+        if w["defName"] == "Doctor":
+            w.update(disabled=True, active=False, priority=0)
+    rim.medical = {"downed": 2, "bleeding": 3, "examples": [{"id": "HumanA", "downed": True},
+                                                            {"id": "HumanB", "downed": True}, {"id": "HumanC"}]}
+    manager = MedicalManager()
+    ctx = Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False))
+    manager.update(ctx)
+    assert [(i.kind, i.severity) for i in ctx.incidents] == [("noDoctor", "warn")]
+    assert not rim.called("order_pawn")
+    ctx = Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False))
+    manager.update(ctx)
+    assert ctx.incidents == []  # once an hour, not every cycle
 
 
 def test_a_patient_found_tended_is_not_retried_every_cycle(tmp_path):
