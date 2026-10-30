@@ -67,6 +67,20 @@ def test_no_farmland_is_a_warning_not_a_crash(tmp_path):
     assert all(i.severity == "warn" for i in ctx.incidents)
 
 
+def test_fields_look_farther_when_no_soil_is_near(tmp_path):
+    """Start desert1: poor ground around the base, the soil 30-50 cells away."""
+    cells = grid(100, 100, "_")
+    for x in range(85, 100):
+        for z in range(40, 60):
+            cells[(x, z)] = "."
+    rim = FakeRim(cells=cells)
+    ctx = ctx_for(rim, tmp_path)
+    FoodManager().update(ctx)
+    (field,) = [c for c in rim.called("set_zone") if c["kind"] == "growing"]
+    assert Rect(**field["add"][0]).x >= 85
+    assert not [i for i in ctx.incidents if "farmland" in i.summary]
+
+
 def test_a_food_only_stockpile_beside_the_general_one(tmp_path):
     """Trial 19: the general stockpile filled with everything; 685 food lay outside storage, 203 inside."""
     rim = FakeRim()

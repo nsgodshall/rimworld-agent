@@ -15,6 +15,7 @@ CROP = "Plant_Rice"
 STOCKPILE_SIZE = (6, 6)
 PANTRY_SIZE = (6, 6)  # food only, preferred (ensure_pantry)
 SEARCH_RADIUS = 30  # cells around the colonists to look for zone sites
+FIELD_SEARCH_RADIUS = 60  # fields look farther when nothing fits within SEARCH_RADIUS
 
 
 class FoodManager(Manager):
@@ -101,11 +102,17 @@ class FoodManager(Manager):
         cells = want - have
         width = math.ceil(math.sqrt(cells))
         height = math.ceil(cells / width)
-        view = self._view(ctx)
-        site = best_site(view, snap.base_center, width, height, good=_chars(view, "soil", "rich soil"),
-                         bonus=_chars(view, "rich soil"), min_fill=0.85)
+        site = None
+        # Farther out when nothing fits near: desert soil lies in patches (start desert1: the one big enough
+        # began 30 cells east of the base). A far field costs hauling; no field costs the colony.
+        for radius in (SEARCH_RADIUS, FIELD_SEARCH_RADIUS):
+            view = self._view(ctx, radius)
+            site = best_site(view, snap.base_center, width, height, good=_chars(view, "soil", "rich soil"),
+                             bonus=_chars(view, "rich soil"), min_fill=0.85)
+            if site is not None:
+                break
         if site is None:
-            ctx.raise_incident("noSite", f"No {width}x{height} farmland near the colonists.", "warn")
+            ctx.raise_incident("noSite", f"No {width}x{height} farmland within {FIELD_SEARCH_RADIUS} cells of the colonists.", "warn")
             return
         result = ctx.rim.set_zone(kind="growing", add=[site.to_api()], request_id=uuid.uuid4().hex)
         zone = (result.data or {}).get("zone") or {}
@@ -113,9 +120,9 @@ class FoodManager(Manager):
             ctx.rim.set_growing_zone(zone_id=zone["id"], plant=CROP, allow_sow=True, allow_cut=True)
         ctx.log(self.name, f"Created field {zone.get('id')} at {site} for {CROP}.", cells=zone.get("cellCount"), wanted=cells)
 
-    def _view(self, ctx: Context) -> MapView:
+    def _view(self, ctx: Context, radius: int = SEARCH_RADIUS) -> MapView:
         x, z = ctx.snapshot.base_center
-        side = 2 * SEARCH_RADIUS
+        side = 2 * radius
         return ctx.snapshot.view(Rect.around(x, z, side, side))
 
 
