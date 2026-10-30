@@ -25,6 +25,9 @@ BUTCHERS = ("ButcherSpot", "TableButcher")
 BUTCHER_BUILD = ("ButcherSpot",)
 ROTATION = "north"
 RECIPE = "CookMealSimple"
+FINE_RECIPE = "CookMealFine"  # once someone cooks at FINE_SKILL: "Ate fine meal" +5 (docs/reference/mood.md)
+FINE_SKILL = 6
+FINE_PER_COLONIST = 2
 BUTCHER_AWAY = 10     # cells south of the stockpile: the butcher spot is ugly work
 CORPSE_STORE = (3, 3)  # a stockpile beside the butcher spot that takes fresh animal corpses
 DUMP_SIZE = (6, 6)     # and one for rotten corpses and stone chunks, out of sight
@@ -58,6 +61,19 @@ class KitchenManager(Manager):
                 self.add_bill(ctx, found[0], recipe, mode)
             if recipe == BUTCHER_RECIPE:
                 self.ensure_corpse_store(ctx, found[0])
+            elif not any((b.get("recipe") or {}).get("defName") == FINE_RECIPE for b in bills) and self.fine_cook(ctx):
+                ctx.rim.add_bill_to_workshop(found[0]["ids"]["id"], recipe_def_name=FINE_RECIPE, repeat_mode_def_name="TargetCount",
+                                             target_count=FINE_PER_COLONIST * len(ctx.snapshot.colonists),
+                                             request_id=uuid.uuid4().hex)
+                ctx.log(self.name, f"Added a bill to make {FINE_RECIPE}: someone cooks well enough now.")
+
+    def fine_cook(self, ctx: Context) -> bool:
+        """Anyone with Cooking FINE_SKILL or more. A fine meal (meat and vegetables) is "Ate fine meal", +5 a day."""
+        for pawn in ctx.snapshot.colonists:
+            skills = (ctx.rim.get_pawn(pawn["ids"]["id"], detail="normal").data or {}).get("skills") or []
+            if any(s.get("defName") == "Cooking" and (s.get("level") or 0) >= FINE_SKILL for s in skills):
+                return True
+        return False
 
     def ensure_corpse_store(self, ctx: Context, butcher: dict) -> None:
         """A small stockpile for fresh animal corpses beside the butcher spot. With nowhere that takes

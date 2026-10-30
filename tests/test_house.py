@@ -45,7 +45,7 @@ def test_planned_once_placed_until_built_then_left_alone(tmp_path):
     first = [p for c in rim.called("place_blueprint") for p in c["placements"]]
     house.update(ctx_for(rim, tmp_path, board))
     second = [p for c in rim.called("place_blueprint") for p in c["placements"]][len(first):]
-    assert first == second and board["house_beds"] == 3
+    assert first == second and board["house_beds"] == 5
     assert {p["def"] for p in first} == {"Bed", "Table2x2c", "DiningChair"}  # beds come first
     for _ in range(3):  # each stage built, then the next placed
         rim.build_blueprints()
@@ -67,8 +67,8 @@ def test_hot_rooms_get_a_passive_cooler_each(tmp_path):
     assert placed() == []
     rim.rooms[0]["temperatureC"] = 30.4  # day-7 heat wave
     house.update(ctx_for(rim, tmp_path))
-    p = plan(tuple(house.memory["house"]["origin"]), 3)
-    assert {(c["x"], c["z"]) for c in placed()} == set(p["coolers"]) and len(placed()) == 4
+    p = plan(tuple(house.memory["house"]["origin"]), 5)
+    assert {(c["x"], c["z"]) for c in placed()} == set(p["coolers"]) and len(placed()) == 6
     rooms = [set(r.cells()) for r in [p["common"], *p["bedrooms"]]]
     assert all(any(xz in cells for xz in p["coolers"]) for cells in rooms)  # one in every room
 
@@ -79,7 +79,7 @@ def test_the_doorstep_row_is_free_ground(tmp_path):
     house = HouseManager()
     house.update(ctx_for(rim, tmp_path))
     x0, z0 = house.memory["house"]["origin"]
-    p = plan((x0, z0), 3)
+    p = plan((x0, z0), 5)
     assert all(rim.cells[(x, z0 - 1)] == "." for x in range(x0, x0 + p["outer"].width))
 
 
@@ -138,7 +138,7 @@ def test_a_house_over_50_placements_goes_in_batches(tmp_path):
     house.update(ctx)
     calls = rim.called("place_blueprint")
     assert len(calls) > 2 and all(len(c["placements"]) <= 50 for c in calls)
-    assert not ctx.incidents and len(rim.blueprints) == len(plan((0, 0), 3)["walls"]) + 4  # the walls and doors
+    assert not ctx.incidents and len(rim.blueprints) == len(plan((0, 0), 5)["walls"]) + 6  # the walls and doors
 
 
 def test_forbidden_steel_doesnt_count(tmp_path):
@@ -222,3 +222,22 @@ def test_what_stands_keeps_its_material_whatever_the_plan_says(tmp_path):
     house.memory["house"]["walls"] = "Steel" if house.memory["house"]["walls"] == "WoodLog" else "WoodLog"  # say, a bug
     house.update(ctx_for(rim, tmp_path, board))
     assert rim.replaced == []
+
+
+def test_a_newcomer_gets_the_next_bedroom_and_nobody_moves(tmp_path):
+    rim = colony()
+    FoodManager().update(ctx_for(rim, tmp_path))
+    house, board = HouseManager(), {}
+    for _ in range(4):
+        house.update(ctx_for(rim, tmp_path, board))
+        rim.build_blueprints()
+    assert house.memory["built"] and len(rim.beds) == 3 and board["house_beds"] == 5
+    before = dict(rim.owners)
+    rim.colonists.append({"ids": {"id": "Human0"}, "name": "N", "position": {"x": 50, "y": 0, "z": 50},
+                          "drafted": False, "downed": False, "gear": {"equipment": [], "apparel": []}})
+    rim.work["Human0"] = rim.work["HumanA"]
+    house.update(ctx_for(rim, tmp_path, board))  # its bed is placed...
+    rim.build_blueprints()
+    house.update(ctx_for(rim, tmp_path, board))  # ...built, and given to the newcomer
+    assert len(rim.beds) == 4 and rim.replaced == []
+    assert {b: p for b, p in rim.owners.items() if p != "Human0"} == before and "Human0" in rim.owners.values()

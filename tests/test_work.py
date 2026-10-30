@@ -107,7 +107,7 @@ def test_two_evening_hours_of_recreation_once(tmp_path):
     manager.update(ctx_for(rim, tmp_path))
     manager.update(ctx_for(rim, tmp_path))
     assert len(rim.called("set_pawn_assignment")) == 3
-    assert all(rim.schedules[p][19] == rim.schedules[p][21] == "Joy" and rim.schedules[p][18] == "Anything"
+    assert all(rim.schedules[p][19] == rim.schedules[p][22] == "Joy" and rim.schedules[p][18] == "Anything"
                for p in ("HumanA", "HumanB", "HumanC"))
 
 

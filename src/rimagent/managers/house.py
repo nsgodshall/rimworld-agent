@@ -41,6 +41,8 @@ WINDOW = 60          # side of the square around the base searched for a site (s
 DEPTH = 4            # interior, north to south
 BEDROOM_WIDTH = 3    # interior: 12 tiles, "rather tight" with a bed, never "cramped"
 COMMON_WIDTH = 6     # interior: a 2x2 table, four chairs, horseshoes, chess, a lamp
+BEDROOMS = 5         # planned from day one: room for two newcomers (the letters manager takes joiners in
+                     # while there's a free bedroom)
 STALL_HOURS = 24     # a stage waiting this long on a material that's run out switches to the other
 STALL_SHORT = 20     # "run out": less than this much usable
 COST = {"Wall": 5, "Door": 25, "Bed": 45, "Table2x2c": 50, "DiningChair": 45, "ChessTable": 70, "HorseshoesPin": 10}
@@ -143,10 +145,17 @@ class HouseManager(Manager):
         colonists = ctx.snapshot.colonists
         if not colonists:
             return
-        house = self.memory.get("house") or self._plan(ctx, len(colonists))
+        house = self.memory.get("house") or self._plan(ctx, max(len(colonists), BEDROOMS))
         if house is None:
             return
         p = plan(tuple(house["origin"]), house["bedrooms"])
+        # Beds only in the rooms someone sleeps in; a newcomer's bed goes in the next room (and the house is
+        # placed again for it, though it was finished).
+        occupied = min(house["bedrooms"], len(colonists))
+        if occupied > house.get("beds_for", 0):
+            house["beds_for"] = occupied
+            self.memory["built"] = False
+        p = {**p, "beds": p["beds"][:house["beds_for"]]}
         ctx.board["house_beds"] = house["bedrooms"]
         ctx.board["house_dining"] = True
         beds = ctx.rim.list_buildings(category="bed").data.get("buildings") or []
@@ -247,9 +256,10 @@ class HouseManager(Manager):
         # Beds first and in steel if there's enough: they're wanted the first night, while wood goes
         # everywhere early (trial 8 had 0-33 wood for two days, and no beds).
         house = {"origin": [site.x, site.z + 1], "bedrooms": bedrooms,
-                 "beds": pick(ctx, 45 * bedrooms, (STEEL, WOOD), spent),
+                 "beds": pick(ctx, 45 * len(ctx.snapshot.colonists), (STEEL, WOOD), spent),
                  "walls": pick(ctx, walls_need, (STEEL, WOOD), spent),  # steel walls leave wood for fuel
-                 "furniture": pick(ctx, furniture_need - 45 * bedrooms, (WOOD, STEEL), spent)}
+                 "furniture": pick(ctx, furniture_need - 45 * bedrooms, (WOOD, STEEL), spent),
+                 "beds_for": min(bedrooms, len(ctx.snapshot.colonists))}
         self.memory["house"] = house
         ctx.log(self.name, f"Planned {bedrooms} bedrooms and a common room at {p['outer']}: walls of "
                            f"{house['walls']}, furniture of {house['furniture']}.", needs=[walls_need, furniture_need])
@@ -286,10 +296,18 @@ class HouseManager(Manager):
         if not indoor:
             return
         assigned = self.memory.setdefault("assigned", {})
-        for i, colonist in enumerate(sorted(colonists, key=lambda c: c["ids"]["id"])):
-            pawn_id, bed = colonist["ids"]["id"], indoor.get(i)
-            if bed is None or assigned.get(pawn_id) == bed["ids"]["id"]:
+        indoor_ids = {b["ids"]["id"] for b in indoor.values()}
+        # Who already has an indoor bed keeps it; the rest take free ones in room order (a newcomer's id can sort
+        # before the others', and moving everyone along would be pointless).
+        taken = {bed for pid, bed in assigned.items() if bed in indoor_ids and pid in {c["ids"]["id"] for c in colonists}}
+        free = [b for _, b in sorted(indoor.items()) if b["ids"]["id"] not in taken]
+        for colonist in sorted(colonists, key=lambda c: c["ids"]["id"]):
+            pawn_id = colonist["ids"]["id"]
+            if assigned.get(pawn_id) in indoor_ids:
                 continue
+            if not free:
+                break
+            bed = free.pop(0)
             try:
                 ctx.rim.assign_owner(bed["ids"]["id"], pawn_id=pawn_id)
             except errors.Conflict as exc:

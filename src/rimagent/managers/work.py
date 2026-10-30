@@ -35,7 +35,7 @@ WOOD_WORK = {"PlantCutting": 2}
 # Hauling at 2: at 3, the last thing anyone did, food lay unstored (the food score counts stored food) and
 # corpses and stone chunks piled up by the house (trial 21: beauty 0-0.06, "Hideous environment").
 TIDY_WORK = ("Hauling",)
-JOY_HOURS = (19, 22)  # evening, before the default 22:00 bedtime. Two hours left recreation at 0.62-0.69, just short of "satisfied" (0.7, +5)
+JOY_HOURS = (19, 23)  # evening, bedtime moved to 23:00. Two hours left recreation at 0.62-0.69, three about 0.8: "fully satisfied" (0.85) is +10
 # Work type -> the skill it uses (for passions and for choosing the doctor and researcher).
 SKILL = {"Doctor": "Medicine", "Research": "Intellectual", "Cooking": "Cooking", "Construction": "Construction",
          "Growing": "Plants", "PlantCutting": "Plants", "Mining": "Mining", "Hunting": "Shooting",

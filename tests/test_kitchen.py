@@ -146,3 +146,16 @@ def test_the_butcher_spot_is_away_from_the_house(tmp_path):
     (spot,) = [p for c in rim.called("place_blueprint") for p in c["placements"] if p["def"] == "ButcherSpot"]
     cell = rim.zones[0]["representativeCell"]
     assert math.hypot(spot["x"] - cell["x"], spot["z"] - cell["z"]) >= 7 and spot["z"] < cell["z"]
+
+
+def test_a_fine_meal_bill_once_someone_cooks_well(tmp_path):
+    rim = FakeRim()
+    rim.buildings = [{"ids": {"id": "Campfire1"}, "def": {"defName": "Campfire"}, "position": {"x": 50, "y": 0, "z": 50}},
+                     {"ids": {"id": "ButcherSpot8"}, "def": {"defName": "ButcherSpot"}, "position": {"x": 55, "y": 0, "z": 40}}]
+    kitchen = KitchenManager()
+    kitchen.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    assert "CookMealFine" not in [c["recipe_def_name"] for c in rim.called("add_bill_to_workshop")]
+    rim.colonists[1]["skills"] = [{"defName": "Cooking", "label": "Cooking", "level": 7, "passion": "None"}]
+    kitchen.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    fine = [c for c in rim.called("add_bill_to_workshop") if c["recipe_def_name"] == "CookMealFine"]
+    assert len(fine) == 1 and fine[0]["workshop_id"] == "Campfire1"
