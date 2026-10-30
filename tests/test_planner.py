@@ -70,6 +70,7 @@ def test_a_new_colony_places_everything_in_its_planned_room(tmp_path):
     assert ("FueledStove", *p["stove"]) in placed and ("SimpleResearchBench", *p["bench"]) in placed
     beds = [(q["x"], q["z"]) for c in rim.called("place_blueprint") for q in c["placements"] if q["def"] == "Bed"]
     assert beds == plan(p["house"], 3)["beds"]
+    assert board["house_dining"]  # the common room is the dining room: no table outdoors
     (chop,) = [c for c in rim.called("designate") if c["kind"] == "chopWood"]
     assert chop["rects"] == [p["footprint"].to_api()]
 

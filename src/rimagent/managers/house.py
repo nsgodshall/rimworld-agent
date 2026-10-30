@@ -176,7 +176,10 @@ class HouseManager(Manager):
         # meal was "Ate without table" (-3). Then the mood manager's table by the stockpile does instead.
         anchor = base_anchor(ctx)
         common = p["common"].center
-        ctx.board["house_dining"] = anchor is not None and math.hypot(common[0] - anchor[0], common[1] - anchor[1]) <= DINING_REACH
+        # With a base plan the common room is beside the store, whether or not its stockpile is made yet: the s1
+        # replay's house was placed first, measured from the colonists, and a dining table went up outdoors.
+        ctx.board["house_dining"] = ctx.board.get("plan") is not None or (
+            anchor is not None and math.hypot(common[0] - anchor[0], common[1] - anchor[1]) <= DINING_REACH)
 
     def update(self, ctx: Context) -> None:
         colonists = ctx.snapshot.colonists
