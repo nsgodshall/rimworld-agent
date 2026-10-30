@@ -43,8 +43,8 @@ DEPTH = 4            # interior, north to south
 BEDROOM_WIDTH = 3    # interior: 12 tiles, "rather tight" with a bed, never "cramped"
 COMMON_WIDTH = 6     # interior: a 2x2 table, four chairs, horseshoes, chess, a lamp
 DINING_REACH = 20    # the common room serves as the dining room only this close to the stockpile
-BEDROOMS = 5         # planned from day one: room for two newcomers (the letters manager takes joiners in
-                     # while there's a free bedroom)
+BEDROOMS = 3         # the house; newcomers' bedrooms are in the wing (WingManager)
+WING_BEDROOMS = 2    # room for two newcomers: the letters manager takes joiners in while there's a free bedroom
 STALL_HOURS = 24     # a stage waiting this long on a material that's run out switches to the other
 STALL_SHORT = 20     # "run out": less than this much usable
 COST = {"Wall": 5, "Door": 25, "Bed": 45, "Table2x2c": 50, "DiningChair": 45, "ChessTable": 70, "HorseshoesPin": 10}
@@ -55,19 +55,29 @@ MAX_PLACEMENTS = 50  # place_blueprint refuses more in one call (400 "At most 50
 HOT = 26.0  # trial 10 ended with "Slept in the heat" (-4) for everyone at 28: discomfort starts at 26
 
 
-def plan(origin: tuple[int, int], bedrooms: int) -> dict:
-    """Cells of every part of a house whose south-west outer corner is `origin`."""
+def plan(origin: tuple[int, int], bedrooms: int, common_room: bool = True) -> dict:
+    """Cells of every part of a house whose south-west outer corner is `origin`. Without the common room
+    it's a wing: bedrooms only (see WingManager)."""
     x0, z0 = origin
-    width = COMMON_WIDTH + 2 + bedrooms * (BEDROOM_WIDTH + 1)
+    common_width = COMMON_WIDTH + 1 if common_room else 0
+    width = common_width + 1 + bedrooms * (BEDROOM_WIDTH + 1)
     top = z0 + DEPTH + 1
     walls = {(x, z) for x in range(x0, x0 + width) for z in (z0, top)}
-    walls |= {(x, z) for z in range(z0, top + 1) for x in (x0, x0 + COMMON_WIDTH + 1)}
-    common = Rect(x0 + 1, z0 + 1, COMMON_WIDTH, DEPTH)
+    walls |= {(x, z) for z in range(z0, top + 1) for x in (x0, x0 + common_width)}
     rooms = []
     for i in range(bedrooms):
-        left = x0 + COMMON_WIDTH + 2 + i * (BEDROOM_WIDTH + 1)
+        left = x0 + common_width + 1 + i * (BEDROOM_WIDTH + 1)
         rooms.append(Rect(left, z0 + 1, BEDROOM_WIDTH, DEPTH))
         walls |= {(left + BEDROOM_WIDTH, z) for z in range(z0, top + 1)}
+    ctop = z0 + DEPTH
+    if not common_room:
+        doors = [(r.x + 1, z0) for r in rooms]
+        return {"outer": Rect(x0, z0, width, DEPTH + 2), "walls": sorted(walls - set(doors)), "doors": doors,
+                "common": None, "bedrooms": rooms, "beds": [(r.x, ctop) for r in rooms],
+                "lamps": [(r.x + 2, ctop) for r in rooms], "table": None, "chairs": [], "horseshoes": None,
+                "chess": None, "end_tables": [(r.x + 2, ctop - 1) for r in rooms],
+                "pots": [(r.x + 2, r.z + 1) for r in rooms], "coolers": [(r.x, r.z) for r in rooms]}
+    common = Rect(x0 + 1, z0 + 1, COMMON_WIDTH, DEPTH)
     doors = [(common.x + 2, z0)] + [(r.x + 1, z0) for r in rooms]
     c, cz, ctop = common.x, common.z, common.z + DEPTH - 1
     return {
@@ -98,14 +108,17 @@ def stages(p: dict, walls: str, furniture: str, beds: str | None = None, metal: 
     def put(def_, xz, stuff=None, rotation="north"):
         return {"def": def_, "x": xz[0], "z": xz[1], "rotation": rotation, **({"stuff": stuff} if stuff else {})}
 
-    tx, _ = p["table"]
-    daily = [put("Bed", xz, beds or furniture, "south") for xz in p["beds"]] + [put("Table2x2c", p["table"], furniture)]
-    daily += [put("DiningChair", xz, furniture, "east" if xz[0] < tx else "west") for xz in p["chairs"]]
+    daily = [put("Bed", xz, beds or furniture, "south") for xz in p["beds"]]
+    comforts = []
+    if p.get("table"):
+        tx, _ = p["table"]
+        daily += [put("Table2x2c", p["table"], furniture)]
+        daily += [put("DiningChair", xz, furniture, "east" if xz[0] < tx else "west") for xz in p["chairs"]]
+        cx, cz = p["chess"]
+        # Chess needs a seat beside it ("Chess table needs chairs" in trial 8): one south, one north, facing it.
+        comforts = [put("HorseshoesPin", p["horseshoes"], metal), put("ChessTable", p["chess"], furniture),
+                    put("DiningChair", (cx, cz - 1), furniture, "north"), put("DiningChair", (cx, cz + 1), furniture, "south")]
     shell = [put("Wall", xz, walls) for xz in p["walls"]] + [put("Door", xz, walls) for xz in p["doors"]]
-    cx, cz = p["chess"]
-    # Chess needs a seat beside it ("Chess table needs chairs" in trial 8): one south, one north, facing it.
-    comforts = [put("HorseshoesPin", p["horseshoes"], metal), put("ChessTable", p["chess"], furniture),
-                put("DiningChair", (cx, cz - 1), furniture, "north"), put("DiningChair", (cx, cz + 1), furniture, "south")]
     comforts += [put("TorchLamp", xz) for xz in p["lamps"]]
     comforts += [put("EndTable", xz, furniture) for xz in p["end_tables"]] + [put("PlantPot", xz, furniture) for xz in p["pots"]]
     return [daily, shell, comforts]
@@ -134,7 +147,8 @@ def place(ctx: Context, items: list[dict]) -> tuple[list[dict], int]:
 
 def cost(p: dict) -> tuple[int, int]:
     """(wall material, furniture material) a plan needs: wall 5, door 25; bed 45, table 50, chair 45, chess 70."""
-    return 5 * len(p["walls"]) + 25 * len(p["doors"]), 45 * len(p["beds"]) + 50 + 45 * len(p["chairs"]) + 70
+    extras = 50 + 70 if p.get("table") else 0
+    return 5 * len(p["walls"]) + 25 * len(p["doors"]), 45 * len(p["beds"]) + extras + 45 * len(p["chairs"])
 
 
 class HouseManager(Manager):
@@ -143,44 +157,62 @@ class HouseManager(Manager):
     every_hours = 3
     alerts = ("Alert_NeedJoySources",)  # horseshoes and chess: two kinds of recreation
 
-    def update(self, ctx: Context) -> None:
-        colonists = ctx.snapshot.colonists
-        if not colonists:
-            return
-        house = self.memory.get("house") or self._plan(ctx, max(len(colonists), BEDROOMS))
-        if house is None:
-            return
-        p = plan(tuple(house["origin"]), house["bedrooms"])
-        # Beds only in the rooms someone sleeps in; a newcomer's bed goes in the next room (and the house is
-        # placed again for it, though it was finished).
-        occupied = min(house["bedrooms"], len(colonists))
-        if occupied > house.get("beds_for", 0):
-            house["beds_for"] = occupied
-            self.memory["built"] = False
-        p = {**p, "beds": p["beds"][:house["beds_for"]]}
-        ctx.board["house_beds"] = house["bedrooms"]
+    COMMON_ROOM = True
+    STAGE_KEY = "house_stage"  # the board's note of how far this building has got
+
+    def rooms_wanted(self, ctx: Context, colonists: list[dict]) -> int | None:
+        return max(len(colonists), BEDROOMS)
+
+    def residents(self, ctx: Context, colonists: list[dict]) -> list[dict]:
+        """Who sleeps here: everyone, as far as the rooms go (the wing takes the rest)."""
+        return colonists
+
+    def publish(self, ctx: Context, house: dict, p: dict) -> None:
+        ctx.board["house_main_beds"] = house["bedrooms"]
+        ctx.board["house_beds"] = house["bedrooms"] + ctx.board.get("wing_beds", 0)
         # Colonists eat at a chair within 32 cells of where they pick up their food (the stockpile): a common room
         # further off isn't a dining room at all. Trial 22's five-bedroom house stood ~40 cells away, and every
         # meal was "Ate without table" (-3). Then the mood manager's table by the stockpile does instead.
         anchor = base_anchor(ctx)
         common = p["common"].center
         ctx.board["house_dining"] = anchor is not None and math.hypot(common[0] - anchor[0], common[1] - anchor[1]) <= DINING_REACH
+
+    def update(self, ctx: Context) -> None:
+        colonists = ctx.snapshot.colonists
+        if not colonists:
+            return
+        house = self.memory.get("house")
+        if house is None:
+            wanted = self.rooms_wanted(ctx, colonists)
+            house = self._plan(ctx, wanted) if wanted else None
+        if house is None:
+            return
+        p = plan(tuple(house["origin"]), house["bedrooms"], self.COMMON_ROOM)
+        residents = self.residents(ctx, colonists)
+        # Beds only in the rooms someone sleeps in; a newcomer's bed goes in the next room (and the building is
+        # placed again for it, though it was finished).
+        occupied = min(house["bedrooms"], len(residents))
+        if occupied > house.get("beds_for", 0):
+            house["beds_for"] = occupied
+            self.memory["built"] = False
+        p = {**p, "beds": p["beds"][:house["beds_for"]]}
+        self.publish(ctx, house, p)
         beds = ctx.rim.list_buildings(category="bed").data.get("buildings") or []
-        self._move_in(ctx, p, colonists, beds)
+        self._move_in(ctx, p, residents, beds)
         self._cool(ctx, p)
         if self.memory.get("built"):
-            ctx.board["house_stage"] = 3  # finished
+            ctx.board[self.STAGE_KEY] = 3  # finished
             return
         results, applied = [], 0
         # The horseshoes pin takes metal only: steel, or silver once the steel is gone (trial 12's last stage
         # waited at 0 steel). Chosen when the last stage is first placed, then kept.
-        if ctx.board.get("house_stage", 0) >= 2 and "metal" not in house:
+        if ctx.board.get(self.STAGE_KEY, 0) >= 2 and "metal" not in house:
             house["metal"] = pick(ctx, 10, (STEEL, SILVER))
         metal = house.get("metal", STEEL)
         overrides = house.get("overrides") or {}
         standing = standing_materials(ctx)
         for number, stage in enumerate(stages(p, house["walls"], house["furniture"], house.get("beds"), metal)):
-            ctx.board["house_stage"] = number  # what's being built: others wait for wood (see stages())
+            ctx.board[self.STAGE_KEY] = number  # what's being built: others wait for wood (see stages())
             stage = [{**item, "stuff": overrides[f"{item['def']}@{item['x']},{item['z']}"]}
                      if f"{item['def']}@{item['x']},{item['z']}" in overrides else item for item in stage]
             # Whatever stands is kept as it is: another material there would be a replacement (see _unstall).
@@ -246,7 +278,7 @@ class HouseManager(Manager):
         anchor = base_anchor(ctx)
         if anchor is None:
             return None
-        size = plan((0, 0), bedrooms)["outer"]
+        size = plan((0, 0), bedrooms, self.COMMON_ROOM)["outer"]
         width, height = size.width, size.height + 1  # and the doorstep row
         view = snap.view(Rect.around(*anchor, WINDOW, WINDOW))
         # Free ground: no fields, zones, items, buildings, blueprints, rock or fog. Builders cut trees in
@@ -257,16 +289,16 @@ class HouseManager(Manager):
         if site is None:
             ctx.raise_incident("noHouseSite", f"No free {width}x{height} ground for a house near {anchor}.", "warn")
             return None
-        p = plan((site.x, site.z + 1), bedrooms)
+        p = plan((site.x, site.z + 1), bedrooms, self.COMMON_ROOM)
         walls_need, furniture_need = cost(p)
         spent: dict[str, int] = {}
         # Beds first and in steel if there's enough: they're wanted the first night, while wood goes
         # everywhere early (trial 8 had 0-33 wood for two days, and no beds).
         house = {"origin": [site.x, site.z + 1], "bedrooms": bedrooms,
-                 "beds": pick(ctx, 45 * len(ctx.snapshot.colonists), (STEEL, WOOD), spent),
+                 "beds": pick(ctx, 45 * max(1, len(self.residents(ctx, ctx.snapshot.colonists))), (STEEL, WOOD), spent),
                  "walls": pick(ctx, walls_need, (STEEL, WOOD), spent),  # steel walls leave wood for fuel
                  "furniture": pick(ctx, furniture_need - 45 * bedrooms, (WOOD, STEEL), spent),
-                 "beds_for": min(bedrooms, len(ctx.snapshot.colonists))}
+                 "beds_for": min(bedrooms, len(self.residents(ctx, ctx.snapshot.colonists)))}
         self.memory["house"] = house
         ctx.log(self.name, f"Planned {bedrooms} bedrooms and a common room at {p['outer']}: walls of "
                            f"{house['walls']}, furniture of {house['furniture']}.", needs=[walls_need, furniture_need])
@@ -322,9 +354,42 @@ class HouseManager(Manager):
                 continue
             assigned[pawn_id] = bed["ids"]["id"]
             ctx.log(self.name, f"{colonist.get('name')} has their own bedroom now.", bed=bed["ids"]["id"])
-        if len(indoor) >= len(colonists):
-            outdoor = sorted(b["ids"]["id"] for b in beds if room_of(b) is None)
+        ctx.board[f"{self.name}_assigned"] = sorted(pid for pid, bed in assigned.items() if bed in indoor_ids)
+        if len(indoor) >= len(colonists) and self.COMMON_ROOM:
+            # Beds outside the house come down, but not the wing's.
+            wing_cells = {tuple(c) for c in ctx.board.get("wing_cells") or ()}
+            outdoor = sorted(b["ids"]["id"] for b in beds if room_of(b) is None
+                             and (b["position"]["x"], b["position"]["z"]) not in wing_cells)
             if outdoor and outdoor != self.memory.get("deconstructing"):
                 ctx.rim.designate(kind="deconstruct", thing_ids=outdoor)
                 ctx.log(self.name, f"Taking down {len(outdoor)} beds outside the house.")
             self.memory["deconstructing"] = outdoor
+
+
+class WingManager(HouseManager):
+    """Two more bedrooms beside the house, for newcomers, once the house is finished.
+
+    The house was planned with five bedrooms in trial 22 to make room for recruits, and the only site wide enough
+    stood ~40 cells from the stockpile: meals were eaten standing, recreation was a walk away, and no joiner came
+    in fourteen days. So the house stays at three, near the stockpile, and this builds the newcomers' rooms
+    separately. Its beds go in only when someone needs one (anyone the house has no room for).
+    """
+
+    name = "wing"
+    priority = 9  # after the house (8), which says who it sleeps
+    alerts = ()
+    COMMON_ROOM = False
+    STAGE_KEY = "wing_stage"
+
+    def rooms_wanted(self, ctx: Context, colonists: list[dict]) -> int | None:
+        return WING_BEDROOMS if ctx.board.get("house_stage", 0) >= 3 else None  # once the house stands
+
+    def residents(self, ctx: Context, colonists: list[dict]) -> list[dict]:
+        housed = set(ctx.board.get("house_assigned") or ())
+        spare = max(0, len(colonists) - ctx.board.get("house_main_beds", BEDROOMS))
+        return [c for c in sorted(colonists, key=lambda c: c["ids"]["id"]) if c["ids"]["id"] not in housed][:spare]
+
+    def publish(self, ctx: Context, house: dict, p: dict) -> None:
+        ctx.board["wing_beds"] = house["bedrooms"]
+        ctx.board["house_beds"] = ctx.board.get("house_main_beds", BEDROOMS) + house["bedrooms"]
+        ctx.board["wing_cells"] = [list(c) for r in p["bedrooms"] for c in r.cells()]
