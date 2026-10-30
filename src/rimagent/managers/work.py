@@ -32,7 +32,7 @@ FOOD_WORK = {"Cooking": 1, "Hunting": 1, "Growing": 1, "Hauling": 2}
 # 0 wood while one colonist felled trees. Under this much usable wood, felling goes to 2 for everyone.
 WOOD_SHORT = 50
 WOOD_WORK = {"PlantCutting": 2}
-JOY_HOURS = (20, 22)  # evening, before the default 22:00 bedtime
+JOY_HOURS = (19, 22)  # evening, before the default 22:00 bedtime. Two hours left recreation at 0.62-0.69, just short of "satisfied" (0.7, +5)
 # Work type -> the skill it uses (for passions and for choosing the doctor and researcher).
 SKILL = {"Doctor": "Medicine", "Research": "Intellectual", "Cooking": "Cooking", "Construction": "Construction",
          "Growing": "Plants", "PlantCutting": "Plants", "Mining": "Mining", "Hunting": "Shooting",
