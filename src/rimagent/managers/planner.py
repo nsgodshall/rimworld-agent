@@ -141,10 +141,13 @@ class PlannerManager(Manager):
         view = ctx.snapshot.view(Rect.around(cx, cz, WINDOW, WINDOW))
         foot = layout((0, 0))["footprint"]
         plain = _chars(view, "soil", "ground too poor")
-        # Open ground or trees (the builders cut those), no rock, water, items, buildings or fog. Open ground
-        # scores higher, and rich soil is left for the fields.
+        # Open ground or trees (the builders cut those), and what moves or is hauled off: items, animals and the
+        # colonists themselves. Not rock, water, buildings or fog. The landing site is strewn with the drop pods'
+        # items: in the replay of s1 (run 20261030-121711) no 31x18 block within 35 cells was free of them.
+        # Open ground scores higher, and rich soil is left for the fields.
+        passing = "".join(sym for sym, text in view.legend.items() if text.startswith(("item", "animal")) or "(Human" in text)
         site = best_site(view, (cx, cz), foot.width, foot.height, good=plain + _chars(view, "rich soil") +
-                         (view.symbol_for("tree") or "t"), bonus=plain, min_fill=1.0)
+                         (view.symbol_for("tree") or "t") + passing, bonus=plain, min_fill=1.0)
         if site is None:
             self.memory["none"] = True
             ctx.raise_incident("noBaseSite", f"No free {foot.width}x{foot.height} ground for the base near "

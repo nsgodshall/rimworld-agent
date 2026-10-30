@@ -141,3 +141,28 @@ def test_no_room_for_the_base_is_a_warning_and_no_plan(tmp_path):
     ctx = ctx_for(rim, tmp_path, board)
     PlannerManager().update(ctx)
     assert "plan" not in board and [(i.kind, i.severity) for i in ctx.incidents] == [("noBaseSite", "warn")]
+
+
+def test_items_and_animals_on_the_site_dont_stop_the_plan(tmp_path):
+    """The replay of s1: drop-pod items lay all over the landing site, and no block was free of them."""
+    cells = grid(100, 100, ".")
+    for x in range(0, 100, 7):
+        for z in range(0, 100, 5):
+            cells[(x, z)] = "*"
+    rim = colony()
+    rim.cells = cells
+    board = {}
+    PlannerManager().update(ctx_for(rim, tmp_path, board))
+    assert "plan" in board
+
+
+def test_rock_and_water_still_stop_it(tmp_path):
+    cells = grid(100, 100, ".")
+    for x in range(0, 100, 7):
+        for z in range(0, 100, 5):
+            cells[(x, z)] = "^"
+    rim = colony()
+    rim.cells = cells
+    board = {}
+    PlannerManager().update(ctx_for(rim, tmp_path, board))
+    assert "plan" not in board

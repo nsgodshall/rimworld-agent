@@ -9,7 +9,8 @@ from rimsdk import RimClient
 from rimsdk.mapview import MapView, Rect, scan
 
 
-RESERVED = "%"  # open ground in the planned base's footprint, as view() shows it (managers/planner.py)
+RESERVED = "§"  # open ground in the planned base's footprint, as view() shows it (managers/planner.py); not
+# "%", which the map view uses for growing zones
 RESERVED_MEANING = "reserved for the planned base"
 
 

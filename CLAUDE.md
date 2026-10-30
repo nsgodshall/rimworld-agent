@@ -70,7 +70,7 @@ Rules:
   hours (250 ticks) while hostiles are near.
 - **The base layout is in `managers/planner.py`.** On day one it fixes where the kitchen, store, workshop,
   house and wing go (`ctx.board["plan"]`), and reserves the footprint: `snapshot.view` shows open ground there
-  as `%`, so other sites keep out. Something that belongs in the base gets a slot in `layout()`, not a spot
+  as `§`, so other sites keep out. Something that belongs in the base gets a slot in `layout()`, not a spot
   of its own found near the stockpile: that is how trial s1 ended with every stockpile and bench outdoors.
 - **Defense is in `managers/defense.py`.** It arms colonists, drafts and gathers them at the base
   when hostiles come within 45 cells, undrafts after, and rescues the downed. It handles
