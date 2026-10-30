@@ -72,6 +72,11 @@ Rules:
   house and wing go (`ctx.board["plan"]`), and reserves the footprint: `snapshot.view` shows open ground there
   as `§`, so other sites keep out. Something that belongs in the base gets a slot in `layout()`, not a spot
   of its own found near the stockpile: that is how trial s1 ended with every stockpile and bench outdoors.
+  - The plan is drawn north-up and laid on the map by a `Frame` (`rimsdk.mapview`): any of four turns, mirrored
+    or not, whichever site scores best. So nothing may assume the house is north of the store: take a
+    building's rotation from the plan (`stove_rotation`, `facing`), and put ugly things out of the back door
+    with `beds.away_from_base`. Only beds, chairs, the stove and the bench turn; tables, lamps and pots take
+    only "north" (the game refuses the rest).
 - **Defense is in `managers/defense.py`.** It arms colonists, drafts and gathers them at the base
   when hostiles come within 45 cells, undrafts after, and rescues the downed. It handles
   `hostiles`, `downed`, and threat letters while hostiles are on the map. Improve the tactic

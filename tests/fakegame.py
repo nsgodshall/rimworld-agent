@@ -24,10 +24,34 @@ FOOTPRINTS = {
 }
 
 
-def _footprint(def_: str, x: int, z: int) -> list[tuple[int, int]]:
-    if def_ == "Bed":
-        return [(x, z), (x, z - 1)]  # facing south
-    fp, _ = FOOTPRINTS.get(def_, ({"x": 0, "z": 0, "width": 1, "height": 1}, None))
+# The same turned, as live check_placement gives them for each rotation.
+ROTATED = {
+    "FueledStove": {"east": ({"x": 0, "z": -1, "width": 1, "height": 3}, {"x": -1, "z": 0}),
+                    "south": ({"x": -1, "z": 0, "width": 3, "height": 1}, {"x": 0, "z": 1}),
+                    "west": ({"x": 0, "z": -1, "width": 1, "height": 3}, {"x": 1, "z": 0})},
+    "SimpleResearchBench": {"east": ({"x": 0, "z": -1, "width": 2, "height": 3}, {"x": -1, "z": 0}),
+                            "south": ({"x": -1, "z": -1, "width": 3, "height": 2}, {"x": 0, "z": 1}),
+                            "west": ({"x": -1, "z": -1, "width": 2, "height": 3}, {"x": 1, "z": 0})},
+    "Bed": {"north": ({"x": 0, "z": 0, "width": 1, "height": 2}, None),
+            "east": ({"x": 0, "z": 0, "width": 2, "height": 1}, None),
+            "south": ({"x": 0, "z": -1, "width": 1, "height": 2}, None),
+            "west": ({"x": -1, "z": 0, "width": 2, "height": 1}, None)},
+}
+# Refused turned (400 "Torch lamp cannot be rotated; leave out rotation."); "north" is taken.
+UNROTATABLE = {"TorchLamp": "Torch lamp", "PlantPot": "Plant pot", "Table2x2c": "Table", "ChessTable": "Chess table",
+               "HorseshoesPin": "Horseshoes pin"}
+
+
+def offsets(def_: str, rotation: str | None = None) -> tuple[dict, dict | None]:
+    """(footprintOffset, interactionCellOffset) of a def facing `rotation`: beds face south unless told."""
+    rotation = rotation or ("south" if def_ == "Bed" else "north")
+    if rotation in ROTATED.get(def_, {}):
+        return ROTATED[def_][rotation]
+    return FOOTPRINTS.get(def_, ({"x": 0, "z": 0, "width": 1, "height": 1}, None))
+
+
+def _footprint(def_: str, x: int, z: int, rotation: str | None = None) -> list[tuple[int, int]]:
+    fp, _ = offsets(def_, rotation)
     return [(x + fp["x"] + i, z + fp["z"] + j) for i in range(fp["width"]) for j in range(fp["height"])]
 
 
@@ -240,11 +264,13 @@ class FakeRim(RimClient):
     def check_placement(self, *, def_, x, z, width=1, height=1, rotation=None, **_: Any) -> Result:
         """As in game: positions whose footprint (and interaction cell) is open ground fit; taken cells,
         whether a blueprint, a bed or an item, are "Space already occupied."."""
-        fp, ic = FOOTPRINTS.get(def_, ({"x": 0, "z": 0, "width": 1, "height": 1}, None))
+        if def_ in UNROTATABLE and rotation not in (None, "north"):
+            raise errors.BadRequest(f"{UNROTATABLE[def_]} cannot be rotated; leave out rotation.", status=400)
+        fp, ic = offsets(def_, rotation)
         fits, taken = [], []
         for cz in range(z, z + height):
             for cx in range(x, x + width):
-                cells = _footprint(def_, cx, cz) + ([(cx + ic["x"], cz + ic["z"])] if ic else [])
+                cells = _footprint(def_, cx, cz, rotation) + ([(cx + ic["x"], cz + ic["z"])] if ic else [])
                 (fits if all(self.cells.get(c) in (".", ":", "_") for c in cells) else taken).append({"x": cx, "z": cz})
         rejected = [{"reason": "Space already occupied.", "count": len(taken), "positions": taken[:10]}] if taken else []
         return Result({"data": {"building": {"def": {"defName": def_}, "rotation": rotation or "north",
@@ -283,7 +309,7 @@ class FakeRim(RimClient):
         self._record("designate", kind=kind, thing_ids=thing_ids, rects=rects, def_name=def_name)
         if kind == "cancel":  # DesignationCommandService: removes a blueprint or frame itself
             for bp in [b for b in self.blueprints if b.get("_id") in (thing_ids or [])]:
-                for c in _footprint(bp["def"], bp["x"], bp["z"]):
+                for c in _footprint(bp["def"], bp["x"], bp["z"], bp.get("rotation")):
                     self.cells[c] = "."
                 self.blueprints.remove(bp)
         if sum(r.get("width", 1) * r.get("height", 1) for r in rects or []) > 3600:
@@ -405,9 +431,12 @@ class FakeRim(RimClient):
         self._record("place_blueprint", placements=placements)
         if len(placements) > 50:
             raise errors.BadRequest("At most 50 placements per call.", status=400)
+        for p in placements:
+            if p["def"] in UNROTATABLE and p.get("rotation", "north") != "north":
+                raise errors.BadRequest(f"{UNROTATABLE[p['def']]} cannot be rotated; leave out rotation.", status=400)
         results = []
         for p in placements:
-            footprint = _footprint(p["def"], p["x"], p["z"])
+            footprint = _footprint(p["def"], p["x"], p["z"], p.get("rotation"))
             same = (p["def"], p["x"], p["z"], p.get("rotation"), p.get("stuff"))
             # BuildPlacement.Existing: the same def at the cell with the same rotation AND material. Anything else
             # goes to the game's build tool: over a building of another material that's a replacement, which
@@ -445,7 +474,7 @@ class FakeRim(RimClient):
         """Colonists finish blueprints: they become buildings list_buildings shows, drawn as buildings."""
         for p in self.blueprints[:n]:
             self.built.append(p)
-            for c in _footprint(p["def"], p["x"], p["z"]):
+            for c in _footprint(p["def"], p["x"], p["z"], p.get("rotation")):
                 self.cells[c] = "b"
             position = {"x": p["x"], "y": 0, "z": p["z"]}
             stuff = {"defName": p["stuff"]} if p.get("stuff") else None

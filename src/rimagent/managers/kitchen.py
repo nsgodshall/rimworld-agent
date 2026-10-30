@@ -15,7 +15,7 @@ import uuid
 from rimsdk.mapview import Rect
 
 from ..manager import Context, Manager
-from .beds import base_anchor
+from .beds import away_from_base, base_anchor
 from .food import _chars, best_site
 
 COOKERS = ("FueledStove", "ElectricStove", "Campfire")
@@ -28,7 +28,7 @@ RECIPE = "CookMealSimple"
 FINE_RECIPE = "CookMealFine"  # once someone cooks at FINE_SKILL: "Ate fine meal" +5 (docs/reference/mood.md)
 FINE_SKILL = 6
 FINE_PER_COLONIST = 2
-BUTCHER_AWAY = 10     # cells south of the stockpile: the butcher spot is ugly work
+BUTCHER_AWAY = 10     # cells from the stockpile, away from the house: the butcher spot is ugly work
 CORPSE_STORE = (3, 3)  # a stockpile beside the butcher spot that takes fresh animal corpses
 DUMP_SIZE = (6, 6)     # and one for rotten corpses and stone chunks, out of sight
 DUMP_DISTANCE = 25
@@ -117,8 +117,8 @@ class KitchenManager(Manager):
             return
         snap = ctx.snapshot
         width, height = snap.map_size
-        # South of the stockpile: the house is planned north of it. Clamped to the map.
-        center = (anchor[0], max(DUMP_SIZE[1], anchor[1] - DUMP_DISTANCE))
+        # Out of the store's back door, away from the house. Clamped to the map.
+        center = away_from_base(ctx, anchor, DUMP_DISTANCE, margin=DUMP_SIZE[1])
         view = snap.view(Rect.around(*center, 20, 20).clamp(width, height))
         site = best_site(view, center, *DUMP_SIZE, good=_chars(view, "soil", "ground too poor"), min_fill=0.9)
         if site is None:
@@ -149,7 +149,11 @@ class KitchenManager(Manager):
         anchor = base_anchor(ctx)
         if anchor is None:
             return
-        window = Rect.around(*anchor, WINDOW, WINDOW).clamp(*snap.map_size)
+        # A base plan has a place for the butcher spot, behind the kitchen (managers/planner.py): looked for
+        # around there, as the stockpile in the plan's store has nothing but the base around it.
+        slot = (ctx.board.get("plan") or {}).get("butcher") if defs == BUTCHER_BUILD else None
+        center = tuple(slot) if slot else anchor
+        window = Rect.around(*center, WINDOW, WINDOW).clamp(*snap.map_size)
         view = snap.view(window)
         good = _chars(view, "soil", "ground too poor")
         planned = view.symbol_for("blueprint") or "x"
@@ -183,20 +187,22 @@ class KitchenManager(Manager):
 
             # A fixed order, nearest the anchor first: next pass finds the same spot, where placing again
             # comes back alreadySatisfied instead of planning a second one.
-            # The butcher spot (and the corpse store beside it) away from the house, which is planned north of
-            # the stockpile: corpses and blood are ugly, and in trials 20-21 they sat by the doorsteps.
-            target = (anchor[0], anchor[1] - BUTCHER_AWAY) if def_ in BUTCHER_BUILD else anchor
+            # The butcher spot (and the corpse store beside it) away from the house, out of the store's back
+            # door: corpses and blood are ugly, and in trials 20-21 they sat by the doorsteps.
+            target = center if slot else away_from_base(ctx, anchor, BUTCHER_AWAY) if def_ in BUTCHER_BUILD else anchor
             spots = sorted(window.cells(), key=lambda c: (math.hypot(c[0] - target[0], c[1] - target[1]), c[1], c[0]))
-            candidates = [s for s in spots if usable(*s) and (def_ not in BUTCHER_BUILD
+            candidates = [s for s in spots if usable(*s) and (def_ not in BUTCHER_BUILD or slot
                           or math.hypot(s[0] - anchor[0], s[1] - anchor[1]) >= BUTCHER_AWAY - 3)]
             if mine in candidates:
                 candidates.remove(mine)
                 candidates.insert(0, mine)
             candidates = candidates[:TRIES]
+            rotation = ROTATION
             if def_ in BUILD and ctx.board.get("plan") is not None:
                 candidates = [tuple(ctx.board["plan"]["stove"])]  # in the kitchen (managers/planner.py)
+                rotation = ctx.board["plan"].get("stove_rotation", ROTATION)  # facing as the plan lies
             for x, z in candidates:
-                result = ctx.rim.place_blueprint(placements=[{"def": def_, "x": x, "z": z, "rotation": ROTATION}],
+                result = ctx.rim.place_blueprint(placements=[{"def": def_, "x": x, "z": z, "rotation": rotation}],
                                                  request_id=uuid.uuid4().hex).data or {}
                 (done,) = result.get("results") or [{}]
                 outcome = done.get("outcome")

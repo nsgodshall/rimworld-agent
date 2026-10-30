@@ -63,6 +63,16 @@ class BedsManager(Manager):
                                rejected=[{k: r.get(k) for k in ("x", "z", "reason")} for r in rejected])
 
 
+def away_from_base(ctx: Context, anchor: tuple[int, int], distance: int, margin: int = 0) -> tuple[int, int]:
+    """`distance` cells from `anchor` away from the house, within the map (`margin` cells from its edge): out of
+    the store's back door in a base plan (planner.layout's "away"), else south (houses used to go north)."""
+    plan = ctx.board.get("plan") or {}
+    dx, dz = plan.get("away") or (0, -1)
+    width, height = ctx.snapshot.map_size
+    x, z = anchor[0] + dx * distance, anchor[1] + dz * distance
+    return min(max(x, margin), width - 1 - margin), min(max(z, margin), height - 1 - margin)
+
+
 def base_anchor(ctx: Context) -> tuple[int, int] | None:
     """The stockpile, which stays put, or else where the colonists are."""
     for zone in ctx.snapshot.zones_of("stockpile"):

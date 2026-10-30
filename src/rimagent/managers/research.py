@@ -60,7 +60,9 @@ class ResearchManager(Manager):
             return
         x, z = bench["position"]["x"], bench["position"]["z"]
         # The simple bench covers (x-1..x+1, z..z+1), its researcher stands at (x, z-1): east, west, then north.
-        for lx, lz in ((x + 2, z), (x - 2, z), (x, z + 2)):
+        # In a base plan, the lamp's place in the workshop (managers/planner.py), whichever way the plan lies.
+        lamp = (ctx.board.get("plan") or {}).get("bench_lamp")
+        for lx, lz in [tuple(lamp)] if lamp else ((x + 2, z), (x - 2, z), (x, z + 2)):
             result = ctx.rim.place_blueprint(placements=[{"def": "TorchLamp", "x": lx, "z": lz, "rotation": "north"}],
                                              request_id=uuid.uuid4().hex).data or {}
             (placed,) = result.get("results") or [{}]
@@ -116,13 +118,15 @@ class ResearchManager(Manager):
         # comes back alreadySatisfied instead of planning a second bench.
         spots = sorted(window.cells(), key=lambda c: (math.hypot(c[0] - anchor[0], c[1] - anchor[1]), c[1], c[0]))
         candidates = [s for s in spots if usable(*s)][:TRIES]
+        rotation = ROTATION
         if ctx.board.get("plan") is not None:
             candidates = [tuple(ctx.board["plan"]["bench"])]  # in the workshop (managers/planner.py)
+            rotation = ctx.board["plan"].get("bench_rotation", ROTATION)  # facing as the plan lies
         # Steel if there's enough (trial 9's wooden bench waited days at 0 wood). Chosen once.
         stuff = self.memory.setdefault("stuff", pick(ctx, 100, (STEEL, STUFF)))  # steel leaves wood for beds
         for x, z in candidates:
             result = ctx.rim.place_blueprint(
-                placements=[{"def": BENCH, "stuff": stuff, "x": x, "z": z, "rotation": ROTATION}],
+                placements=[{"def": BENCH, "stuff": stuff, "x": x, "z": z, "rotation": rotation}],
                 request_id=uuid.uuid4().hex).data or {}
             (placed,) = result.get("results") or [{}]
             outcome = placed.get("outcome")

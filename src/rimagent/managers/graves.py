@@ -18,12 +18,12 @@ from rimsdk.mapview import Rect
 
 from ..events import Event
 from ..manager import Context, Manager
-from .beds import base_anchor
+from .beds import away_from_base, base_anchor
 from .kitchen import DUMP_DISTANCE
 
 CORPSE = "Corpse_Human"
 GRAVE = "Grave"
-# The window searched for a grave spot: just south of the corpse dump (itself south of the stockpile).
+# The window searched for a grave spot: just beyond the corpse dump (itself out of the store's back door).
 WINDOW = (20, 10)
 
 
@@ -92,8 +92,10 @@ class GravesManager(Manager):
             return None
         width, height = ctx.snapshot.map_size
         w, h = WINDOW
-        south = max(0, anchor[1] - DUMP_DISTANCE - 7 - h)
-        window = Rect(max(0, anchor[0] - w // 2), south, w, h).clamp(width, height)
+        # Its far side DUMP_DISTANCE + 7 + h cells away, as wide as it is across the way out.
+        cx, cz = away_from_base(ctx, anchor, DUMP_DISTANCE + 7 + h // 2, margin=h // 2)
+        across = (ctx.board.get("plan") or {}).get("away", (0, -1))[0] != 0
+        window = (Rect(cx - h // 2, cz - w // 2, h, w) if across else Rect(cx - w // 2, cz - h // 2, w, h)).clamp(width, height)
         check = ctx.rim.check_placement(def_=GRAVE, **window.to_api()).data or {}
         for fit in check.get("fits") or []:
             spot = [fit["x"], fit["z"]]

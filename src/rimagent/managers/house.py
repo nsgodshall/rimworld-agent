@@ -31,7 +31,7 @@ import math
 import uuid
 
 from rimsdk import errors
-from rimsdk.mapview import Rect
+from rimsdk.mapview import Frame, Rect
 
 from ..manager import Context, Manager
 from .beds import base_anchor
@@ -55,9 +55,11 @@ MAX_PLACEMENTS = 50  # place_blueprint refuses more in one call (400 "At most 50
 HOT = 26.0  # trial 10 ended with "Slept in the heat" (-4) for everyone at 28: discomfort starts at 26
 
 
-def plan(origin: tuple[int, int], bedrooms: int, common_room: bool = True) -> dict:
+def plan(origin: tuple[int, int], bedrooms: int, common_room: bool = True, frame: Frame | None = None) -> dict:
     """Cells of every part of a house whose south-west outer corner is `origin`. Without the common room
-    it's a wing: bedrooms only (see WingManager)."""
+    it's a wing: bedrooms only (see WingManager). With a `frame`, `origin` is in the frame's plan and the cells
+    are where the frame lays them on the map (the base plan's houses: managers/planner.py); `facing` gives the
+    rotation of each bed and chair by its cell."""
     x0, z0 = origin
     common_width = COMMON_WIDTH + 1 if common_room else 0
     width = common_width + 1 + bedrooms * (BEDROOM_WIDTH + 1)
@@ -70,35 +72,80 @@ def plan(origin: tuple[int, int], bedrooms: int, common_room: bool = True) -> di
         rooms.append(Rect(left, z0 + 1, BEDROOM_WIDTH, DEPTH))
         walls |= {(left + BEDROOM_WIDTH, z) for z in range(z0, top + 1)}
     ctop = z0 + DEPTH
+    beds = [(r.x, ctop) for r in rooms]  # south-facing: covers (x, top) and (x, top - 1)
     if not common_room:
         doors = [(r.x + 1, z0) for r in rooms]
-        return {"outer": Rect(x0, z0, width, DEPTH + 2), "walls": sorted(walls - set(doors)), "doors": doors,
-                "common": None, "bedrooms": rooms, "beds": [(r.x, ctop) for r in rooms],
-                "lamps": [(r.x + 2, ctop) for r in rooms], "table": None, "chairs": [], "horseshoes": None,
-                "chess": None, "end_tables": [(r.x + 2, ctop - 1) for r in rooms],
-                "pots": [(r.x + 2, r.z + 1) for r in rooms], "coolers": [(r.x, r.z) for r in rooms]}
+        p = {"outer": Rect(x0, z0, width, DEPTH + 2), "walls": sorted(walls - set(doors)), "doors": doors,
+             "common": None, "bedrooms": rooms, "beds": beds,
+             "lamps": [(r.x + 2, ctop) for r in rooms], "table": None, "chairs": [], "horseshoes": None,
+             "chess": None, "chess_chairs": [], "end_tables": [(r.x + 2, ctop - 1) for r in rooms],
+             "pots": [(r.x + 2, r.z + 1) for r in rooms], "coolers": [(r.x, r.z) for r in rooms],
+             "facing": {b: "south" for b in beds}}
+        return _laid(p, frame)
     common = Rect(x0 + 1, z0 + 1, COMMON_WIDTH, DEPTH)
     doors = [(common.x + 2, z0)] + [(r.x + 1, z0) for r in rooms]
     c, cz, ctop = common.x, common.z, common.z + DEPTH - 1
-    return {
+    chairs = [(c, cz + 1), (c, cz + 2), (c + 3, cz + 1), (c + 3, cz + 2)]
+    chess = (c + 5, cz + 2)
+    # Chess needs a seat beside it ("Chess table needs chairs" in trial 8): one south, one north, facing it.
+    chess_chairs = [(chess[0], chess[1] - 1), (chess[0], chess[1] + 1)]
+    p = {
         "outer": Rect(x0, z0, width, DEPTH + 2),
         "walls": sorted(walls - set(doors)),
         "doors": doors,
         "common": common,
         "bedrooms": rooms,
-        "beds": [(r.x, ctop) for r in rooms],  # south-facing: covers (x, top) and (x, top - 1)
+        "beds": beds,
         "lamps": [(r.x + 2, ctop) for r in rooms] + [(c + 5, cz)],
         "table": (c + 1, cz + 1),               # Table2x2c by its south-west cell
-        "chairs": [(c, cz + 1), (c, cz + 2), (c + 3, cz + 1), (c + 3, cz + 2)],
+        "chairs": chairs,
         "horseshoes": (c + 3, ctop),
-        "chess": (c + 5, cz + 2),
+        "chess": chess,
+        "chess_chairs": chess_chairs,
         # Beauty and wealth for impressiveness: every bedroom was "awful" (-2) with a bed and a lamp alone.
         "end_tables": [(r.x + 2, ctop - 1) for r in rooms],
         "pots": [(r.x + 2, r.z + 1) for r in rooms] + [(c, cz), (c, ctop)],
         # Placed only while a room is hot (see HOT): a corner beside the doorway in each bedroom, the top row
         # of the common room left of the horseshoes.
         "coolers": [(r.x, r.z) for r in rooms] + [(c + 1, ctop)],
+        "facing": {**{b: "south" for b in beds}, chairs[0]: "east", chairs[1]: "east", chairs[2]: "west",
+                   chairs[3]: "west", chess_chairs[0]: "north", chess_chairs[1]: "south"},
     }
+    return _laid(p, frame)
+
+
+def _laid(p: dict, frame: Frame | None) -> dict:
+    """A plan drawn north-up, where `frame` lays it on the map."""
+    if frame is None or frame == Frame():
+        return p
+    cell = frame.cell
+    cells = lambda xs: [cell(*xz) for xz in xs]
+    one = lambda xz: cell(*xz) if xz is not None else None
+    table = frame.rect(Rect(*p["table"], 2, 2)) if p["table"] else None  # takes only "north": its cells, not a turn
+    return {
+        **p,
+        "outer": frame.rect(p["outer"]),
+        "walls": sorted(cells(p["walls"])),
+        "doors": cells(p["doors"]),
+        "common": frame.rect(p["common"]) if p["common"] else None,
+        "bedrooms": [frame.rect(r) for r in p["bedrooms"]],
+        "beds": cells(p["beds"]),
+        "lamps": cells(p["lamps"]),
+        "table": (table.x, table.z) if table else None,
+        "chairs": cells(p["chairs"]),
+        "horseshoes": one(p["horseshoes"]),
+        "chess": one(p["chess"]),
+        "chess_chairs": cells(p["chess_chairs"]),
+        "end_tables": cells(p["end_tables"]),
+        "pots": cells(p["pots"]),
+        "coolers": cells(p["coolers"]),
+        "facing": {cell(*xz): frame.rotation(r) for xz, r in p["facing"].items()},
+    }
+
+
+def _frame(house: dict) -> Frame | None:
+    """Where the base plan lays a house (its origin is then in the plan), or None: its origin is a map cell."""
+    return Frame.from_list(house["frame"]) if house.get("frame") else None
 
 
 def stages(p: dict, walls: str, furniture: str, beds: str | None = None, metal: str = STEEL) -> list[list[dict]]:
@@ -108,16 +155,14 @@ def stages(p: dict, walls: str, furniture: str, beds: str | None = None, metal: 
     def put(def_, xz, stuff=None, rotation="north"):
         return {"def": def_, "x": xz[0], "z": xz[1], "rotation": rotation, **({"stuff": stuff} if stuff else {})}
 
-    daily = [put("Bed", xz, beds or furniture, "south") for xz in p["beds"]]
+    facing = p["facing"]
+    daily = [put("Bed", xz, beds or furniture, facing[xz]) for xz in p["beds"]]
     comforts = []
     if p.get("table"):
-        tx, _ = p["table"]
         daily += [put("Table2x2c", p["table"], furniture)]
-        daily += [put("DiningChair", xz, furniture, "east" if xz[0] < tx else "west") for xz in p["chairs"]]
-        cx, cz = p["chess"]
-        # Chess needs a seat beside it ("Chess table needs chairs" in trial 8): one south, one north, facing it.
-        comforts = [put("HorseshoesPin", p["horseshoes"], metal), put("ChessTable", p["chess"], furniture),
-                    put("DiningChair", (cx, cz - 1), furniture, "north"), put("DiningChair", (cx, cz + 1), furniture, "south")]
+        daily += [put("DiningChair", xz, furniture, facing[xz]) for xz in p["chairs"]]
+        comforts = [put("HorseshoesPin", p["horseshoes"], metal), put("ChessTable", p["chess"], furniture)]
+        comforts += [put("DiningChair", xz, furniture, facing[xz]) for xz in p["chess_chairs"]]
     shell = [put("Wall", xz, walls) for xz in p["walls"]] + [put("Door", xz, walls) for xz in p["doors"]]
     comforts += [put("TorchLamp", xz) for xz in p["lamps"]]
     comforts += [put("EndTable", xz, furniture) for xz in p["end_tables"]] + [put("PlantPot", xz, furniture) for xz in p["pots"]]
@@ -170,6 +215,7 @@ class HouseManager(Manager):
 
     def publish(self, ctx: Context, house: dict, p: dict) -> None:
         ctx.board["house_main_beds"] = house["bedrooms"]
+        ctx.board["base_walls"] = house["walls"]
         ctx.board["house_beds"] = house["bedrooms"] + ctx.board.get("wing_beds", 0)
         # Colonists eat at a chair within 32 cells of where they pick up their food (the stockpile): a common room
         # further off isn't a dining room at all. Trial 22's five-bedroom house stood ~40 cells away, and every
@@ -191,7 +237,7 @@ class HouseManager(Manager):
             house = self._plan(ctx, wanted) if wanted else None
         if house is None:
             return
-        p = plan(tuple(house["origin"]), house["bedrooms"], self.COMMON_ROOM)
+        p = plan(tuple(house["origin"]), house["bedrooms"], self.COMMON_ROOM, _frame(house))
         residents = self.residents(ctx, colonists)
         # Beds only in the rooms someone sleeps in; a newcomer's bed goes in the next room (and the building is
         # placed again for it, though it was finished).
@@ -285,7 +331,7 @@ class HouseManager(Manager):
         base = ctx.board.get("plan")
         if base is not None:  # the base plan's place for it (managers/planner.py), with the rooms it has room for
             bedrooms = min(bedrooms, BEDROOMS if self.COMMON_ROOM else WING_BEDROOMS)
-            return self._materials(ctx, tuple(base[self.PLAN_KEY]), bedrooms)
+            return self._materials(ctx, tuple(base[self.PLAN_KEY]), bedrooms, Frame.from_list(base["frame"]) if base.get("frame") else None)
         size = plan((0, 0), bedrooms, self.COMMON_ROOM)["outer"]
         width, height = size.width, size.height + 1  # and the doorstep row
         view = snap.view(Rect.around(*anchor, WINDOW, WINDOW))
@@ -299,15 +345,18 @@ class HouseManager(Manager):
             return None
         return self._materials(ctx, (site.x, site.z + 1), bedrooms)
 
-    def _materials(self, ctx: Context, origin: tuple[int, int], bedrooms: int) -> dict:
-        p = plan(origin, bedrooms, self.COMMON_ROOM)
+    def _materials(self, ctx: Context, origin: tuple[int, int], bedrooms: int, frame: Frame | None = None) -> dict:
+        p = plan(origin, bedrooms, self.COMMON_ROOM, frame)
         walls_need, furniture_need = cost(p)
         spent: dict[str, int] = {}
         # Beds first and in steel if there's enough: they're wanted the first night, while wood goes
         # everywhere early (trial 8 had 0-33 wood for two days, and no beds).
-        house = {"origin": list(origin), "bedrooms": bedrooms,
+        # The wing and the core are walled in what the house is, if there's enough: one material all round.
+        first = ctx.board.get("base_walls") if not self.COMMON_ROOM else None
+        house = {"origin": list(origin), "bedrooms": bedrooms, **({"frame": frame.to_list()} if frame else {}),
                  "beds": pick(ctx, 45 * max(1, len(self.residents(ctx, ctx.snapshot.colonists))), (STEEL, WOOD), spent),
-                 "walls": pick(ctx, walls_need, (STEEL, WOOD), spent),  # steel walls leave wood for fuel
+                 "walls": pick(ctx, walls_need, (first, WOOD if first == STEEL else STEEL) if first else (STEEL, WOOD),
+                               spent),  # steel walls leave wood for fuel
                  "furniture": pick(ctx, furniture_need - 45 * bedrooms, (WOOD, STEEL), spent),
                  "beds_for": min(bedrooms, len(self.residents(ctx, ctx.snapshot.colonists)))}
         self.memory["house"] = house
