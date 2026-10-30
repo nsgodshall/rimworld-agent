@@ -154,3 +154,15 @@ def test_a_new_injury_ends_the_wait_on_that_colonist(tmp_path):
     manager.on_event(ctx, Event("injured", rim.tick, "run", "bleeding", {"id": "HumanC", "name": "C"}))
     manager.update(ctx)
     assert [c["target_id"] for c in rim.called("order_pawn") if c["order"] == "tend"] == ["HumanC"]
+
+
+def test_a_long_tend_gets_one_more_helper_an_hour_not_one_a_cycle(tmp_path):
+    rim = FakeRim()
+    rim.medical = {"downed": 0, "bleeding": 1, "examples": [{"id": "HumanC"}]}
+    rim.colonists[0]["currentJob"] = {"defName": "TendPatient", "report": "tending to C."}
+    manager = MedicalManager()
+    for _ in range(12):  # 1.2 hours of 0.1-hour cycles
+        manager.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+        rim.tick += 250
+    sent = [c for c in rim.called("order_pawn") if c["order"] == "tend"]
+    assert len(sent) == 1

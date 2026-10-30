@@ -71,6 +71,7 @@ class MedicalManager(Manager):
                 return
             ctx.log(self.name, f"{', '.join(p['name'] for p in tending)} tending for {(ctx.tick - since) / 2500:.1f}h "
                                "with someone still bleeding: sending another helper.")
+            self.memory["tending_since"] = ctx.tick  # and give that one an hour too: not a helper every cycle
         else:
             self.memory.pop("tending_since", None)
         patients = [e["id"] for e in medical.get("examples") or [] if e.get("id") in colonists]
