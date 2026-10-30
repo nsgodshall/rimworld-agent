@@ -49,12 +49,13 @@ class StartSpec:
         return 0 if self.biome in HARSH else 30
 
 
-def saves_dir() -> Path:
+def saves_dir(save: str) -> Path:
+    """The Saves folder holding `save`. There can be several (a plain and a Flatpak Steam config dir, one of
+    them stale and empty), so look for the file the game just wrote."""
     for cfg in config.rimworld_config_dirs():
-        saves = cfg.parent / "Saves"
-        if saves.is_dir():
-            return saves
-    raise FileNotFoundError("No RimWorld Saves folder found beside the Config folders.")
+        if (cfg.parent / "Saves" / f"{save}.rws").is_file():
+            return cfg.parent / "Saves"
+    raise FileNotFoundError(f"No RimWorld Saves folder holds {save}.rws.")
 
 
 def name_colony(save: Path, out: Path, name: str) -> None:
@@ -136,7 +137,7 @@ def new_start(rim: RimClient, spec: StartSpec, say=print) -> Path:
         if rim.list_pawns(filter="colonists").data.get("pawns"):
             break
     _op(rim, rim.save_game(name=landed, overwrite=True, wait_seconds=30), "save")
-    folder = saves_dir()
+    folder = saves_dir(landed)
     out = folder / f"{spec.name}.rws"
     name_colony(folder / f"{landed}.rws", out, spec.colony_name)
     for leftover in (raw, landed):
