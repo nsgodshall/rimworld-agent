@@ -138,6 +138,34 @@ def test_nobody_to_carry_the_downed_is_an_incident(tmp_path):
     assert [i.kind for i in ctx.incidents] == ["noRescuer"]
 
 
+def test_downed_in_bed_with_a_drafted_tender_is_no_incident(tmp_path):
+    """The live halt: Bishop kidnapped, Miyazaki downed in bed (LayDownAwake), Sparky drafted to tend her."""
+    rim = colony()
+    rim.colonists.pop()
+    patient, tender = rim.colonists
+    patient["downed"] = True
+    patient["currentJob"] = {"defName": "LayDownAwake", "label": "LayDownAwake", "report": "laying down."}
+    tender["drafted"] = True
+    tender["currentJob"] = {"defName": "TendPatient", "label": "TendPatient", "report": "tending to Miyazaki."}
+    ctx = ctx_for(rim, tmp_path)
+    DefenseManager().update(ctx)
+    assert ctx.incidents == []
+    assert [c for c in rim.called("order_pawn") if c["order"] == "rescue"] == []
+    assert tender["drafted"]  # stand_down leaves tenders drafted
+
+
+def test_downed_on_the_ground_waits_for_a_drafted_tender(tmp_path):
+    rim = colony()
+    rim.colonists.pop()
+    patient, tender = rim.colonists
+    patient["downed"] = True
+    tender["drafted"] = True
+    tender["currentJob"] = {"defName": "TendPatient", "label": "TendPatient", "report": "tending."}
+    ctx = ctx_for(rim, tmp_path)
+    DefenseManager().update(ctx)
+    assert ctx.incidents == []  # carried once the tending is done and the tender undrafted
+
+
 def test_shooters_take_cover_facing_the_raiders_and_melee_waits_behind(tmp_path):
     rim = colony()
     rim.colonists[2]["gear"]["equipment"] = [{"def": {"defName": "MeleeWeapon_Knife"}}]

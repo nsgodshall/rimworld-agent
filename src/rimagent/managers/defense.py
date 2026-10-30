@@ -35,6 +35,7 @@ COVER_SEARCH = 10         # cells around the base searched for covered positions
 SPACING = 2               # least distance between two fighters' cells
 TEND_JOBS = {"TendPatient"}
 BUSY_HELPING = {"Rescue", *TEND_JOBS, "TakeToBedToOperate"}
+IN_BED_JOBS = {"LayDown", "LayDownAwake"}
 SPREAD = [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)]
 # Map-view meanings (legend text prefixes) that stop bullets, and that a pawn can stand on.
 COVER = ("tree", "natural rock", "wall", "other building", "blueprint or unfinished building")
@@ -154,16 +155,19 @@ class DefenseManager(Manager):
         # Read afresh: the snapshot predates this cycle's undrafting, and a fight can add colonists
         # (RimWorld's "man in black" joins when everyone is down).
         colonists = [p for p in ctx.rim.list_pawns(filter="colonists").data.get("pawns") or [] if not p.get("dead")]
-        # In bed (LayDown) already: the doctors take it from there.
-        downed = [p for p in colonists if p.get("downed") and (p.get("currentJob") or {}).get("defName") != "LayDown"]
+        # In bed (LayDown, or LayDownAwake: a patient resting awake) already: the doctors take it from there.
+        downed = [p for p in colonists if p.get("downed") and (p.get("currentJob") or {}).get("defName") not in IN_BED_JOBS]
         if not downed:
             return
-        able = [p for p in colonists if not p.get("downed") and not p.get("drafted")]
+        # Still drafted here (stand_down() ran first) means drafted to tend (medical.py) or to cool down
+        # (heat.py): busy, but not a reason to stop. Run 20261029-164246 halted on a downed colonist in bed, with
+        # the only other one drafted to tend her.
+        able = [p for p in colonists if not p.get("downed")]
         if not able:
             ctx.raise_incident("noRescuer", f"{len(downed)} colonists downed and nobody can carry them.")
             return
         # Leave anyone already carrying or tending to it; the rest wait for the next cycle.
-        free = [p for p in able if (p.get("currentJob") or {}).get("defName") not in BUSY_HELPING]
+        free = [p for p in able if not p.get("drafted") and (p.get("currentJob") or {}).get("defName") not in BUSY_HELPING]
         for patient, helper in zip(downed, free):
             result = ctx.rim.order_pawn(pawn_id(helper), order="rescue", target_id=pawn_id(patient), request_id=uuid.uuid4().hex)
             ctx.log(self.name, f"{helper['name']} rescues {patient['name']}.", result=(result.data or {}).get("outcome"))
