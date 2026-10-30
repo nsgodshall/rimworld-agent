@@ -300,6 +300,8 @@ class Runtime:
             if op.get("state") != "succeeded":
                 raise errors.RimError(f"load {op.get('state')}: {op.get('message')}")
             self.rim.wait_until_ready()
+            # The reloaded game's history starts over: skip it, or old letters (a raid's) come back as new events.
+            self._skip_old_history()
         except (errors.RimError, TimeoutError) as exc:
             self.journal.write("warning", tick=tick, summary=f"Couldn't save and reload past a forced pause: {exc}")
             return False
