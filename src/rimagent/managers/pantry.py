@@ -35,6 +35,7 @@ RUSH_BELOW_DAYS = 2.0         # below this much stored food, an awake colonist h
 RUSH_STACKS = 2               # stacks rushed per pass, each by a different colonist
 RUSH_OPTION = "Prioritize hauling"
 RESTING_JOBS = ("LayDown",)   # asleep or resting: leave them be
+EAT_HOLD_TICKS = 2 * 2500     # someone told to eat isn't given other work this long
 STARVING_ALERT = "Alert_StarvationColonists"
 LOW_FOOD_ALERT = "Alert_LowFood"  # also rushes hauling, whatever the days left
 EAT_OPTION = "Consume"        # list_pawn_actions on food: "Consume packaged survival meal", or "...: No path"
@@ -99,6 +100,8 @@ class PantryManager(Manager):
             except (errors.BadRequest, errors.Conflict, errors.NotFound):
                 continue  # the food or the menu changed under us: next pass tries again
             ctx.log(self.name, f"{pawn_id} is starving: told to eat {food[0]['id']}.")
+            # Leave them to it: nobody told to eat is rushed off to haul (rush_hauling).
+            ctx.board.setdefault("eating_until", {})[pawn_id] = ctx.tick + EAT_HOLD_TICKS
 
     def trapped(self, ctx: Context, pawn_id: str, food: dict, trapped: dict) -> None:
         first = trapped.setdefault(pawn_id, ctx.tick)
@@ -200,9 +203,13 @@ class PantryManager(Manager):
 def rush_hauling(ctx: Context, stacks: list[dict]) -> list[str]:
     """Each stack gets the nearest awake, free colonist's right-click "Prioritize hauling"."""
     positions = {p["ids"]["id"]: p.get("position") for p in ctx.snapshot.colonists if p.get("ids")}
+    # Not anyone eating or just told to: in trial 25 the pantry told starving Miyazaki to eat, then, the same
+    # pass, rushed her off to haul berries 40 cells away; every pass alike, until she was at extreme break risk.
+    eating = {pid for pid, until in (ctx.board.get("eating_until") or {}).items() if until > ctx.tick}
     free = [p["id"] for p in ctx.rim.list_work(detail="normal").data.get("pawns") or []
             if p.get("role") == "colonist" and not p.get("drafted") and not p.get("downed")
-            and (p.get("currentJob") or {}).get("defName") not in RESTING_JOBS and positions.get(p["id"])]
+            and (p.get("currentJob") or {}).get("defName") not in RESTING_JOBS + ("Ingest",)
+            and p["id"] not in eating and positions.get(p["id"])]
     rushed = []
     for stack in stacks:
         free.sort(key=lambda pid: math.hypot(positions[pid]["x"] - stack["x"], positions[pid]["z"] - stack["z"]))

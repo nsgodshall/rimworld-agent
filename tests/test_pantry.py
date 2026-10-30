@@ -167,3 +167,12 @@ def test_no_new_hunting_while_kills_wait_to_be_butchered(tmp_path):
     rim.corpses = [{"id": f"Corpse_Hare{i}", "def": "Corpse_Hare", "x": 50, "z": 50, "count": 1} for i in range(3)]
     PantryManager().update(ctx_for(rim, tmp_path))
     assert rim.called("designate_animal") == []
+
+
+def test_someone_told_to_eat_is_not_rushed_off_to_haul(tmp_path):
+    """Trial 25: starving Miyazaki was told to eat and, the same pass, sent to haul berries 40 cells away."""
+    rim = colony(food_days=0.3)
+    rim.loose_food = [meal(1, 52, 50, 10)]
+    board = {"eating_until": {"HumanA": rim.tick + 5000, "HumanB": rim.tick + 5000, "HumanC": rim.tick + 5000}}
+    PantryManager().update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False), board=board))
+    assert rim.called("choose_pawn_action") == []
