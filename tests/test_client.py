@@ -210,3 +210,10 @@ def test_check_manifest_reports_drift():
     assert drift.added == ["brand_new_tool"]
     assert drift.removed == ["list_mods"]
     assert drift.changed == [tools[0]["name"]]
+
+
+def test_integer_path_ids_are_sent(rim, fake):
+    """answer_letter's letterId is an integer; the request builder only took strings."""
+    fake.handler = lambda m, p, b: {"changed": True, "data": {"letterId": 9, "answered": "Reject"}}
+    rim.answer_letter(9, option="2", revision="r")
+    assert fake.requests[-1][1].startswith("/v1/letters/9/answer")

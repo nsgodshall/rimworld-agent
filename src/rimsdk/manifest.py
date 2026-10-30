@@ -94,6 +94,8 @@ def build_request(spec: ToolSpec, args: dict[str, Any]) -> tuple[str, str, dict[
     for segment in spec.path_template.split("/"):
         if len(segment) > 2 and segment[0] == "{" and segment[-1] == "}":
             value = args.get(segment[1:-1])
+            if isinstance(value, int) and not isinstance(value, bool):  # e.g. answer_letter's letterId
+                value = str(value)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{spec.name}: missing required argument '{segment[1:-1]}'.")
             segments.append(_escape(value))

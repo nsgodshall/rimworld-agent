@@ -59,6 +59,7 @@ class FakeRim(RimClient):
         self.run_script: list[dict[str, Any]] = []  # runs to return, in order; then plain completed runs
         self.history: list[dict[str, Any]] = []
         self.alerts: list[dict[str, Any]] = []
+        self.letters: list[dict[str, Any]] = []     # as get_events detail=full shows them
         self.beds: list[dict[str, Any]] = []        # built beds, as list_buildings shows them
         self.blueprints: list[dict[str, Any]] = []  # placements not built yet
         self.buildings: list[dict[str, Any]] = []   # other built buildings, as list_buildings shows them
@@ -164,8 +165,16 @@ class FakeRim(RimClient):
 
     def get_events(self, *, since=None, **_: Any) -> Result:
         entries, self.history = (self.history, []) if since else ([], self.history)
-        return Result({"data": {"alerts": self.alerts,
+        return Result({"data": {"alerts": self.alerts, "letters": self.letters,
                                 "history": {"entries": entries, "more": False, "cursor": f"c{self.tick}"}}})
+
+    def answer_letter(self, letter_id, *, option=None, revision=None, dismiss=None, **_: Any) -> Result:
+        """Mirrors RimMCP's reply: {letterId, answered (the option's text), letterWaiting}."""
+        self._record("answer_letter", letter_id=letter_id, option=option, revision=revision)
+        letter = next(l for l in self.letters if l["id"] == letter_id)
+        self.letters.remove(letter)
+        text = next(o["text"] for o in letter["options"] if o["id"] == option)
+        return Result({"changed": True, "data": {"letterId": letter_id, "answered": text, "letterWaiting": False}})
 
     def get_map_view(self, *, x, z, width, height, **_: Any) -> Result:
         rows = ["".join(self.cells.get((cx, cz), "?") for cx in range(x, x + width)) for cz in range(z + height - 1, z - 1, -1)]

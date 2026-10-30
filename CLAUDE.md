@@ -90,6 +90,13 @@ Rules:
     it. In trial 17 the house switched its wall material, every built wall got a steel blueprint, the
     walls came down and the roof killed a colonist. Never re-place a standing building in another material.
 
+## Letters that must be answered
+
+A letter with `canDismiss: false` (get_events letters) must be answered (`answer_letter`). When it expires
+the game opens it as a window that holds time paused, and reloading brings it back: trials 9, 15 and 18
+stalled on these. `managers/letters.py` answers joiners and halts on any other kind before it expires:
+give that kind an answer there.
+
 ## The SDK, briefly
 
 - **Calls and results.** `ctx.rim.<tool>(...)` covers every RimMCP tool. Only URL path ids are
