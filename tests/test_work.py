@@ -43,7 +43,7 @@ def test_the_best_researcher_researches_first_and_emergencies_come_before_everyt
     skilled(rim, "HumanB", Intellectual=9, Medicine=0)
     skilled(rim, "HumanC", Intellectual=0, Medicine=7)
     WorkManager().update(ctx_for(rim, tmp_path))
-    assert priorities(rim, "HumanB")["Research"] == 2 and priorities(rim, "HumanA")["Research"] == 3
+    assert priorities(rim, "HumanB")["Research"] == 1 and priorities(rim, "HumanA")["Research"] == 3
     assert priorities(rim, "HumanC")["Doctor"] == 1 and priorities(rim, "HumanA")["Doctor"] == 3
     assert all(priorities(rim, p)["Firefighter"] == priorities(rim, p)["PatientBedRest"] == 1
                for p in ("HumanA", "HumanB", "HumanC"))
@@ -66,7 +66,7 @@ def test_short_food_puts_food_work_first_and_plenty_puts_it_back(tmp_path):
     manager.update(ctx_for(rim, tmp_path))
     a = priorities(rim, "HumanA")
     assert a["Cooking"] == a["Hunting"] == a["Growing"] == 1 and a["Hauling"] == 2
-    assert a["Research"] == 2 and a["Construction"] == 3 and a["Firefighter"] == 1
+    assert a["Research"] == 1 and a["Construction"] == 3 and a["Firefighter"] == 1
 
     rim.food = {"eatenPerDay": 4.8, "daysLeft": 6.0}
     manager.update(ctx_for(rim, tmp_path))
@@ -127,6 +127,6 @@ def test_building_comes_first_while_the_house_is_going_up(tmp_path):
     skilled(rim, "HumanB", Intellectual=9)
     WorkManager().update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False), board={"house_stage": 1}))
     assert all(priorities(rim, p)["Construction"] == 1 for p in ("HumanA", "HumanB", "HumanC"))
-    assert priorities(rim, "HumanB")["Research"] == 2
+    assert priorities(rim, "HumanB")["Research"] == 2  # building first; research next
     WorkManager().update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False), board={"house_stage": 3}))
     assert priorities(rim, "HumanA")["Construction"] == 3

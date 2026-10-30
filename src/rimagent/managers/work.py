@@ -69,6 +69,10 @@ def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]], food_short: bo
             # held research back for the house instead, finished none).
             if not house_done and work_type == "Construction":
                 out[(pid, work_type)] = 1
+            # Once the house stands, the researcher researches first: at 2, sharing the rank with passions, trials
+            # 16 and 18 finished no project in 14 days. Food work at 1 still comes before it in the game's order.
+            if house_done and work_type == "Research" and ("Research", pid) in leads:
+                out[(pid, work_type)] = 1
             if food_short and work_type in FOOD_WORK:
                 out[(pid, work_type)] = min(out[(pid, work_type)], FOOD_WORK[work_type])
             if wood_short and work_type in WOOD_WORK:
