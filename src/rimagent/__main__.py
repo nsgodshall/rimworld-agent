@@ -39,7 +39,9 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--budget-usd", type=float, default=3.0, help="cap per fixing session, in estimated API dollars (plan usage on a subscription)")
     run.add_argument("--model", help="model for fixing sessions (Claude Code's default if unset)")
     ev = sub.add_parser("eval", help="load a baseline save, play it with the current code, and score it")
-    ev.add_argument("--save", required=True, help="save to start from, e.g. rimagent-start")
+    start = ev.add_mutually_exclusive_group(required=True)
+    start.add_argument("--save", help="save to start from, e.g. rimagent-landed-named")
+    start.add_argument("--new", help="a new colony from the main menu: SEED:BIOME[:STORYTELLER[:DIFFICULTY]]")
     ev.add_argument("--days", type=float, default=3.0, help="in-game days to play")
     ev.add_argument("--label", default="", help="a name for this run in `evals`")
     ev.add_argument("--chunk", type=float, default=2.0)
@@ -50,6 +52,15 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--model")
     ev.add_argument("--focus-wait", type=float, default=600.0)
     sub.add_parser("evals", help="compare every evaluation so far")
+    es = sub.add_parser("evalset", help="evaluate several new colonies in a row and summarise")
+    es.add_argument("starts", nargs="+", help="SEED:BIOME[:STORYTELLER[:DIFFICULTY]] each")
+    es.add_argument("--days", type=float, default=14.0)
+    es.add_argument("--label", default="set")
+    es.add_argument("--escalate", choices=["halt", "claude"], default="halt")
+    es.add_argument("--max-escalations", type=int, default=6)
+    es.add_argument("--budget-usd", type=float, default=3.0)
+    es.add_argument("--model")
+    es.add_argument("--focus-wait", type=float, default=600.0)
     watch = sub.add_parser("watch", help="live view of a run: the runtime's picture of the game, and its commands")
     watch.add_argument("run_dir", nargs="?", help="a runs/<dir> (default: follow the newest)")
     inspect = sub.add_parser("inspect", help="read-only access to the live game", add_help=False)
@@ -77,11 +88,32 @@ def main(argv: list[str] | None = None) -> int:
 
         escalator = ClaudeEscalator(model=args.model, budget_usd=args.budget_usd)
 
+    if args.command == "evalset":
+        from .escalate import REPO
+        from .evaluate import EvalConfig, run_eval, summarise_set
+
+        results = []
+        for spec in args.starts:
+            seed = spec.split(":")[0]
+            one_dir = RUNS / f"{datetime.now():%Y%m%d-%H%M%S}-{seed}"
+            cfg = EvalConfig(None, args.days, f"{args.label}-{seed}", max_escalations=args.max_escalations, new=spec)
+            print(f"\n=== {spec}: {one_dir}", flush=True)
+            try:
+                with RimClient.connect(focus_wait=args.focus_wait) as rim:
+                    result = run_eval(rim, cfg, one_dir, escalator, REPO)
+            except Exception as exc:  # one start failing to set up shouldn't stop the set
+                print(f"{spec} failed: {type(exc).__name__}: {exc}", flush=True)
+                results.append({"label": cfg.label, "new": spec, "error": str(exc)})
+                continue
+            results.append(result)
+            print(f"{spec}: {result['score']['total']} over {result['score']['daysPlayed']} days ({result['endReason']})", flush=True)
+        print("\n" + summarise_set(results))
+        return 0
     if args.command == "eval":
         from .escalate import REPO
         from .evaluate import EvalConfig, run_eval
 
-        cfg = EvalConfig(args.save, args.days, args.label, args.chunk, args.speed, args.max_escalations)
+        cfg = EvalConfig(args.save, args.days, args.label, args.chunk, args.speed, args.max_escalations, new=args.new)
         with RimClient.connect(focus_wait=args.focus_wait) as rim:
             result = run_eval(rim, cfg, run_dir, escalator, REPO)
         s, a = result["score"], result["autonomy"]

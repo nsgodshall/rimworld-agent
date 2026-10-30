@@ -131,7 +131,9 @@ uv run pytest -q
 
 Arguments to `inspect` use the tool's wire (camelCase) names, with JSON values.
 
-Evaluations start from the save `rimagent-landed-named`: `rimagent-landed` with the faction and
+Evaluations can start from the main menu with a new colony: `uv run python -m rimagent eval --new SEED:BIOME`
+(see `src/rimagent/starts.py`), or several in a row with `rimagent evalset SEED:BIOME ...` for a mean and spread
+across maps. That needs RimMCP's "Unattended game setup" on (Mod settings). The older trials used the save `rimagent-landed-named`: `rimagent-landed` with the faction and
 settlement already named. Unnamed, RimWorld asks for names around day 4, in a window that holds the
 game paused, and RimMCP can't answer it.
 

@@ -23,6 +23,7 @@ from .incidents import Escalator
 from .manager import TICKS_PER_HOUR
 from .runtime import Runtime
 from .snapshot import Snapshot
+from .starts import StartSpec, new_start
 
 TICKS_PER_DAY = 24 * TICKS_PER_HOUR
 SAMPLE_EVERY_HOURS = 6
@@ -51,7 +52,7 @@ BUILDINGS_TARGET = 15
 
 @dataclass
 class EvalConfig:
-    save: str
+    save: str | None
     days: float
     label: str = ""
     chunk_hours: float = 2.0
@@ -60,6 +61,19 @@ class EvalConfig:
     # The colony that's loaded when an eval starts is saved here first. Timestamped, so a second eval
     # never overwrites the backup of a colony that mattered with a copy of the last baseline.
     backup: str = field(default_factory=lambda: f"rimagent-before-eval-{datetime.now():%Y%m%d-%H%M%S}")
+    # A new colony made from the main menu instead of a save: "seed:biome" (see rimagent.starts).
+    new: str | None = None
+
+
+def parse_start(text: str) -> StartSpec:
+    """'seed:biome[:storyteller[:difficulty]]', e.g. 'boreal7:BorealForest' or 'arid3:AridShrubland:Randy'."""
+    seed, *rest = text.split(":")
+    spec = StartSpec(name=f"start-{seed}", seed=seed)
+    for attr, value in zip(("biome", "storyteller", "difficulty"), rest):
+        if value:
+            setattr(spec, attr, value)
+    spec.name = f"start-{seed}-{spec.biome}"
+    return spec
 
 
 @dataclass
@@ -186,7 +200,17 @@ def code_version(repo: Path) -> dict[str, Any]:
 
 
 def run_eval(rim: RimClient, cfg: EvalConfig, run_dir: Path, escalator: Escalator | None, repo: Path) -> dict[str, Any]:
-    load_baseline(rim, cfg)
+    if cfg.new:
+        # From the main menu: a new colony, landed and named (rimagent.starts), then loaded to play.
+        spec = parse_start(cfg.new)
+        new_start(rim, spec)
+        cfg.save = spec.name
+        op = rim.wait_operation(rim.load_game(name=spec.name, discard_unsaved=True, wait_seconds=30), timeout=900)
+        if op.get("state") != "succeeded":
+            raise RuntimeError(f"Loading {spec.name} ended {op.get('state')}: {op.get('message')}")
+        rim.wait_until_ready()
+    else:
+        load_baseline(rim, cfg)
     sampler = Sampler()
     runtime = Runtime(rim, run_dir, chunk_hours=cfg.chunk_hours, speed=cfg.speed, escalator=escalator,
                       max_escalations=cfg.max_escalations, observers=[sampler])
@@ -200,6 +224,7 @@ def run_eval(rim: RimClient, cfg: EvalConfig, run_dir: Path, escalator: Escalato
     result = {
         "label": cfg.label,
         "save": cfg.save,
+        "new": cfg.new,
         "days": cfg.days,
         "started": datetime.fromtimestamp(started).isoformat(timespec="seconds"),
         "wallSeconds": round(time.time() - started),
@@ -242,3 +267,23 @@ def compare(runs: Path) -> str:
     widths = [max(len(str(x)) for x in col) for col in zip(head, *rows)]
     table = "\n".join("  ".join(str(c).ljust(w) for c, w in zip(row, widths)) for row in [head, *rows])
     return table + "\n* shelter from beds alone: the run didn't record who slept outside."
+
+
+def summarise_set(results: list[dict[str, Any]]) -> str:
+    """One line per start, then the mean, spread and worst: a set's score is how the code does across maps."""
+    rows, totals = [], []
+    for r in results:
+        if "error" in r:
+            rows.append(f"  {r['new']:<36} setup failed: {r['error'][:80]}")
+            continue
+        s = r["score"]
+        totals.append(s["total"])
+        weak = sorted(s["parts"].items(), key=lambda kv: WEIGHTS[kv[0]] * (1 - kv[1]), reverse=True)[:2]
+        rows.append(f"  {r.get('new') or r['save']:<36} {s['total']:5.1f} over {s['daysPlayed']:>5} days ({r['endReason']}); "
+                    f"weakest {', '.join(f'{k} {v:.2f}' for k, v in weak)}; "
+                    f"{r['autonomy']['escalations']} escalations")
+    if totals:
+        mean = sum(totals) / len(totals)
+        spread = (sum((t - mean) ** 2 for t in totals) / len(totals)) ** 0.5
+        rows.append(f"  mean {mean:.1f}, sd {spread:.1f}, worst {min(totals):.1f}, best {max(totals):.1f} over {len(totals)} starts")
+    return "\n".join(rows)
