@@ -116,6 +116,8 @@ class ResearchManager(Manager):
         # comes back alreadySatisfied instead of planning a second bench.
         spots = sorted(window.cells(), key=lambda c: (math.hypot(c[0] - anchor[0], c[1] - anchor[1]), c[1], c[0]))
         candidates = [s for s in spots if usable(*s)][:TRIES]
+        if ctx.board.get("plan") is not None:
+            candidates = [tuple(ctx.board["plan"]["bench"])]  # in the workshop (managers/planner.py)
         # Steel if there's enough (trial 9's wooden bench waited days at 0 wood). Chosen once.
         stuff = self.memory.setdefault("stuff", pick(ctx, 100, (STEEL, STUFF)))  # steel leaves wood for beds
         for x, z in candidates:

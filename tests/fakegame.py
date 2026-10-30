@@ -312,7 +312,12 @@ class FakeRim(RimClient):
         (self.hunting.add if action == "hunt" else self.hunting.discard)(pawn_id)
         return Result({"changed": True, "data": {}})
 
-    def set_zone(self, *, kind=None, add=None, request_id=None, **_: Any) -> Result:
+    def set_zone(self, *, kind=None, add=None, request_id=None, zone_id=None, label=None, **_: Any) -> Result:
+        if zone_id is not None:  # a rename (all the managers do to an existing zone)
+            self._record("set_zone", zone_id=zone_id, label=label)
+            zone = next(z for z in self.zones if z["id"] == zone_id)
+            zone["label"] = label
+            return Result({"changed": True, "data": {"zone": zone}})
         self._record("set_zone", kind=kind, add=add)
         cells = 0
         for r in add or []:

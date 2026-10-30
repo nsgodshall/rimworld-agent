@@ -193,6 +193,8 @@ class KitchenManager(Manager):
                 candidates.remove(mine)
                 candidates.insert(0, mine)
             candidates = candidates[:TRIES]
+            if def_ in BUILD and ctx.board.get("plan") is not None:
+                candidates = [tuple(ctx.board["plan"]["stove"])]  # in the kitchen (managers/planner.py)
             for x, z in candidates:
                 result = ctx.rim.place_blueprint(placements=[{"def": def_, "x": x, "z": z, "rotation": ROTATION}],
                                                  request_id=uuid.uuid4().hex).data or {}

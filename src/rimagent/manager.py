@@ -31,6 +31,10 @@ class Context:
     # the house manager's "house_beds": beds it has planned, so the beds manager needn't place any.
     board: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        # The planned base's cells, kept on the board, so every view this cycle keeps out of them (planner.py).
+        self.snapshot.reserved = self.board.setdefault("reserved", set())
+
     def request_chunk(self, hours: float) -> None:
         """Ask for the next time run to be at most `hours` long, e.g. 0.1 while a fight is on."""
         self.chunk_hours = hours if self.chunk_hours is None else min(self.chunk_hours, hours)

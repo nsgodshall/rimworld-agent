@@ -44,15 +44,21 @@ class FoodManager(Manager):
     def ensure_stockpile(self, ctx: Context) -> None:
         if ctx.snapshot.zones_of("stockpile"):
             return
-        view = self._view(ctx)
-        width, height = STOCKPILE_SIZE
-        # Plain or poor ground: save rich soil for crops.
-        site = best_site(view, ctx.snapshot.base_center, width, height, good=_chars(view, "soil", "ground too poor"), min_fill=0.8)
+        plan = ctx.board.get("plan")
+        if plan is not None:
+            site = plan["general"]  # in the store (managers/planner.py)
+        else:
+            view = self._view(ctx)
+            width, height = STOCKPILE_SIZE
+            # Plain or poor ground: save rich soil for crops.
+            site = best_site(view, ctx.snapshot.base_center, width, height, good=_chars(view, "soil", "ground too poor"), min_fill=0.8)
         if site is None:
             ctx.raise_incident("noSite", "No room for a stockpile near the colonists.", "warn")
             return
         result = ctx.rim.set_zone(kind="stockpile", add=[site.to_api()], request_id=uuid.uuid4().hex)
         zone = (result.data or {}).get("zone") or {}
+        if plan is not None and zone.get("id"):  # named so the plan is found again after a restart (planner.recall)
+            ctx.rim.set_zone(zone_id=zone["id"], label=plan["label"])
         ctx.snapshot.__dict__.pop("zones", None)  # read again: the pantry goes beside this one, this pass
         ctx.log(self.name, f"Created stockpile {zone.get('id')} at {site}.", cells=zone.get("cellCount"))
 
@@ -66,11 +72,15 @@ class FoodManager(Manager):
         # Found by what it takes (list_zones shows each stockpile's accepts): only food.
         if any(((z.get("stockpile") or {}).get("accepts") or {}).get("all") == ["Foods"] for z in zones):
             return
-        view = self._view(ctx)
-        width, height = PANTRY_SIZE
-        cell = zones[0].get("representativeCell") or {}
-        anchor = (cell["x"], cell["z"]) if "x" in cell else ctx.snapshot.base_center
-        site = best_site(view, anchor, width, height, good=_chars(view, "soil", "ground too poor"), min_fill=0.8)
+        plan = ctx.board.get("plan")
+        if plan is not None:
+            site = plan["pantry"]  # the store's other half
+        else:
+            view = self._view(ctx)
+            width, height = PANTRY_SIZE
+            cell = zones[0].get("representativeCell") or {}
+            anchor = (cell["x"], cell["z"]) if "x" in cell else ctx.snapshot.base_center
+            site = best_site(view, anchor, width, height, good=_chars(view, "soil", "ground too poor"), min_fill=0.8)
         if site is None:
             ctx.raise_incident("noPantrySite", "No room for a food stockpile near the base.", "warn")
             return

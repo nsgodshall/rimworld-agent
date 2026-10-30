@@ -158,7 +158,8 @@ class HouseManager(Manager):
     alerts = ("Alert_NeedJoySources",)  # horseshoes and chess: two kinds of recreation
 
     COMMON_ROOM = True
-    STAGE_KEY = "house_stage"  # the board's note of how far this building has got
+    STAGE_KEY = "house_stage"
+    PLAN_KEY = "house"  # its origin in the base plan  # the board's note of how far this building has got
 
     def rooms_wanted(self, ctx: Context, colonists: list[dict]) -> int | None:
         return max(len(colonists), BEDROOMS)
@@ -278,6 +279,10 @@ class HouseManager(Manager):
         anchor = base_anchor(ctx)
         if anchor is None:
             return None
+        base = ctx.board.get("plan")
+        if base is not None:  # the base plan's place for it (managers/planner.py), with the rooms it has room for
+            bedrooms = min(bedrooms, BEDROOMS if self.COMMON_ROOM else WING_BEDROOMS)
+            return self._materials(ctx, tuple(base[self.PLAN_KEY]), bedrooms)
         size = plan((0, 0), bedrooms, self.COMMON_ROOM)["outer"]
         width, height = size.width, size.height + 1  # and the doorstep row
         view = snap.view(Rect.around(*anchor, WINDOW, WINDOW))
@@ -289,12 +294,15 @@ class HouseManager(Manager):
         if site is None:
             ctx.raise_incident("noHouseSite", f"No free {width}x{height} ground for a house near {anchor}.", "warn")
             return None
-        p = plan((site.x, site.z + 1), bedrooms, self.COMMON_ROOM)
+        return self._materials(ctx, (site.x, site.z + 1), bedrooms)
+
+    def _materials(self, ctx: Context, origin: tuple[int, int], bedrooms: int) -> dict:
+        p = plan(origin, bedrooms, self.COMMON_ROOM)
         walls_need, furniture_need = cost(p)
         spent: dict[str, int] = {}
         # Beds first and in steel if there's enough: they're wanted the first night, while wood goes
         # everywhere early (trial 8 had 0-33 wood for two days, and no beds).
-        house = {"origin": [site.x, site.z + 1], "bedrooms": bedrooms,
+        house = {"origin": list(origin), "bedrooms": bedrooms,
                  "beds": pick(ctx, 45 * max(1, len(self.residents(ctx, ctx.snapshot.colonists))), (STEEL, WOOD), spent),
                  "walls": pick(ctx, walls_need, (STEEL, WOOD), spent),  # steel walls leave wood for fuel
                  "furniture": pick(ctx, furniture_need - 45 * bedrooms, (WOOD, STEEL), spent),
@@ -381,6 +389,7 @@ class WingManager(HouseManager):
     alerts = ()
     COMMON_ROOM = False
     STAGE_KEY = "wing_stage"
+    PLAN_KEY = "wing"
 
     def rooms_wanted(self, ctx: Context, colonists: list[dict]) -> int | None:
         return WING_BEDROOMS if ctx.board.get("house_stage", 0) >= 3 else None  # once the house stands

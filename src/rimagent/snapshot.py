@@ -9,9 +9,15 @@ from rimsdk import RimClient
 from rimsdk.mapview import MapView, Rect, scan
 
 
+RESERVED = "%"  # open ground in the planned base's footprint, as view() shows it (managers/planner.py)
+RESERVED_MEANING = "reserved for the planned base"
+
+
 class Snapshot:
     def __init__(self, rim: RimClient):
         self.rim = rim
+        # Cells of the planned base (the planner's footprint): Context ties this to the board's "reserved".
+        self.reserved: set[tuple[int, int]] = set()
 
     @cached_property
     def colony(self) -> dict[str, Any]:
@@ -78,5 +84,17 @@ class Snapshot:
         return (self.colony.get("threats") or {}).get("hostiles", 0)
 
     def view(self, area: Rect) -> MapView:
-        """The character map of an area, clamped to the map (not cached: managers change it)."""
-        return scan(self.rim, area.clamp(*self.map_size))
+        """The character map of an area, clamped to the map (not cached: managers change it). Open ground in the
+        planned base shows as RESERVED, so fields, barricades and dumps keep out of it."""
+        return mask(scan(self.rim, area.clamp(*self.map_size)), self.reserved)
+
+
+def mask(view: MapView, reserved: set[tuple[int, int]]) -> MapView:
+    """`view` with open ground (soil, poor ground, trees) in `reserved` shown as RESERVED. Walls, buildings,
+    zones, blueprints and items stay as they are: defense still finds cover there."""
+    if not reserved:
+        return view
+    open_ = "".join(s for s, text in view.legend.items()
+                    if text.startswith(("soil", "rich soil", "ground too poor", "tree")))
+    cells = {c: (RESERVED if c in reserved and ch in open_ else ch) for c, ch in view.cells.items()}
+    return MapView(cells, {**view.legend, RESERVED: RESERVED_MEANING})
