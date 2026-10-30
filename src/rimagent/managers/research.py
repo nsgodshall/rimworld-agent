@@ -48,6 +48,27 @@ class ResearchManager(Manager):
         # Battery got to 263 of 400 by day 14.
         if "missingResearchBench" in blockers:
             self.ensure_bench(ctx)
+        elif not self.memory.get("lamp"):
+            self.light_bench(ctx)
+
+    def light_bench(self, ctx: Context) -> None:
+        """A torch lamp beside the bench: it stands outdoors, and work in the dark is slow. Trial 19's Battery
+        got to 387 of 400 by day 14."""
+        bench = next((b for page in ctx.rim.pages(ctx.rim.list_buildings, limit=200) for b in page.data.get("buildings") or []
+                      if (b.get("def") or {}).get("defName") in BENCHES and b.get("position")), None)
+        if bench is None:
+            return
+        x, z = bench["position"]["x"], bench["position"]["z"]
+        # The simple bench covers (x-1..x+1, z..z+1), its researcher stands at (x, z-1): east, west, then north.
+        for lx, lz in ((x + 2, z), (x - 2, z), (x, z + 2)):
+            result = ctx.rim.place_blueprint(placements=[{"def": "TorchLamp", "x": lx, "z": lz, "rotation": "north"}],
+                                             request_id=uuid.uuid4().hex).data or {}
+            (placed,) = result.get("results") or [{}]
+            if placed.get("outcome") in ("applied", "alreadySatisfied"):
+                self.memory["lamp"] = [lx, lz]
+                ctx.log(self.name, f"Placed a torch lamp by the research bench at ({lx}, {lz}).")
+                return
+        self.memory["lamp"] = "none"  # nowhere beside it: don't try every pass
 
     def choose_project(self, ctx: Context) -> None:
         available = [p for page in ctx.rim.pages(ctx.rim.get_research, available_only=True, limit=200)
