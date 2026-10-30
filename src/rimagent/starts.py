@@ -26,6 +26,9 @@ from pathlib import Path
 from rimsdk import RimClient, config, errors
 
 
+HARSH = {"Desert", "ExtremeDesert", "Tundra", "IceSheet", "SeaIce", "AridShrubland"}
+
+
 @dataclass
 class StartSpec:
     name: str                       # the save's name
@@ -37,6 +40,13 @@ class StartSpec:
     map_size: int = 250
     coverage: int = 30              # percent of the planet: smaller generates faster
     colony_name: str = "Rimagent"
+    # Shortest growing season to accept. Harsh biomes (desert, tundra) have little or none.
+    min_growing_days: int | None = None
+
+    def growing_days(self) -> int:
+        if self.min_growing_days is not None:
+            return self.min_growing_days
+        return 0 if self.biome in HARSH else 30
 
 
 def saves_dir() -> Path:
@@ -89,13 +99,15 @@ def new_start(rim: RimClient, spec: StartSpec, say=print) -> Path:
     """Make the save `spec.name`: a landed Crashlanded colony with its faction and settlement named."""
     playing = rim.get_game_context().data.get("programState") == "Playing"
     kwargs = {"discard_unsaved": True} if playing else {}
+    if not playing and (rim.get_setup().data or {}).get("active"):  # a setup left open: start over
+        _op(rim, rim.cancel_setup(request_id=uuid.uuid4().hex, wait_seconds=30), "cancel_setup")
     _op(rim, rim.start_setup(scenario="Crashlanded", wait_seconds=30, request_id=uuid.uuid4().hex, **kwargs), "start_setup")
     rim.set_setup_storyteller(storyteller=spec.storyteller, difficulty=spec.difficulty, commitment_mode=False,
                               expected_revision=_revision(rim))
     say(f"{spec.name}: generating world {spec.seed!r}...")
     _op(rim, rim.generate_world(seed=spec.seed, coverage=spec.coverage, expected_revision=_revision(rim),
                                 request_id=uuid.uuid4().hex, wait_seconds=30), "generate_world")
-    found = _op(rim, rim.find_starting_sites(biomes=[spec.biome], min_growing_days=30, avoid_encroaching=True,
+    found = _op(rim, rim.find_starting_sites(biomes=[spec.biome], min_growing_days=spec.growing_days(), avoid_encroaching=True,
                                              limit=5, request_id=uuid.uuid4().hex, wait_seconds=30), "find_starting_sites")
     sites = (found.get("result") or {}).get("sites") or found.get("sites") or []
     if not sites:
