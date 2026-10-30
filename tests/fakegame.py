@@ -20,6 +20,7 @@ FOOTPRINTS = {
     "ButcherSpot": ({"x": 0, "z": 0, "width": 1, "height": 1}, {"x": 0, "z": -1}),
     "Table2x2c": ({"x": 0, "z": 0, "width": 2, "height": 2}, None),
     "SimpleResearchBench": ({"x": -1, "z": 0, "width": 3, "height": 2}, {"x": 0, "z": -1}),
+    "Grave": ({"x": 0, "z": -1, "width": 1, "height": 2}, None),  # live check_placement, facing south
 }
 
 
@@ -252,6 +253,9 @@ class FakeRim(RimClient):
         if category == "Corpses":
             return Result({"data": {"summary": {"matches": len(self.corpses), "totalStackCount": len(self.corpses)},
                                     "things": self.corpses}})
+        if def_ is not None and def_.startswith("Corpse_"):
+            things = [c for c in self.corpses if c.get("def") == def_]
+            return Result({"data": {"summary": {"matches": len(things), "totalStackCount": len(things)}, "things": things}})
         if def_ is not None:  # a material: self.resources rows, minus their "forbidden" part
             row = next((r for r in self.resources if r.get("defName") == def_), {})
             usable = row.get("count", 0) - row.get("forbidden", 0) if forbidden is False else row.get("count", 0)

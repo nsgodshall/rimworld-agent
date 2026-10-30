@@ -269,7 +269,7 @@ def test_melee_fighters_engage_a_hostile_that_closes_in(tmp_path):
     """Trial 14: a lone waster clubbed two shooters down while the knife fighter waited behind them."""
     rim = colony()
     rim.colonists[2]["gear"]["equipment"] = [{"def": {"defName": "MeleeWeapon_Knife"}}]
-    rim.threats = [raider("R1", 53, 50)]  # three cells from the colonists at (50, 50)
+    rim.threats = [raider("R1", 51, 50)]  # hand to hand with the shooters at (50, 50)
     DefenseManager().update(ctx_for(rim, tmp_path))
     attacks = [c for c in rim.called("order_pawn") if c["order"] == "attack"]
     assert [(c["pawn_id"], c["target_id"]) for c in attacks] == [("HumanC", "R1")]

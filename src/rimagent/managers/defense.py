@@ -127,7 +127,9 @@ class DefenseManager(Manager):
                           anchor, centroid(threats), len(shooters), len(fighters) - len(shooters))
         # Melee fighters wait behind the shooters until a hostile closes in, then go for the nearest one: in
         # trial 14 a lone waster with a club downed two shooters while the knife fighter stood back.
-        close = [t for t in threats if any(cells_apart(t, f) <= MELEE_ENGAGE for f in fighters)]
+        # Only to save a shooter caught hand to hand: going out to meet a raider got the knife fighter downed in
+        # trials 23-24 (and killed in 24). A raider who comes for the melee fighter is fought anyway.
+        close = [t for t in threats if any(cells_apart(t, f) <= MELEE_ENGAGE for f in shooters)]
         engaging = set()
         # Only with a weapon in hand: downed colonists drop theirs, and a bare-handed one going in is just downed
         # again (trial 23: Sparky, knife gone, against a waster with a club).
@@ -248,7 +250,7 @@ class DefenseManager(Manager):
                     rejected=rejected, blockers=result.get("blockers"))
 
 
-MELEE_ENGAGE = 6  # cells: a hostile this close to any colonist is fought hand to hand
+MELEE_ENGAGE = 2  # cells: a hostile this close to a shooter is fought hand to hand
 ATTACK_JOBS = ("AttackMelee", "AttackStatic")
 
 

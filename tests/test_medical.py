@@ -140,3 +140,17 @@ def test_a_patient_found_tended_is_not_retried_every_cycle(tmp_path):
     manager.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
     targets = [c["target_id"] for c in rim.called("order_pawn") if c["order"] == "tend"]
     assert targets == ["HumanB", "HumanC"]
+
+
+def test_a_new_injury_ends_the_wait_on_that_colonist(tmp_path):
+    """Trial 24: Sparky was waited on from an earlier tend, then cut in a raid, and bled out untended."""
+    from rimagent import Event
+
+    rim = FakeRim()
+    rim.medical = {"downed": 1, "bleeding": 1, "examples": [{"id": "HumanC", "downed": True}]}
+    manager = MedicalManager()
+    manager.memory["tended_until"] = {"HumanC": rim.tick + 10 * 2500}
+    ctx = Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False))
+    manager.on_event(ctx, Event("injured", rim.tick, "run", "bleeding", {"id": "HumanC", "name": "C"}))
+    manager.update(ctx)
+    assert [c["target_id"] for c in rim.called("order_pawn") if c["order"] == "tend"] == ["HumanC"]

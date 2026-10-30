@@ -28,6 +28,7 @@ UNFORBID_EVERY_TICKS = 2 * 2500
 TEND_CHUNK_HOURS = 0.1
 LOW_MEDICINE_ALERT = "Alert_LowMedicine"
 NEEDS_TEND_ALERT = "Alert_ColonistNeedsTend"
+MAX_TEND_WAIT_HOURS = 1  # someone "tending" this long while another still bleeds: send a second helper
 RETEND_AFTER_HOURS = 4  # a patient found tended already (or untendable) is skipped this long
 NEEDS_TEND_HOLD_HOURS = 2  # doctors get this long to tend on their own before someone is drafted to
 STORE_EVERY_TICKS = 2 * 2500      # how often loose medicine is marked and rushed while the alert shows
@@ -38,7 +39,7 @@ class MedicalManager(Manager):
     name = "medical"
     priority = 5  # after defense, before everything else
     every_hours = 0  # every cycle: bleeding can't wait for a schedule
-    handles = ("injured",)
+    handles = ("injured", "downed")
     alerts = (LOW_MEDICINE_ALERT, NEEDS_TEND_ALERT)
 
     def __init__(self) -> None:
@@ -61,8 +62,17 @@ class MedicalManager(Manager):
             return  # nobody to tend, or a fight to finish first (defense's job)
         if medical.get("bleeding"):
             ctx.request_chunk(TEND_CHUNK_HOURS)
-        if any(job_of(p) in TEND_JOBS for p in colonists.values()):
-            return  # someone is already tending
+        tending = [p for p in colonists.values() if job_of(p) in TEND_JOBS]
+        if tending:
+            # Someone is tending already; but not for ever. In trial 24 Sparky bled for five hours after a raid with
+            # nobody sent to him, and this is the one quiet way out of here: past an hour, send another helper.
+            since = self.memory.setdefault("tending_since", ctx.tick)
+            if ctx.tick - since < MAX_TEND_WAIT_HOURS * 2500:
+                return
+            ctx.log(self.name, f"{', '.join(p['name'] for p in tending)} tending for {(ctx.tick - since) / 2500:.1f}h "
+                               "with someone still bleeding: sending another helper.")
+        else:
+            self.memory.pop("tending_since", None)
         patients = [e["id"] for e in medical.get("examples") or [] if e.get("id") in colonists]
         patients += [pid for pid in untended if pid in colonists and pid not in patients]
         # Skip whoever was found tended already, or couldn't be tended, a little while ago. In trial 22 a tend
@@ -74,10 +84,15 @@ class MedicalManager(Manager):
         # Helpers who aren't hurt come first, but a patient still on their feet can tend another. In run
         # 20261029-234707 all three colonists came out of a raid needing tending, Sparky downed, and nobody was
         # counted free: the runtime stopped while the two walking wounded ate berries.
-        helpers = sorted((p for p in colonists.values() if not p.get("downed") and not p.get("drafted")),
+        helpers = sorted((p for p in colonists.values() if not p.get("downed") and not p.get("drafted")
+                          and p not in tending),
                          key=lambda p: pawn_id(p) in patients)
         pair = next(((h, colonists[pid]) for pid in patients for h in helpers if pawn_id(h) != pid), None)
         if pair is None:
+            if not patients and medical.get("bleeding") and self.memory.get("quiet_noted") != ctx.tick // 2500:
+                self.memory["quiet_noted"] = ctx.tick // 2500
+                ctx.log(self.name, "Someone is bleeding but no patient is listed to tend.", medical=medical,
+                        waiting=self.memory.get("tended_until"))
             if patients:
                 ctx.raise_incident("noTender", f"{len(patients)} colonists need tending and nobody is free to.",
                                    "halt" if medical.get("bleeding") else "warn")
@@ -148,7 +163,12 @@ class MedicalManager(Manager):
                 f"{len(rushed)} hauled now.", units=sum(m.get("count") or 0 for m in loose), rushed=rushed)
 
     def on_event(self, ctx: Context, event: Event) -> bool:
-        # An injury needs medicine and a doctor: update() sees to both on this cycle.
+        # An injury needs medicine and a doctor: update() sees to both on this cycle. A new injury also ends any
+        # wait on that colonist (see RETEND_AFTER_HOURS): in trial 24 Sparky, waited on from an earlier tend,
+        # was cut in a raid and bled to death over five hours with nobody sent to him.
+        pid = (event.pawn or {}).get("id")
+        if pid:
+            self.memory.setdefault("tended_until", {}).pop(pid, None)
         return True
 
 
