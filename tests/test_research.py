@@ -41,8 +41,9 @@ def test_a_built_bench_and_a_project_need_nothing(tmp_path):
     ResearchManager().update(ctx_for(rim, tmp_path))
     rim.build_blueprints()
     ResearchManager().update(ctx_for(rim, tmp_path))
-    bench, lamp = rim.called("place_blueprint")  # and, once it's built, a lamp beside it
-    assert lamp["placements"][0]["def"] == "TorchLamp" and len(rim.called("set_research_project")) == 1
+    defs = [c["placements"][0]["def"] for c in rim.called("place_blueprint")]
+    assert defs[0] == "SimpleResearchBench" and defs[-1] == "TorchLamp"  # and, once it's built, a lamp beside it
+    assert defs.count("SimpleResearchBench") == 1 and len(rim.called("set_research_project")) == 1
 
 
 def test_preferred_project_before_cheaper_ones(tmp_path):

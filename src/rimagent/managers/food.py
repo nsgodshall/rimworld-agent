@@ -13,6 +13,7 @@ from ..manager import Context, Manager
 GROW_CELLS_PER_COLONIST = 60  # rice, cooked: 36 and 45 left stores near 2 days, and hungry colonists ate raw rice where they stood
 CROP = "Plant_Rice"
 STOCKPILE_SIZE = (6, 6)
+PANTRY_SIZE = (6, 6)  # food only, preferred (ensure_pantry)
 SEARCH_RADIUS = 30  # cells around the colonists to look for zone sites
 
 
@@ -27,6 +28,7 @@ class FoodManager(Manager):
         if snap.base_center is None:
             return
         self.ensure_stockpile(ctx)
+        self.ensure_pantry(ctx)
         self.unforbid_food(ctx)
         self.ensure_fields(ctx)
 
@@ -50,7 +52,33 @@ class FoodManager(Manager):
             return
         result = ctx.rim.set_zone(kind="stockpile", add=[site.to_api()], request_id=uuid.uuid4().hex)
         zone = (result.data or {}).get("zone") or {}
+        ctx.snapshot.__dict__.pop("zones", None)  # read again: the pantry goes beside this one, this pass
         ctx.log(self.name, f"Created stockpile {zone.get('id')} at {site}.", cells=zone.get("cellCount"))
+
+    def ensure_pantry(self, ctx: Context) -> None:
+        """A stockpile for food only, preferred over the general one. The general stockpile takes everything
+        (wood, steel, apparel...) and fills up: at the end of trial 19 685 rice and berries lay in 70 stacks
+        outside storage, 203 inside, and stored food read 3.6 days."""
+        zones = ctx.snapshot.zones_of("stockpile")
+        if not zones:
+            return  # the general one first: it's the base's anchor (beds.base_anchor)
+        # Found by what it takes (list_zones shows each stockpile's accepts): only food.
+        if any(((z.get("stockpile") or {}).get("accepts") or {}).get("all") == ["Foods"] for z in zones):
+            return
+        view = self._view(ctx)
+        width, height = PANTRY_SIZE
+        cell = zones[0].get("representativeCell") or {}
+        anchor = (cell["x"], cell["z"]) if "x" in cell else ctx.snapshot.base_center
+        site = best_site(view, anchor, width, height, good=_chars(view, "soil", "ground too poor"), min_fill=0.8)
+        if site is None:
+            ctx.raise_incident("noPantrySite", "No room for a food stockpile near the base.", "warn")
+            return
+        zone = (ctx.rim.set_zone(kind="stockpile", add=[site.to_api()], request_id=uuid.uuid4().hex).data or {}).get("zone") or {}
+        if not zone.get("id"):
+            return
+        result = ctx.rim.set_storage(zone_id=zone["id"], priority="Preferred", disallow_all=True, allow=["Foods"]).data or {}
+        rejected = [e for e in result.get("entries") or [] if e.get("outcome") == "rejected"]
+        ctx.log(self.name, f"Made a food stockpile {zone['id']} at {site}.", rejected=rejected)
 
     def unforbid_food(self, ctx: Context) -> None:
         things = ctx.rim.find_things(category="Foods", forbidden=True).data.get("things") or []
