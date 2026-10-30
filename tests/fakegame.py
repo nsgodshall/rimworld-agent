@@ -60,6 +60,7 @@ class FakeRim(RimClient):
         self.history: list[dict[str, Any]] = []
         self.alerts: list[dict[str, Any]] = []
         self.letters: list[dict[str, Any]] = []     # as get_events detail=full shows them
+        self.corpses: list[dict[str, Any]] = []     # as find_things category=Corpses shows them
         self.beds: list[dict[str, Any]] = []        # built beds, as list_buildings shows them
         self.blueprints: list[dict[str, Any]] = []  # placements not built yet
         self.buildings: list[dict[str, Any]] = []   # other built buildings, as list_buildings shows them
@@ -248,6 +249,9 @@ class FakeRim(RimClient):
                                 "fits": fits[:50], "rejected": rejected}})
 
     def find_things(self, *, category=None, forbidden=None, in_storage=None, def_=None, **_: Any) -> Result:
+        if category == "Corpses":
+            return Result({"data": {"summary": {"matches": len(self.corpses), "totalStackCount": len(self.corpses)},
+                                    "things": self.corpses}})
         if def_ is not None:  # a material: self.resources rows, minus their "forbidden" part
             row = next((r for r in self.resources if r.get("defName") == def_), {})
             usable = row.get("count", 0) - row.get("forbidden", 0) if forbidden is False else row.get("count", 0)

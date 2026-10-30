@@ -41,6 +41,7 @@ EAT_OPTION = "Consume"        # list_pawn_actions on food: "Consume packaged sur
 TRAPPED_HALT_HOURS = 24       # a starving colonist with no path to food this long needs a person
 HUNT_BELOW_DAYS = 8.0         # hunt while stored food is under this: from day one, as the rations (~7 days) outlast the first harvest by little
 HUNT_AT_ONCE = 2              # animals marked for hunting at any one time
+MAX_UNBUTCHERED = 3           # no new hunting while this many corpses wait
 # Game that seldom fights back and doesn't bring its herd: no boomalopes, boars, muffalo or predators.
 GAME = ("Deer", "Elk", "Caribou", "Ibex", "Gazelle", "Alpaca", "Dromedary", "Emu", "Ostrich", "Capybara",
         "Turkey", "Duck", "Goose", "Hare", "Snowhare", "Squirrel", "Chinchilla", "Iguana",
@@ -134,6 +135,11 @@ class PantryManager(Manager):
         snap = ctx.snapshot
         days = snap.food_days
         if days is None or days >= HUNT_BELOW_DAYS:
+            return
+        # Kills wait to be butchered: past a few, more hunting only leaves corpses about the base to rot. Trial 20
+        # had 22 there, and "Hideous environment" (beauty 0.01) on everyone.
+        unbutchered = (ctx.rim.find_things(category="Corpses", forbidden=False, limit=1).data.get("summary") or {}).get("totalStackCount", 0)
+        if unbutchered >= MAX_UNBUTCHERED:
             return
         animals = [a for a in ctx.rim.list_pawns(filter="wildAnimals", limit=200).data.get("pawns") or []
                    if not a.get("dead") and not a.get("downed") and a.get("position")]

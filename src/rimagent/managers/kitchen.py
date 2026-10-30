@@ -26,7 +26,7 @@ BUTCHER_BUILD = ("ButcherSpot",)
 ROTATION = "north"
 RECIPE = "CookMealSimple"
 CORPSE_STORE = (3, 3)  # a stockpile beside the butcher spot that takes fresh animal corpses
-DUMP_SIZE = (4, 4)     # and one for rotten corpses, out of sight
+DUMP_SIZE = (6, 6)     # and one for rotten corpses and stone chunks, out of sight
 DUMP_DISTANCE = 25
 BUTCHER_RECIPE = "ButcherCorpseFlesh"  # "Butcher creature"; butchering has no count to target, so Forever
 MEALS_PER_COLONIST = 10  # the bill's target: a few days of meals in store
@@ -88,7 +88,8 @@ class KitchenManager(Manager):
                                rejected=rejected)
 
     def ensure_dump(self, ctx: Context) -> None:
-        """A low-priority stockpile for rotten corpses, out of sight of the base. Kills still rot in the
+        """A low-priority stockpile for rotten corpses and stone chunks, out of sight of the base (both are ugly:
+        trial 20 had a dozen chunks by the house). Kills still rot in the
         fresh-corpse store before they're butchered (trial 10 ended with "Observed rotting corpse", -6,
         on two colonists); that store refuses rotten ones, so haulers carry them here."""
         zone_id = self.memory.get("dump_zone")
@@ -109,7 +110,7 @@ class KitchenManager(Manager):
         zone = (ctx.rim.set_zone(kind="stockpile", add=[site.to_api()], request_id=uuid.uuid4().hex).data or {}).get("zone") or {}
         if not zone.get("id"):
             return
-        result = ctx.rim.set_storage(zone_id=zone["id"], priority="Low", disallow_all=True, allow=["Corpses", "AllowRotten"]).data or {}
+        result = ctx.rim.set_storage(zone_id=zone["id"], priority="Low", disallow_all=True, allow=["Corpses", "AllowRotten", "Chunks"]).data or {}
         self.memory["dump_zone"] = zone["id"]
         rejected = [e for e in result.get("entries") or [] if e.get("outcome") == "rejected"]
         ctx.log(self.name, f"Made a corpse dump {zone['id']} at {site}, out of sight of the base.", rejected=rejected)

@@ -158,3 +158,12 @@ def test_a_starving_colonist_with_no_path_to_food_warns_then_halts(tmp_path):
     rim.alerts = []
     pantry.update(ctx_for(rim, tmp_path))
     assert pantry.memory["trapped"] == {}
+
+
+def test_no_new_hunting_while_kills_wait_to_be_butchered(tmp_path):
+    """Trial 20: 22 corpses lay about the base, and beauty fell to 0.01 ("Hideous environment")."""
+    rim = colony(food_days=3.0)
+    rim.animals = [animal("Ibex", 4, 55, 50)]
+    rim.corpses = [{"id": f"Corpse_Hare{i}", "def": "Corpse_Hare", "x": 50, "z": 50, "count": 1} for i in range(3)]
+    PantryManager().update(ctx_for(rim, tmp_path))
+    assert rim.called("designate_animal") == []
