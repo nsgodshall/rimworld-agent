@@ -223,3 +223,11 @@ def test_a_reload_sees_new_names_in_the_modules_a_manager_imports(tmp_path, monk
     assert [m.name for m in loader.load()] == ["alpha2"]
     for name in [m for m in sys.modules if m.startswith("trialpkg")]:
         del sys.modules[name]
+
+
+def test_an_incident_naming_its_alert_by_type_has_a_key():
+    """Trial 25 crashed: the mood manager's extremeBreakRisk incident gave alert as a string."""
+    from rimagent.incidents import Incident
+
+    assert Incident("extremeBreakRisk", "x", details={"alert": "Alert_MajorOrExtremeBreakRisk"}).key == \
+        "extremeBreakRisk:Alert_MajorOrExtremeBreakRisk"

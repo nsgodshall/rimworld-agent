@@ -26,7 +26,9 @@ class Incident:
     @property
     def key(self) -> str:
         """What makes two incidents 'the same problem' for repeat limits."""
-        what = self.event.kind if self.event else self.details.get("alert", {}).get("type") or self.details.get("where")
+        alert = self.details.get("alert")
+        alert_type = alert.get("type") if isinstance(alert, dict) else alert  # a whole alert, or just its type
+        what = self.event.kind if self.event else alert_type or self.details.get("where")
         return f"{self.kind}:{what}"
 
     @classmethod
