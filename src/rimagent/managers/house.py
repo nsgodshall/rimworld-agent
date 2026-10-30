@@ -44,6 +44,7 @@ COMMON_WIDTH = 6     # interior: a 2x2 table, four chairs, horseshoes, chess, a 
 STALL_HOURS = 24     # a stage waiting this long on a material that's run out switches to the other
 STALL_SHORT = 20     # "run out": less than this much usable
 MATERIAL_KEY = {"Bed": "beds", "Wall": "walls", "Door": "walls", "HorseshoesPin": "metal"}  # else furniture
+COST = {"Wall": 5, "Door": 25, "Bed": 45, "Table2x2c": 50, "DiningChair": 45, "ChessTable": 70, "HorseshoesPin": 10}
 MAX_PLACEMENTS = 50  # place_blueprint refuses more in one call (400 "At most 50 placements per call.")
 # Comfortable is up to about 26 C; above it bedrooms give "Slept in the heat", and a heat wave brings
 # heatstroke (docs/reference/rooms.md, threats.md). In the day-7 heat wave the bedrooms were 29-30 C at
@@ -187,11 +188,13 @@ class HouseManager(Manager):
         for key in {MATERIAL_KEY.get(r.get("def"), "furniture") for r in waiting}:
             stuff = house.get(key) or house["furniture"]
             alt = {STEEL: WOOD, WOOD: STEEL, SILVER: STEEL}.get(stuff)
-            if alt is None or ctx.snapshot.usable(stuff) >= STALL_SHORT or ctx.snapshot.usable(alt) <= ctx.snapshot.usable(stuff):
+            items = [r for r in waiting if MATERIAL_KEY.get(r.get("def"), "furniture") == key and r.get("stuff") == stuff]
+            need = sum(COST.get(r.get("def"), 30) for r in items)
+            # The other material must cover half of what's waiting: in trial 16 the walls went to steel with
+            # little steel about, waited a day more, and went back to wood.
+            if alt is None or not items or ctx.snapshot.usable(stuff) >= STALL_SHORT or ctx.snapshot.usable(alt) < need / 2:
                 continue
-            ids = [r["id"] for r in waiting if MATERIAL_KEY.get(r.get("def"), "furniture") == key and r.get("stuff") == stuff]
-            if not ids:
-                continue
+            ids = [r["id"] for r in items]
             ctx.rim.designate(kind="cancel", thing_ids=ids[:300])
             house[key] = alt
             switched.append(f"{len(ids)} {key} from {stuff} to {alt}")

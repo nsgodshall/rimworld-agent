@@ -119,3 +119,13 @@ def test_with_no_wood_everyone_fells_trees(tmp_path):
     rim.resources = [{"defName": "WoodLog", "count": 400}]
     WorkManager().update(ctx_for(rim, tmp_path))
     assert all(priorities(rim, p)["PlantCutting"] == 3 for p in ("HumanA", "HumanB", "HumanC"))
+
+
+def test_research_waits_while_the_house_is_going_up(tmp_path):
+    """Trial 16: the best builder researched (first at equal priority) while everyone slept outside."""
+    rim = FakeRim()
+    skilled(rim, "HumanB", Intellectual=9)
+    WorkManager().update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False), board={"house_stage": 1}))
+    assert priorities(rim, "HumanB")["Research"] == 3
+    WorkManager().update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False), board={"house_stage": 3}))
+    assert priorities(rim, "HumanB")["Research"] == 2

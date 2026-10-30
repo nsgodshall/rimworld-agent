@@ -45,7 +45,7 @@ def skills_of(pawn: dict) -> dict[str, dict]:
 
 
 def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]], food_short: bool = False,
-           wood_short: bool = False) -> dict[tuple[str, str], int]:
+           wood_short: bool = False, house_done: bool = True) -> dict[tuple[str, str], int]:
     """(pawn id, work type) -> priority, for every work type each pawn can do."""
     capable = {p["id"]: [w["defName"] for w in p.get("work") or [] if not w.get("disabled")] for p in pawns}
 
@@ -60,7 +60,9 @@ def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]], food_short: bo
             passion = skills[pid].get(SKILL.get(work_type, ""), {}).get("passion") not in (None, "None")
             if work_type in EMERGENCY or (work_type == "Doctor" and ("Doctor", pid) in leads):
                 out[(pid, work_type)] = 1
-            elif (work_type == "Research" and ("Research", pid) in leads) or passion:
+            # Research waits for the house (board house_stage): in trial 16 the colony's best builder researched
+            # (research comes first at equal priority) while everyone slept outside.
+            elif (work_type == "Research" and ("Research", pid) in leads and house_done) or (passion and work_type != "Research"):
                 out[(pid, work_type)] = 2
             else:
                 out[(pid, work_type)] = 3
@@ -85,7 +87,8 @@ class WorkManager(Manager):
         days = ctx.snapshot.food_days
         food_short = days is not None and days < FOOD_SHORT_DAYS
         wood_short = ctx.snapshot.usable("WoodLog") < WOOD_SHORT
-        for (pid, work_type), priority in sorted(wanted(pawns, skills, food_short, wood_short).items()):
+        house_done = ctx.board.get("house_stage", 3) >= 3
+        for (pid, work_type), priority in sorted(wanted(pawns, skills, food_short, wood_short, house_done).items()):
             if current.get((pid, work_type)) == priority:
                 continue
             try:
