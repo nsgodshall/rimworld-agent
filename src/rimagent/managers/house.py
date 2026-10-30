@@ -41,6 +41,9 @@ WINDOW = 60          # side of the square around the base searched for a site (s
 DEPTH = 4            # interior, north to south
 BEDROOM_WIDTH = 3    # interior: 12 tiles, "rather tight" with a bed, never "cramped"
 COMMON_WIDTH = 6     # interior: a 2x2 table, four chairs, horseshoes, chess, a lamp
+STALL_HOURS = 24     # a stage waiting this long on a material that's run out switches to the other
+STALL_SHORT = 20     # "run out": less than this much usable
+MATERIAL_KEY = {"Bed": "beds", "Wall": "walls", "Door": "walls", "HorseshoesPin": "metal"}  # else furniture
 MAX_PLACEMENTS = 50  # place_blueprint refuses more in one call (400 "At most 50 placements per call.")
 # Comfortable is up to about 26 C; above it bedrooms give "Slept in the heat", and a heat wave brings
 # heatstroke (docs/reference/rooms.md, threats.md). In the day-7 heat wave the bedrooms were 29-30 C at
@@ -156,7 +159,9 @@ class HouseManager(Manager):
             stage_results, stage_applied = place(ctx, stage)
             results, applied = results + stage_results, applied + stage_applied
             if not all(r.get("state") == "built" for r in stage_results):
+                self._unstall(ctx, house, number, stage_results)
                 break  # the next stage waits until this one stands
+            self.memory.setdefault("stage_since", {}).pop(str(number), None)
         rejected = [{k: r.get(k) for k in ("def", "x", "z", "reason")} for r in results if r.get("outcome") == "rejected"]
         if applied:
             ctx.log(self.name, f"Placed {applied} house blueprints at {p['outer']}.", rejected=len(rejected))
@@ -168,6 +173,32 @@ class HouseManager(Manager):
         if len(results) == len(placements(p, house["walls"], house["furniture"], house.get("beds"), metal)) and all(r.get("outcome") == "alreadySatisfied" and r.get("state") == "built" for r in results):
             self.memory["built"] = True
             ctx.log(self.name, f"The house at {p['outer']} is finished.")
+
+    def _unstall(self, ctx: Context, house: dict, number: int, results: list[dict]) -> None:
+        """A stage waiting over STALL_HOURS on a material that's run out goes to the other one. Trial 15 chose
+        steel beds while steel looked plentiful; the stove and research bench took it first, and two beds
+        (and every later stage, walls included) waited eleven days. Untouched blueprints are cancelled and
+        placed again next pass in the new material; frames, which hold material already, are left."""
+        since = self.memory.setdefault("stage_since", {}).setdefault(str(number), ctx.tick)
+        if ctx.tick - since < STALL_HOURS * 2500:
+            return
+        waiting = [r for r in results if r.get("state") == "blueprint" and r.get("stuff") and r.get("id")]
+        switched = []
+        for key in {MATERIAL_KEY.get(r.get("def"), "furniture") for r in waiting}:
+            stuff = house.get(key) or house["furniture"]
+            alt = {STEEL: WOOD, WOOD: STEEL, SILVER: STEEL}.get(stuff)
+            if alt is None or ctx.snapshot.usable(stuff) >= STALL_SHORT or ctx.snapshot.usable(alt) <= ctx.snapshot.usable(stuff):
+                continue
+            ids = [r["id"] for r in waiting if MATERIAL_KEY.get(r.get("def"), "furniture") == key and r.get("stuff") == stuff]
+            if not ids:
+                continue
+            ctx.rim.designate(kind="cancel", thing_ids=ids[:300])
+            house[key] = alt
+            switched.append(f"{len(ids)} {key} from {stuff} to {alt}")
+        if switched:
+            self.memory["stage_since"][str(number)] = ctx.tick
+            ctx.log(self.name, f"Stage {number} waited {(ctx.tick - since) / 2500:.0f}h for material: switched "
+                               f"{'; '.join(switched)}.")
 
     def _plan(self, ctx: Context, bedrooms: int) -> dict | None:
         snap = ctx.snapshot

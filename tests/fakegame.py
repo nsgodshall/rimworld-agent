@@ -260,6 +260,11 @@ class FakeRim(RimClient):
 
     def designate(self, *, kind, thing_ids=None, rects=None, def_name=None, **_: Any) -> Result:
         self._record("designate", kind=kind, thing_ids=thing_ids, rects=rects, def_name=def_name)
+        if kind == "cancel":  # DesignationCommandService: removes a blueprint or frame itself
+            for bp in [b for b in self.blueprints if b.get("_id") in (thing_ids or [])]:
+                for c in _footprint(bp["def"], bp["x"], bp["z"]):
+                    self.cells[c] = "."
+                self.blueprints.remove(bp)
         if sum(r.get("width", 1) * r.get("height", 1) for r in rects or []) > 3600:
             raise errors.BadRequest("The rectangles cover more than 3600 cells; split the change into smaller calls.",
                                     status=400)
@@ -375,15 +380,19 @@ class FakeRim(RimClient):
         for p in placements:
             footprint = _footprint(p["def"], p["x"], p["z"])
             same = (p["def"], p["x"], p["z"], p.get("rotation"), p.get("stuff"))
-            if any((b["def"], b["x"], b["z"], b.get("rotation"), b.get("stuff")) == same for b in self.blueprints):
-                results.append({**p, "outcome": "alreadySatisfied", "state": "blueprint", "reason": None})
+            # BuildService: Existing(cell) matches what's there by def and cell, whatever its material.
+            existing = next((b for b in self.blueprints if (b["def"], b["x"], b["z"]) == same[:3]), None)
+            if existing is not None:
+                results.append({**p, "outcome": "alreadySatisfied", "state": "blueprint",
+                                "reason": None, "id": existing["_id"]})
             elif any((b["def"], b["x"], b["z"]) == same[:3] for b in self.built):  # BuildService: Existing(cell)
                 results.append({**p, "outcome": "alreadySatisfied", "state": "built", "reason": None})
             elif all(self.cells.get(c) in (".", "_") for c in footprint):
                 for c in footprint:
                     self.cells[c] = "x"  # a blueprint, on the map view
-                self.blueprints.append(p)
-                results.append({**p, "outcome": "applied", "state": "blueprint", "reason": None})
+                bp = {**p, "_id": f"Blueprint_{p['def']}{len(self.blueprints) + len(self.built) + 1}"}
+                self.blueprints.append(bp)
+                results.append({**p, "outcome": "applied", "state": "blueprint", "reason": None, "id": bp["_id"]})
             else:
                 results.append({**p, "outcome": "rejected", "reason": "Space already occupied."})
         count = lambda o: sum(r["outcome"] == o for r in results)

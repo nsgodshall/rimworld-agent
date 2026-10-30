@@ -156,3 +156,24 @@ def test_no_free_ground_is_a_warning(tmp_path):
     ctx = ctx_for(rim, tmp_path)
     HouseManager().update(ctx)
     assert [(i.kind, i.severity) for i in ctx.incidents] == [("noHouseSite", "warn")]
+
+
+def test_a_stage_stalled_on_a_spent_material_switches_to_the_other(tmp_path):
+    """Trial 15: steel beds chosen, the steel spent elsewhere, and two beds waited eleven days."""
+    rim = colony()
+    rim.resources = [{"defName": "WoodLog", "count": 50}, {"defName": "Steel", "count": 400}]
+    FoodManager().update(ctx_for(rim, tmp_path))
+    house, board = HouseManager(), {}
+    house.update(ctx_for(rim, tmp_path, board))
+    assert house.memory["house"]["beds"] == "Steel"
+    rim.resources = [{"defName": "WoodLog", "count": 600}, {"defName": "Steel", "count": 0}]  # the steel went elsewhere
+    rim.tick += 25 * 2500
+    house.update(ctx_for(rim, tmp_path, board))  # first sight of the stall starts its clock...
+    rim.tick += 25 * 2500
+    house.update(ctx_for(rim, tmp_path, board))  # ...a day later the beds switch
+    cancelled = [c for c in rim.called("designate") if c["kind"] == "cancel"]
+    assert cancelled and all(i.startswith("Blueprint_Bed") for i in cancelled[0]["thing_ids"])
+    assert house.memory["house"]["beds"] == "WoodLog"
+    house.update(ctx_for(rim, tmp_path, board))
+    beds = [p for p in rim.called("place_blueprint")[-1]["placements"] if p["def"] == "Bed"]
+    assert {b["stuff"] for b in beds} == {"WoodLog"} and sum(b["def"] == "Bed" for b in rim.blueprints) == 3
