@@ -27,6 +27,7 @@ house's beds are on the board (`house_beds`), so the beds manager doesn't put an
 
 from __future__ import annotations
 
+import math
 import uuid
 
 from rimsdk import errors
@@ -41,6 +42,7 @@ WINDOW = 60          # side of the square around the base searched for a site (s
 DEPTH = 4            # interior, north to south
 BEDROOM_WIDTH = 3    # interior: 12 tiles, "rather tight" with a bed, never "cramped"
 COMMON_WIDTH = 6     # interior: a 2x2 table, four chairs, horseshoes, chess, a lamp
+DINING_REACH = 20    # the common room serves as the dining room only this close to the stockpile
 BEDROOMS = 5         # planned from day one: room for two newcomers (the letters manager takes joiners in
                      # while there's a free bedroom)
 STALL_HOURS = 24     # a stage waiting this long on a material that's run out switches to the other
@@ -157,7 +159,12 @@ class HouseManager(Manager):
             self.memory["built"] = False
         p = {**p, "beds": p["beds"][:house["beds_for"]]}
         ctx.board["house_beds"] = house["bedrooms"]
-        ctx.board["house_dining"] = True
+        # Colonists eat at a chair within 32 cells of where they pick up their food (the stockpile): a common room
+        # further off isn't a dining room at all. Trial 22's five-bedroom house stood ~40 cells away, and every
+        # meal was "Ate without table" (-3). Then the mood manager's table by the stockpile does instead.
+        anchor = base_anchor(ctx)
+        common = p["common"].center
+        ctx.board["house_dining"] = anchor is not None and math.hypot(common[0] - anchor[0], common[1] - anchor[1]) <= DINING_REACH
         beds = ctx.rim.list_buildings(category="bed").data.get("buildings") or []
         self._move_in(ctx, p, colonists, beds)
         self._cool(ctx, p)

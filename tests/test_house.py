@@ -241,3 +241,15 @@ def test_a_newcomer_gets_the_next_bedroom_and_nobody_moves(tmp_path):
     house.update(ctx_for(rim, tmp_path, board))  # ...built, and given to the newcomer
     assert len(rim.beds) == 4 and rim.replaced == []
     assert {b: p for b, p in rim.owners.items() if p != "Human0"} == before and "Human0" in rim.owners.values()
+
+
+def test_a_house_far_from_the_stockpile_leaves_dining_to_the_mood_manager(tmp_path):
+    """Trial 22: the house stood ~40 cells from the stockpile; meals were eaten standing ("Ate without table")."""
+    rim = colony()
+    FoodManager().update(ctx_for(rim, tmp_path))
+    house, board = HouseManager(), {}
+    house.update(ctx_for(rim, tmp_path, board))
+    assert board["house_dining"] is True
+    house.memory["house"]["origin"] = [5, 5]  # say the only site was far off
+    house.update(ctx_for(rim, tmp_path, board))
+    assert board["house_dining"] is False
