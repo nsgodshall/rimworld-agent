@@ -60,12 +60,15 @@ def wanted(pawns: list[dict], skills: dict[str, dict[str, dict]], food_short: bo
             passion = skills[pid].get(SKILL.get(work_type, ""), {}).get("passion") not in (None, "None")
             if work_type in EMERGENCY or (work_type == "Doctor" and ("Doctor", pid) in leads):
                 out[(pid, work_type)] = 1
-            # Research waits for the house (board house_stage): in trial 16 the colony's best builder researched
-            # (research comes first at equal priority) while everyone slept outside.
-            elif (work_type == "Research" and ("Research", pid) in leads and house_done) or (passion and work_type != "Research"):
+            elif (work_type == "Research" and ("Research", pid) in leads) or passion:
                 out[(pid, work_type)] = 2
             else:
                 out[(pid, work_type)] = 3
+            # Building comes first until the house stands (board house_stage): mood ran 0.62-0.77 while it went
+            # up in trial 16 and 0.76-0.89 once it was done; and research then still gets done (trial 16, which
+            # held research back for the house instead, finished none).
+            if not house_done and work_type == "Construction":
+                out[(pid, work_type)] = 1
             if food_short and work_type in FOOD_WORK:
                 out[(pid, work_type)] = min(out[(pid, work_type)], FOOD_WORK[work_type])
             if wood_short and work_type in WOOD_WORK:
