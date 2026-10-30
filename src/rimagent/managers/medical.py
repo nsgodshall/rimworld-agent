@@ -70,14 +70,19 @@ class MedicalManager(Manager):
         # the colonist who did need help (downed, starving) died.
         resting = self.memory.setdefault("tended_until", {})
         patients = [pid for pid in patients if resting.get(pid, 0) <= ctx.tick]
-        helpers = [p for p in colonists.values()
-                   if not p.get("downed") and not p.get("drafted") and pawn_id(p) not in patients]
-        if not patients or not helpers:
+        patients.sort(key=lambda pid: not colonists[pid].get("downed"))  # the downed can't tend themselves
+        # Helpers who aren't hurt come first, but a patient still on their feet can tend another. In run
+        # 20261029-234707 all three colonists came out of a raid needing tending, Sparky downed, and nobody was
+        # counted free: the runtime stopped while the two walking wounded ate berries.
+        helpers = sorted((p for p in colonists.values() if not p.get("downed") and not p.get("drafted")),
+                         key=lambda p: pawn_id(p) in patients)
+        pair = next(((h, colonists[pid]) for pid in patients for h in helpers if pawn_id(h) != pid), None)
+        if pair is None:
             if patients:
                 ctx.raise_incident("noTender", f"{len(patients)} colonists need tending and nobody is free to.",
                                    "halt" if medical.get("bleeding") else "warn")
             return
-        helper, patient = helpers[0], colonists[patients[0]]
+        helper, patient = pair
         try:
             ctx.rim.set_pawn_drafted(pawn_id(helper), drafted=True)
             result = ctx.rim.order_pawn(pawn_id(helper), order="tend", target_id=pawn_id(patient)).data or {}

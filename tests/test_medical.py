@@ -90,6 +90,34 @@ def test_a_colonist_left_untended_gets_a_drafted_tender(tmp_path):
     assert [(c["pawn_id"], c["target_id"]) for c in tends] == [("HumanA", "HumanB")]
 
 
+def test_when_everyone_is_hurt_a_walking_patient_tends_the_downed(tmp_path):
+    """Run 20261029-234707: after a raid all three colonists needed tending, one downed and bleeding; the
+    runtime stopped because no unhurt colonist was left to tend."""
+    rim = FakeRim()
+    rim.colonists[2]["downed"] = True
+    rim.medical = {"downed": 1, "bleeding": 1, "examples": [{"id": "HumanC", "name": "C", "downed": True},
+                                                            {"id": "HumanA", "name": "A", "downed": False}]}
+    rim.alerts = [{"type": "Alert_ColonistNeedsTend", "label": "Medical treatment needed", "priority": "High",
+                   "culprits": [{"id": "HumanB", "label": "B"}], "culpritCount": 1}]
+    manager = MedicalManager()
+    manager.memory["needs_tend_since"] = rim.tick - 3 * 2500
+    ctx = Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False))
+    manager.update(ctx)
+    assert ctx.incidents == []
+    tends = [(c["pawn_id"], c["target_id"]) for c in rim.called("order_pawn") if c["order"] == "tend"]
+    assert tends == [("HumanA", "HumanC")]
+
+
+def test_a_lone_downed_colonist_still_stops_the_runtime(tmp_path):
+    rim = FakeRim()
+    rim.colonists = rim.colonists[:1]
+    rim.colonists[0]["downed"] = True
+    rim.medical = {"downed": 1, "bleeding": 1, "examples": [{"id": "HumanA", "name": "A", "downed": True}]}
+    ctx = Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False))
+    MedicalManager().update(ctx)
+    assert [(i.kind, i.severity) for i in ctx.incidents] == [("noTender", "halt")]
+
+
 def test_a_patient_found_tended_is_not_retried_every_cycle(tmp_path):
     """Trial 22: tend came back alreadySatisfied each cycle; the helper was drafted again and again, never ate,
     and the colonist who did need help died."""
