@@ -62,6 +62,7 @@ class FakeRim(RimClient):
         self.alerts: list[dict[str, Any]] = []
         self.letters: list[dict[str, Any]] = []     # as get_events detail=full shows them
         self.corpses: list[dict[str, Any]] = []     # as find_things category=Corpses shows them
+        self.strangers: list[dict[str, Any]] = []   # as list_pawns filter=others shows them
         self.beds: list[dict[str, Any]] = []        # built beds, as list_buildings shows them
         self.blueprints: list[dict[str, Any]] = []  # placements not built yet
         self.buildings: list[dict[str, Any]] = []   # other built buildings, as list_buildings shows them
@@ -129,7 +130,8 @@ class FakeRim(RimClient):
         }})
 
     def list_pawns(self, *, filter=None, **_: Any) -> Result:
-        return Result({"data": {"pawns": self.animals if filter == "wildAnimals" else self.colonists}})
+        pawns = {"wildAnimals": self.animals, "others": self.strangers}.get(filter, self.colonists)
+        return Result({"data": {"pawns": pawns}})
 
     def list_pawn_actions(self, pawn_id, *, target_id=None, **_: Any) -> Result:
         """As in game for a food stack (fixtures: list_pawn_actions on MealSurvivalPack7759; shut in, run

@@ -191,7 +191,7 @@ class HouseManager(Manager):
         residents = self.residents(ctx, colonists)
         # Beds only in the rooms someone sleeps in; a newcomer's bed goes in the next room (and the building is
         # placed again for it, though it was finished).
-        occupied = min(house["bedrooms"], len(residents))
+        occupied = min(house["bedrooms"], len(residents) if self.COMMON_ROOM else house["bedrooms"])
         if occupied > house.get("beds_for", 0):
             house["beds_for"] = occupied
             self.memory["built"] = False
@@ -372,7 +372,8 @@ class WingManager(HouseManager):
     The house was planned with five bedrooms in trial 22 to make room for recruits, and the only site wide enough
     stood ~40 cells from the stockpile: meals were eaten standing, recreation was a walk away, and no joiner came
     in fourteen days. So the house stays at three, near the stockpile, and this builds the newcomers' rooms
-    separately. Its beds go in only when someone needs one (anyone the house has no room for).
+    separately. Its beds all go in: a free bed is where a rescued stranger is carried (managers/strangers.py),
+    and a joiner sleeps the night they come.
     """
 
     name = "wing"

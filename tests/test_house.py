@@ -234,9 +234,9 @@ def test_newcomers_get_bedrooms_in_the_wing_and_nobody_moves(tmp_path):
         house.update(ctx_for(rim, tmp_path, board))
         wing.update(ctx_for(rim, tmp_path, board))
         rim.build_blueprints()
-    assert house.memory["built"] and len(rim.beds) == 3
+    assert house.memory["built"]
     assert wing.memory["house"]["bedrooms"] == 2 and board["house_beds"] == 5  # room for two more
-    assert wing.memory["house"].get("beds_for", 0) == 0  # no wing beds until someone needs one
+    assert len(rim.beds) == 5  # the wing's beds wait, free, for newcomers and rescued strangers
     before = dict(rim.owners)
     for n in ("Human0", "Human1"):
         rim.colonists.append({"ids": {"id": n}, "name": n, "position": {"x": 50, "y": 0, "z": 50},
