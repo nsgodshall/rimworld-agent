@@ -263,3 +263,22 @@ def test_barricades_wait_for_the_house(tmp_path):
     rim = colony()
     DefenseManager().update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False), board={}))
     assert rim.called("place_blueprint") == []
+
+
+def test_melee_fighters_engage_a_hostile_that_closes_in(tmp_path):
+    """Trial 14: a lone waster clubbed two shooters down while the knife fighter waited behind them."""
+    rim = colony()
+    rim.colonists[2]["gear"]["equipment"] = [{"def": {"defName": "MeleeWeapon_Knife"}}]
+    rim.threats = [raider("R1", 53, 50)]  # three cells from the colonists at (50, 50)
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    attacks = [c for c in rim.called("order_pawn") if c["order"] == "attack"]
+    assert [(c["pawn_id"], c["target_id"]) for c in attacks] == [("HumanC", "R1")]
+    assert "HumanC" not in [c["pawn_id"] for c in rim.called("order_pawn") if c["order"] == "move"]
+
+
+def test_melee_fighters_wait_while_hostiles_are_far(tmp_path):
+    rim = colony()
+    rim.colonists[2]["gear"]["equipment"] = [{"def": {"defName": "MeleeWeapon_Knife"}}]
+    rim.threats = [raider("R1", 80, 50)]
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    assert not [c for c in rim.called("order_pawn") if c["order"] == "attack"]

@@ -124,8 +124,26 @@ class DefenseManager(Manager):
         shooters = [p for p in fighters if has_gun(p)]
         spots = positions(ctx.snapshot.view(Rect.around(*anchor, 2 * COVER_SEARCH + 1, 2 * COVER_SEARCH + 1)),
                           anchor, centroid(threats), len(shooters), len(fighters) - len(shooters))
+        # Melee fighters wait behind the shooters until a hostile closes in, then go for the nearest one: in
+        # trial 14 a lone waster with a club downed two shooters while the knife fighter stood back.
+        close = [t for t in threats if any(cells_apart(t, f) <= MELEE_ENGAGE for f in fighters)]
+        engaging = set()
+        for pawn in [p for p in fighters if not has_gun(p)] if close else []:
+            target = min(close, key=lambda t: cells_apart(t, pawn))
+            engaging.add(pawn_id(pawn))
+            if (pawn.get("currentJob") or {}).get("defName") in ATTACK_JOBS:
+                continue
+            try:
+                if not pawn.get("drafted"):
+                    ctx.rim.set_pawn_drafted(pawn_id(pawn), drafted=True)
+                ctx.rim.order_pawn(pawn_id(pawn), order="attack", target_id=pawn_id(target))
+                ctx.log(self.name, f"{pawn['name']} engages {describe(target)} in melee.")
+            except errors.RimError as exc:
+                ctx.log(self.name, f"{pawn['name']} can't engage {describe(target)}: {exc.message}")
         for pawn, spot in zip(shooters + [p for p in fighters if not has_gun(p)], spots):
             pid = pawn_id(pawn)
+            if pid in engaging:
+                continue
             if not pawn.get("drafted"):
                 try:
                     ctx.rim.set_pawn_drafted(pid, drafted=True)
@@ -224,6 +242,17 @@ class DefenseManager(Manager):
                         for r in result.get("results") or [] if r.get("outcome") == "rejected"]
             ctx.log(self.name, f"Placed {result['applied']} barricade blueprints around the base.",
                     rejected=rejected, blockers=result.get("blockers"))
+
+
+MELEE_ENGAGE = 6  # cells: a hostile this close to any colonist is fought hand to hand
+ATTACK_JOBS = ("AttackMelee", "AttackStatic")
+
+
+def cells_apart(a: dict[str, Any], b: dict[str, Any]) -> int:
+    pa, pb = a.get("position") or {}, b.get("position") or {}
+    if "x" not in pa or "x" not in pb:
+        return 10**6
+    return max(abs(pa["x"] - pb["x"]), abs(pa["z"] - pb["z"]))
 
 
 def engaging_threats(ctx: Context, radius: int | None = ENGAGE_RADIUS) -> list[dict[str, Any]]:
