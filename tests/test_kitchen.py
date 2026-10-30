@@ -134,3 +134,15 @@ def test_a_stockpile_for_fresh_animal_corpses_beside_the_butcher_spot(tmp_path):
     assert abs(dump_zone["add"][0]["z"] - 50) >= 15  # out of sight of the base
     kitchen.update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
     assert len(rim.called("set_storage")) == 2  # each made once
+
+
+def test_the_butcher_spot_is_away_from_the_house(tmp_path):
+    """Trials 20-21: corpses and blood by the butcher spot sat at the house's doorsteps."""
+    import math
+
+    rim = FakeRim()
+    FoodManager().update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    KitchenManager().update(Context(rim, Snapshot(rim), Journal(tmp_path / "j.jsonl", echo=False)))
+    (spot,) = [p for c in rim.called("place_blueprint") for p in c["placements"] if p["def"] == "ButcherSpot"]
+    cell = rim.zones[0]["representativeCell"]
+    assert math.hypot(spot["x"] - cell["x"], spot["z"] - cell["z"]) >= 7 and spot["z"] < cell["z"]

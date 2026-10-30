@@ -25,6 +25,7 @@ BUTCHERS = ("ButcherSpot", "TableButcher")
 BUTCHER_BUILD = ("ButcherSpot",)
 ROTATION = "north"
 RECIPE = "CookMealSimple"
+BUTCHER_AWAY = 10     # cells south of the stockpile: the butcher spot is ugly work
 CORPSE_STORE = (3, 3)  # a stockpile beside the butcher spot that takes fresh animal corpses
 DUMP_SIZE = (6, 6)     # and one for rotten corpses and stone chunks, out of sight
 DUMP_DISTANCE = 25
@@ -166,8 +167,12 @@ class KitchenManager(Manager):
 
             # A fixed order, nearest the anchor first: next pass finds the same spot, where placing again
             # comes back alreadySatisfied instead of planning a second one.
-            spots = sorted(window.cells(), key=lambda c: (math.hypot(c[0] - anchor[0], c[1] - anchor[1]), c[1], c[0]))
-            candidates = [s for s in spots if usable(*s)]
+            # The butcher spot (and the corpse store beside it) away from the house, which is planned north of
+            # the stockpile: corpses and blood are ugly, and in trials 20-21 they sat by the doorsteps.
+            target = (anchor[0], anchor[1] - BUTCHER_AWAY) if def_ in BUTCHER_BUILD else anchor
+            spots = sorted(window.cells(), key=lambda c: (math.hypot(c[0] - target[0], c[1] - target[1]), c[1], c[0]))
+            candidates = [s for s in spots if usable(*s) and (def_ not in BUTCHER_BUILD
+                          or math.hypot(s[0] - anchor[0], s[1] - anchor[1]) >= BUTCHER_AWAY - 3)]
             if mine in candidates:
                 candidates.remove(mine)
                 candidates.insert(0, mine)
