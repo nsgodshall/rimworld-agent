@@ -74,7 +74,8 @@ class DefenseManager(Manager):
             bleeding = (ctx.snapshot.colony.get("medical") or {}).get("bleeding")
             if not bleeding and any(p.get("downed") for p in ctx.snapshot.colonists):
                 self.rescue(ctx)
-            if self.armed_at is None or ctx.tick - self.armed_at >= 12 * 2500:
+            # Re-arm soon after a fight too: the downed drop their weapons.
+            if self.armed_at is None or ctx.tick - self.armed_at >= 12 * 2500 or self.memory.pop("rearm", False):
                 self.arm(ctx)
                 self.armed_at = ctx.tick
             # Barricades wait for the house (or day 4): they take wood the beds and walls need, and early
@@ -128,7 +129,9 @@ class DefenseManager(Manager):
         # trial 14 a lone waster with a club downed two shooters while the knife fighter stood back.
         close = [t for t in threats if any(cells_apart(t, f) <= MELEE_ENGAGE for f in fighters)]
         engaging = set()
-        for pawn in [p for p in fighters if not has_gun(p)] if close else []:
+        # Only with a weapon in hand: downed colonists drop theirs, and a bare-handed one going in is just downed
+        # again (trial 23: Sparky, knife gone, against a waster with a club).
+        for pawn in [p for p in fighters if not has_gun(p) and (p.get("gear") or {}).get("equipment")] if close else []:
             target = min(close, key=lambda t: cells_apart(t, pawn))
             engaging.add(pawn_id(pawn))
             if (pawn.get("currentJob") or {}).get("defName") in ATTACK_JOBS:
@@ -167,6 +170,7 @@ class DefenseManager(Manager):
             ctx.rim.set_pawn_drafted(pawn_id(pawn), drafted=False)
         if self.combat_since is not None:
             ctx.log(self.name, f"No hostiles near after {(ctx.tick - self.combat_since) / 2500:.1f}h: undrafted {len(drafted)}.")
+            self.memory["rearm"] = True
         self.combat_since = None
 
     def rescue(self, ctx: Context) -> None:

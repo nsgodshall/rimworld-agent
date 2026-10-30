@@ -282,3 +282,12 @@ def test_melee_fighters_wait_while_hostiles_are_far(tmp_path):
     rim.threats = [raider("R1", 80, 50)]
     DefenseManager().update(ctx_for(rim, tmp_path))
     assert not [c for c in rim.called("order_pawn") if c["order"] == "attack"]
+
+
+def test_a_bare_handed_colonist_stays_out_of_melee(tmp_path):
+    """Trial 23: Sparky, who had dropped his knife when downed, went in with his fists."""
+    rim = colony()
+    rim.colonists[2]["gear"]["equipment"] = []
+    rim.threats = [raider("R1", 53, 50)]
+    DefenseManager().update(ctx_for(rim, tmp_path))
+    assert not [c for c in rim.called("order_pawn") if c["order"] == "attack"]
