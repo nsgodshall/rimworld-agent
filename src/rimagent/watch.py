@@ -7,7 +7,11 @@ It never calls the game. It reads the run's state.json (the runtime's picture of
 each cycle) and tails its journal.jsonl (commands sent, events, warnings, incidents), so it shows the
 controller's understanding, which can lag or differ from the game itself.
 
-Keys: q quit, c toggle routine clock commands, f toggle following newer runs, ↑/↓ pick a colonist.
+The Base panel draws the base plan as it's built and, when the planner has just chosen a site, the search that
+chose it, sweeping across the map (basemap.py).
+
+Keys: q quit, c toggle routine clock commands, f toggle following newer runs, b base plan or site search,
+↑/↓ pick a colonist.
 """
 
 from __future__ import annotations
@@ -22,6 +26,9 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import DataTable, Footer, RichLog, Static
 
+from .basemap import plan_text, search_text
+
+REVEAL_SECONDS, HOLD_SECONDS = 4.0, 6.0  # a new site search sweeps the map, then shows a while before the plan
 TICKS_PER_HOUR = 2500
 TICKS_PER_DAY = 24 * TICKS_PER_HOUR
 STATUS_STYLE = {"cycle": "bold green", "advancing": "bold cyan", "escalating": "bold magenta",
@@ -101,8 +108,11 @@ class Watch(App):
     Screen { layout: vertical; }
     #status { height: 2; padding: 0 1; background: $panel; }
     #top { height: 12; }
+    #lower { height: 1fr; }
+    #left { width: 1fr; }
     #middle { height: 1fr; min-height: 10; }
     #bottom { height: 1fr; min-height: 8; }
+    #base { width: 49; overflow-y: auto; }
     .box { border: round $primary-darken-2; border-title-color: $text; padding: 0 1; }
     #colony { width: 34; }
     #colonists { width: 1fr; }
@@ -113,7 +123,8 @@ class Watch(App):
     #journal { width: 2fr; }
     DataTable { height: 1fr; }
     """
-    BINDINGS = [("q", "quit", "quit"), ("c", "toggle_quiet", "clock cmds"), ("f", "toggle_follow", "follow newest")]
+    BINDINGS = [("q", "quit", "quit"), ("c", "toggle_quiet", "clock cmds"), ("f", "toggle_follow", "follow newest"),
+                ("b", "toggle_base", "base plan/search")]
 
     def __init__(self, run_dir: Path | None, runs: Path = Path("runs")):
         super().__init__()
@@ -127,6 +138,10 @@ class Watch(App):
         self.last_message: dict[str, tuple[int | None, str]] = {}
         self.selected: str | None = None
         self.counts = {"commands": 0, "errors": 0, "rejected": 0}
+        self.base_mode = "plan"
+        self.searched: dict | None = None    # the chosen site of the search last seen
+        self.reveal_from: float | None = None  # when a new search began sweeping
+        self.pulse = 0
 
     def compose(self) -> ComposeResult:
         yield Static(id="status")
@@ -134,18 +149,21 @@ class Watch(App):
             yield Static(id="colony", classes="box")
             yield DataTable(id="colonists", classes="box", cursor_type="row", zebra_stripes=True)
             yield Static(id="pawn", classes="box")
-        with Horizontal(id="middle"):
-            yield DataTable(id="managers", classes="box", cursor_type="none", zebra_stripes=True)
-            yield DataTable(id="alerts", classes="box", cursor_type="none")
-        with Horizontal(id="bottom"):
-            yield RichLog(id="commands", classes="box", max_lines=2000, wrap=False, auto_scroll=True)
-            yield RichLog(id="journal", classes="box", max_lines=2000, wrap=True, auto_scroll=True)
+        with Horizontal(id="lower"):
+            with Vertical(id="left"):
+                with Horizontal(id="middle"):
+                    yield DataTable(id="managers", classes="box", cursor_type="none", zebra_stripes=True)
+                    yield DataTable(id="alerts", classes="box", cursor_type="none")
+                with Horizontal(id="bottom"):
+                    yield RichLog(id="commands", classes="box", max_lines=2000, wrap=False, auto_scroll=True)
+                    yield RichLog(id="journal", classes="box", max_lines=2000, wrap=True, auto_scroll=True)
+            yield Static(id="base", classes="box")
         yield Footer()
 
     def on_mount(self) -> None:
         titles = {"colony": "Colony (as read this cycle)", "colonists": "Colonists", "pawn": "Colonist",
                   "managers": "Managers", "alerts": "Game alerts", "commands": "Commands sent to the game",
-                  "journal": "Journal: events · runs · warnings · incidents"}
+                  "journal": "Journal: events · runs · warnings · incidents", "base": "Base"}
         for widget_id, title in titles.items():
             self.query_one(f"#{widget_id}").border_title = title
         self.query_one("#colonists", DataTable).add_columns("name", "pos", "mood", "job", "flags", "worst thoughts")
@@ -153,6 +171,7 @@ class Watch(App):
         self.query_one("#alerts", DataTable).add_columns("prio", "alert", "owner")
         self.refresh_all()
         self.set_interval(1.0, self.refresh_all)
+        self.set_interval(0.15, self.animate)
 
     # --- actions ---------------------------------------------------------------------------
 
@@ -163,6 +182,11 @@ class Watch(App):
     def action_toggle_follow(self) -> None:
         self.follow = not self.follow
         self.notify(f"Following newer runs: {'on' if self.follow else 'off'}.")
+
+    def action_toggle_base(self) -> None:
+        self.reveal_from = None
+        self.base_mode = "search" if self.base_mode == "plan" and self.state.get("baseSearch") else "plan"
+        self.render_base()
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.data_table.id == "colonists" and event.row_key is not None:
@@ -185,6 +209,7 @@ class Watch(App):
 
     def switch_run(self, run_dir: Path) -> None:
         self.run_dir, self.offset, self.state, self.state_mtime = run_dir, 0, {}, 0.0
+        self.searched, self.reveal_from, self.base_mode = None, None, "plan"
         self.last_message.clear()
         self.counts = {"commands": 0, "errors": 0, "rejected": 0}
         self.query_one("#commands", RichLog).clear()
@@ -226,14 +251,21 @@ class Watch(App):
             mtime = path.stat().st_mtime
             if mtime == self.state_mtime:
                 return
+            first = not self.state
             self.state, self.state_mtime = json.loads(path.read_text(encoding="utf-8")), mtime
         except (OSError, ValueError):
             return
+        chosen = (self.state.get("baseSearch") or {}).get("chosen")
+        if chosen and chosen != self.searched:
+            self.searched = chosen
+            if not first:  # chosen while watching: sweep it (a run opened later just shows its plan)
+                self.base_mode, self.reveal_from = "search", time.time()
         self.render_colony()
         self.render_colonists()
         self.render_pawn()
         self.render_managers()
         self.render_alerts()
+        self.render_base()
 
     # --- panels ----------------------------------------------------------------------------
 
@@ -345,6 +377,32 @@ class Watch(App):
             table.add_row(str(m.get("priority")), Text(m["name"], style="bold"), every, days(m.get("lastTick")),
                           hours_until(m.get("nextTick"), now),
                           Text(f"{days(said_tick)} {said}"[:90] if said else (m.get("memory") or "")[:90], style="grey70"))
+
+    def animate(self) -> None:
+        """The search's sweep while it runs, and the blueprints' pulse: redrawn only when something moved."""
+        if self.reveal_from is not None:
+            if time.time() - self.reveal_from > REVEAL_SECONDS + HOLD_SECONDS:
+                self.reveal_from, self.base_mode = None, "plan"
+            self.render_base()
+            return
+        pulse = int(time.time() * 2) % 2
+        if pulse != self.pulse and self.base_mode == "plan":
+            self.pulse = pulse
+            self.render_base()
+
+    def render_base(self) -> None:
+        widget = self.query_one("#base", Static)
+        base, search = self.state.get("base"), self.state.get("baseSearch")
+        if self.base_mode == "search" and search:
+            reveal = 1.0 if self.reveal_from is None else (time.time() - self.reveal_from) / REVEAL_SECONDS
+            widget.border_title = "Base: site search" + (" (sweeping)" if reveal < 1 else "")
+            widget.update(search_text(search, max(10, widget.content_size.width or 42), min(1.0, reveal)))
+        elif base:
+            widget.border_title = "Base: plan and progress"
+            widget.update(plan_text(base, self.pulse))
+        else:
+            widget.border_title = "Base"
+            widget.update(Text("No base plan yet: the planner lays one out on the first day.", style="grey50"))
 
     def render_alerts(self) -> None:
         table = self.query_one("#alerts", DataTable)

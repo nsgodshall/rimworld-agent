@@ -44,9 +44,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from rimsdk.mapview import ORIENTATIONS, Counts, Frame, MapView, Rect, walking
+from rimsdk.mapview import FACING, ORIENTATIONS, Counts, Frame, MapView, Rect, walking
 
 from ..manager import Context, Manager
+from ..snapshot import RESERVED
 from .food import _chars
 from .house import (
     BEDROOMS,
@@ -143,9 +144,14 @@ def layout(frame: Frame) -> dict[str, Any]:
     }
 
 
-def best_frame(view: MapView, center: tuple[float, float], map_size: tuple[int, int]) -> tuple[Frame, dict] | None:
+def best_frame(view: MapView, center: tuple[float, float], map_size: tuple[int, int],
+               seen: dict | None = None) -> tuple[Frame, dict] | None:
     """The best place and way to lay the plan in `view` for colonists around `center` (see the module's
-    docstring), with its score's terms; None if it fits nowhere."""
+    docstring), with its score's terms; None if it fits nowhere. A `seen` dict gets what the search went
+    through, for watching it: placements "tried" and that "fits", and "heat", the best score of those that fit by the cell
+    their middle falls on."""
+    heat: dict[tuple[int, int], float] = {}
+    tried = fits = 0
     plain = _chars(view, "soil", "ground too poor")
     rich = _chars(view, "rich soil")
     tree = view.symbol_for("tree") or "t"
@@ -165,6 +171,7 @@ def best_frame(view: MapView, center: tuple[float, float], map_size: tuple[int, 
         area = inner0.area
         for z in range(good.z0, good.z0 + good.height - inner0.height + 1):
             for x in range(good.x0, good.x0 + good.width - inner0.width + 1):
+                tried += 1
                 dx, dz = x - inner0.x, z - inner0.z
                 inner = Rect(x, z, inner0.width, inner0.height)
                 if good(inner) < area:
@@ -179,9 +186,126 @@ def best_frame(view: MapView, center: tuple[float, float], map_size: tuple[int, 
                          "room": open_(room) - open_(inner), "farmland": farmland(back), "edge": edge}
                 score = (-WALK * walk - TREE * terms["trees"] - RICH * terms["rich"] - ITEM * terms["items"]
                          + ROOM * terms["room"] + FARMLAND * terms["farmland"] - EDGE * max(0, EDGE_REACH - edge))
+                fits += 1
+                middle = (x + inner.width // 2, z + inner.height // 2)
+                heat[middle] = max(score, heat.get(middle, score))
                 if best is None or score > best[0]:
                     best = (score, turned.moved(dx, dz), {**terms, "score": round(score, 1)})
+    if seen is not None:
+        seen.update(tried=tried, fits=fits, heat=heat)
     return (best[1], best[2]) if best else None
+
+
+# --- for watching (rimagent watch: the Base panel) -------------------------------------------------------
+
+SURROUNDINGS = 5  # cells of ground shown round the footprint: fields, dump, trees
+# What each cell of the footprint is to be, one letter each: floors, then the things placed on them.
+FLOORS = {"kitchen": "k", "workshop": "w", "pantry": "p", "general": "g", "street": "s"}
+
+
+def roles(p: dict[str, Any]) -> tuple[dict[tuple[int, int], str], dict[str, list[tuple[int, int]]]]:
+    """(cell -> role letter, building -> the cells its placements are made at) for the plan `p`. Letters: W wall,
+    D door, S stove, R research bench, B bed, T table, c chair, L lamp, H horseshoes, C chess, e end table,
+    o plant pot indoors, f the street's pots; floors k kitchen, w workshop, p pantry, g general, h rooms,
+    s street."""
+    frame = Frame.from_list(p["frame"])
+    house = plan(tuple(p["house"]), BEDROOMS, frame=frame)
+    wing = plan(tuple(p["wing"]), WING_BEDROOMS, common_room=False, frame=frame)
+    cells: dict[tuple[int, int], str] = {}
+    for key, letter in FLOORS.items():
+        cells.update(dict.fromkeys(p[key].cells(), letter))
+    for h in (house, wing):
+        for r in h["bedrooms"] + ([h["common"]] if h["common"] else []):
+            cells.update(dict.fromkeys(r.cells(), "h"))
+
+    def put(xs, letter):
+        cells.update(dict.fromkeys((tuple(c) for c in xs if c is not None), letter))
+
+    def turned(anchor, rotation, across, deep):
+        """The cells of a building `across` wide (odd) and `deep` facing `rotation`, by its cell (mapview.FACING)."""
+        fx, fz = FACING[rotation]
+        px, pz = fz, -fx  # across the way it faces
+        half = across // 2
+        return [(anchor[0] + k * px + j * fx, anchor[1] + k * pz + j * fz) for k in range(-half, half + 1) for j in range(deep)]
+
+    groups: dict[str, list[tuple[int, int]]] = {}
+    for name, h in (("house", house), ("wing", wing)):
+        put(h["walls"], "W")
+        put(h["doors"], "D")
+        for bed in h["beds"]:
+            put(turned(bed, h["facing"][bed], 1, 2), "B")
+        if h["table"]:
+            put(Rect(*h["table"], 2, 2).cells(), "T")
+        put(h["chairs"] + h["chess_chairs"], "c")
+        put([h["chess"]], "C")
+        put([h["horseshoes"]], "H")
+        put(h["lamps"], "L")
+        put(h["end_tables"], "e")
+        put(h["pots"], "o")
+        groups[name] = [c for key in ("walls", "doors", "beds", "chairs", "chess_chairs", "lamps", "end_tables", "pots")
+                        for c in h[key]] + [c for c in (h["table"], h["chess"], h["horseshoes"]) if c]
+    put(p["walls"], "W")
+    put(p["doors"], "D")
+    put(turned(p["stove"], p["stove_rotation"], 3, 1), "S")
+    put(turned(p["bench"], p["bench_rotation"], 3, 2), "R")
+    put(p["lamps"] + [p["bench_lamp"]], "L")
+    put(p["garden"], "f")
+    groups["core"] = [tuple(c) for c in p["walls"] + p["doors"] + p["lamps"] + [p["stove"], p["bench"], p["bench_lamp"]]]
+    groups["garden"] = [tuple(c) for c in p["garden"]]
+    return cells, groups
+
+
+def base_picture(ctx: Context, p: dict[str, Any], terms: dict | None) -> dict[str, Any]:
+    """The plan and how far it's built, from a map view of the footprint and SURROUNDINGS cells round it (two
+    get_map_view calls): rows north first of role letters (see roles) and of what the map shows ("#" built, "x"
+    blueprint, "=" stockpile, "%" field, else the map's own symbol), and per building [built, blueprints,
+    placements]."""
+    foot = p["footprint"].grow(SURROUNDINGS)
+    view = ctx.snapshot.view(foot)
+    built = "".join(s for s, text in view.legend.items() if text.startswith(("wall", "other building")))
+    blueprint = view.symbol_for("blueprint") or "x"
+    stockpile = "".join(s for s, text in view.legend.items() if text.startswith("stockpile")) or "="
+    growing = "".join(s for s, text in view.legend.items() if text.startswith("growing")) or "%"
+    cells, groups = roles(p)
+
+    def state(xz):
+        ch = view[xz] or "?"
+        return ("#" if ch in built else "x" if ch in blueprint else "." if ch == RESERVED else "=" if ch in stockpile
+                else "%" if ch in growing else ch)
+
+    zs = range(foot.z + foot.height - 1, foot.z - 1, -1)
+    xs = range(foot.x, foot.x + foot.width)
+    return {
+        "frame": p["frame"], "rect": foot.to_api(), "away": list(p["away"]), "walls": ctx.board.get("base_walls"),
+        "terms": terms,
+        "roles": ["".join(cells.get((x, z), " ") for x in xs) for z in zs],
+        "state": ["".join(state((x, z)) for x in xs) for z in zs],
+        "progress": {name: [sum(state(c) == "#" for c in group), sum(state(c) == "x" for c in group), len(group)]
+                     for name, group in groups.items()},
+    }
+
+
+def search_picture(view: MapView, seen: dict, chosen: Rect, terms: dict) -> dict[str, Any]:
+    """The site search: rows north first over the searched view, each cell a digit 0-9 for the best score of
+    the placements centred there, by rank among those that fit (9: the best tenth), or what the map shows where
+    none fits. By rank, not by score: a few poor sites would leave the rest one colour."""
+    heat = seen.get("heat") or {}
+    order = sorted(heat, key=heat.get)
+    rank = {xz: i / len(order) for i, xz in enumerate(order)}
+    xs = [x for x, _ in view.cells]
+    zs = [z for _, z in view.cells]
+    x0, z0, x1, z1 = min(xs), min(zs), max(xs), max(zs)
+
+    def glyph(xz):
+        if xz in rank:
+            return str(min(9, int(10 * rank[xz])))
+        return view[xz] or "?"
+
+    return {
+        "rect": {"x": x0, "z": z0, "width": x1 - x0 + 1, "height": z1 - z0 + 1},
+        "rows": ["".join(glyph((x, z)) for x in range(x0, x1 + 1)) for z in range(z1, z0 - 1, -1)],
+        "chosen": chosen.to_api(), "tried": seen.get("tried", 0), "fits": seen.get("fits", 0), "terms": terms,
+    }
 
 
 class PlannerManager(Manager):
@@ -200,6 +324,7 @@ class PlannerManager(Manager):
         if not reserved:
             reserved.update(p["footprint"].cells())
         ctx.snapshot.reserved = reserved
+        ctx.board["base_view"] = base_picture(ctx, p, self.memory.get("terms"))
 
     def recall(self, ctx: Context) -> dict[str, Any] | None:
         """The plan, from memory or from the store's general stockpile, which the food manager names after the
@@ -228,7 +353,8 @@ class PlannerManager(Manager):
         if center is None:
             return None
         view = ctx.snapshot.view(Rect.around(center[0], center[1], WINDOW, WINDOW))
-        found = best_frame(view, center, ctx.snapshot.map_size)
+        seen: dict = {}
+        found = best_frame(view, center, ctx.snapshot.map_size, seen)
         if found is None:
             self.memory["none"] = True
             ctx.raise_incident("noBaseSite", f"No free {INNER.width}x{INNER.height} ground for the base near "
@@ -237,6 +363,8 @@ class PlannerManager(Manager):
         frame, terms = found
         p = layout(frame)
         self.memory["frame"] = p["frame"]
+        self.memory["terms"] = terms
+        ctx.board["base_search"] = search_picture(view, seen, frame.rect(INNER), terms)
         # Trees in the footprint come down now: wood for the beds, and nothing in the way of walls or stockpiles.
         ctx.rim.designate(kind="chopWood", rects=[p["footprint"].to_api()])
         ctx.log(self.name, f"Planned the base: core {p['core']} (kitchen, store, workshop), {frame.turns} quarter "

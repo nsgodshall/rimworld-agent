@@ -4,7 +4,7 @@
   manager, or the runtime itself), the tool, its arguments, and what the game said.
 - After each cycle, and whenever the runtime's status changes, `state.json` in the run directory is
   rewritten with the runtime's picture of the game: the colony as this cycle read it, the managers'
-  schedules and memory, alert claims and hold timers, tripwires, pending events.
+  schedules and memory, alert claims and hold timers, tripwires, pending events, and the base plan.
 
 The picture is the runtime's own: what it read this cycle, not a fresh look at the game.
 """
@@ -165,6 +165,9 @@ def build_state(rt: Runtime, status: str, snap: Snapshot | None) -> dict[str, An
             "memory": json.dumps(m.memory, default=str)[:400] if m.memory else None,
         } for m in rt.managers],
         "tripwires": [{"name": w.name, "since": w.since, "holdHours": w.hold_hours} for w in rt.tripwires],
+        # The base plan and how far it's built, and the search that placed it (managers/planner.py).
+        "base": rt.board.get("base_view"),
+        "baseSearch": rt.board.get("base_search"),
     }
 
 

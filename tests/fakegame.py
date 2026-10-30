@@ -210,7 +210,8 @@ class FakeRim(RimClient):
                                 "legend": {".": "soil", ":": "rich soil", "_": "ground too poor to farm, or floor",
                                            "x": "blueprint or unfinished building", "b": "other building", "t": "tree",
                                            "#": "wall or impassable building", "^": "natural rock", "?": "unexplored",
-                                           "*": "item", "a": "animal", "%": "growing zone"}}})
+                                           "*": "item", "a": "animal", "%": "growing zone", "s": "stockpile zone",
+                                           "g": "growing zone"}}})
 
     def get_game_context(self, **_: Any) -> Result:
         return Result({"data": {"programState": "Playing"}})
